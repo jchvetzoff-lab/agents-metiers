@@ -1,0 +1,40 @@
+# Environnement
+.env
+ID agent.txt
+.env.local
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Données locales (optionnel - décommenter si tu veux exclure la BDD)
+# database/*.db
+
+# Logs et rapports
+data/rapports/*.log
+*.log
+
+# Cache Streamlit
+.streamlit/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Tests
+.pytest_cache/
+.coverage
+htmlcov/
