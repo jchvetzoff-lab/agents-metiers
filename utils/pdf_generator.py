@@ -174,7 +174,7 @@ def generer_pdf_fiche(fiche: FicheMetier, output_path: Optional[Path] = None) ->
         pdf.output(str(output_path))
         return None
     else:
-        return pdf.output(dest='S').encode('latin-1')
+        return pdf.output()
 
 
 def generer_pdf_variante(variante: VarianteFiche, fiche_originale: FicheMetier, output_path: Optional[Path] = None) -> bytes:
@@ -312,4 +312,4 @@ def generer_pdf_variante(variante: VarianteFiche, fiche_originale: FicheMetier, 
         pdf.output(str(output_path))
         return None
     else:
-        return pdf.output(dest='S').encode('latin-1')
+        return pdf.output()
