@@ -28,8 +28,9 @@ database/*.db
 data/rapports/*.log
 *.log
 
-# Cache Streamlit
-.streamlit/
+# Cache Streamlit (mais on garde config.toml et secrets.toml.example)
+.streamlit/secrets.toml
+.streamlit/credentials.toml
 
 # OS
 .DS_Store
