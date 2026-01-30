@@ -197,37 +197,6 @@ def afficher_detail_fiche(fiche: FicheMetier, repo: Repository):
                     for env in variante.environnements:
                         st.markdown(f"- {env}")
 
-            # Bouton téléchargement PDF
-            st.markdown("---")
-
-            col_pdf1, col_pdf2 = st.columns([3, 1])
-
-            with col_pdf1:
-                st.markdown("### 📄 Télécharger la fiche en PDF")
-                st.caption("Format prêt pour impression ou consultation hors ligne.")
-
-            with col_pdf2:
-                try:
-                    from utils.pdf_generator import generer_pdf_variante
-
-                    # Générer le PDF
-                    pdf_bytes = generer_pdf_variante(variante, fiche)
-
-                    # Nom du fichier
-                    filename = f"{fiche.code_rome}_{variante.langue.value}_{variante.tranche_age.value}_{variante.format_contenu.value}_{variante.genre.value}.pdf"
-
-                    st.download_button(
-                        label="📥 Télécharger PDF",
-                        data=pdf_bytes,
-                        file_name=filename,
-                        mime="application/pdf",
-                        type="primary",
-                        key=f"dl_pdf_{fiche.code_rome}_{langue}_{tranche_age}_{format_contenu}_{genre}"
-                    )
-
-                except Exception as e:
-                    st.error(f"❌ Erreur lors de la génération du PDF : {str(e)}")
-
             # Métadonnées de la variante
             st.markdown("---")
             st.caption(

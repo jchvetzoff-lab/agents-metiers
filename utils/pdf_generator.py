@@ -234,32 +234,32 @@ def generer_pdf_fiche(fiche: FicheMetier, output_path: Optional[Path] = None) ->
 
     # Compétences techniques
     if fiche.competences:
-        pdf.section_title('COMPETENCES TECHNIQUES REQUISES', chr(128295))
+        pdf.section_title('COMPETENCES TECHNIQUES REQUISES')
         pdf.add_list_items(fiche.competences)
 
     # Compétences transversales
     if fiche.competences_transversales:
-        pdf.section_title('COMPETENCES TRANSVERSALES', chr(128101))
+        pdf.section_title('COMPETENCES TRANSVERSALES')
         pdf.add_list_items(fiche.competences_transversales, (255, 87, 34))
 
     # Formations
     if fiche.formations:
-        pdf.section_title('FORMATIONS RECOMMANDEES', chr(127891))
+        pdf.section_title('FORMATIONS RECOMMANDEES')
         pdf.add_list_items(fiche.formations, (33, 150, 243))
 
     # Certifications
     if fiche.certifications:
-        pdf.section_title('CERTIFICATIONS PROFESSIONNELLES', chr(128196))
+        pdf.section_title('CERTIFICATIONS PROFESSIONNELLES')
         pdf.add_list_items(fiche.certifications, (156, 39, 176))
 
     # Salaires avec tableau professionnel
     if fiche.salaires and (fiche.salaires.junior.median or fiche.salaires.confirme.median or fiche.salaires.senior.median):
-        pdf.section_title('REMUNERATION (brut annuel)', chr(128176))
+        pdf.section_title('REMUNERATION (brut annuel)')
         pdf.add_salary_table(fiche.salaires)
 
     # Perspectives d'emploi
     if fiche.perspectives:
-        pdf.section_title('PERSPECTIVES D\'EMPLOI', chr(128200))
+        pdf.section_title('PERSPECTIVES D\'EMPLOI')
 
         # Indicateurs clés dans un encadré
         info_text = f'Tendance du marche: {fiche.perspectives.tendance.value.title()}'
@@ -279,12 +279,12 @@ def generer_pdf_fiche(fiche: FicheMetier, output_path: Optional[Path] = None) ->
 
     # Conditions de travail
     if fiche.conditions_travail:
-        pdf.section_title('CONDITIONS DE TRAVAIL', chr(128188))
+        pdf.section_title('CONDITIONS DE TRAVAIL')
         pdf.add_list_items(fiche.conditions_travail, (96, 125, 139))
 
     # Environnements professionnels
     if fiche.environnements:
-        pdf.section_title('ENVIRONNEMENTS PROFESSIONNELS', chr(127970))
+        pdf.section_title('ENVIRONNEMENTS PROFESSIONNELS')
         pdf.add_list_items(fiche.environnements, (63, 81, 181))
 
     # Métadonnées en pied de page
@@ -376,32 +376,32 @@ def generer_pdf_variante(variante: VarianteFiche, fiche_originale: FicheMetier, 
 
     # Compétences techniques
     if variante.competences:
-        pdf.section_title('COMPETENCES TECHNIQUES REQUISES', chr(128295))
+        pdf.section_title('COMPETENCES TECHNIQUES REQUISES')
         pdf.add_list_items(variante.competences)
 
     # Compétences transversales
     if variante.competences_transversales:
-        pdf.section_title('COMPETENCES TRANSVERSALES', chr(128101))
+        pdf.section_title('COMPETENCES TRANSVERSALES')
         pdf.add_list_items(variante.competences_transversales, (255, 87, 34))
 
     # Formations
     if variante.formations:
-        pdf.section_title('FORMATIONS RECOMMANDEES', chr(127891))
+        pdf.section_title('FORMATIONS RECOMMANDEES')
         pdf.add_list_items(variante.formations, (33, 150, 243))
 
     # Certifications
     if variante.certifications:
-        pdf.section_title('CERTIFICATIONS PROFESSIONNELLES', chr(128196))
+        pdf.section_title('CERTIFICATIONS PROFESSIONNELLES')
         pdf.add_list_items(variante.certifications, (156, 39, 176))
 
     # Salaires (depuis la fiche originale)
     if fiche_originale.salaires and (fiche_originale.salaires.junior.median or fiche_originale.salaires.confirme.median or fiche_originale.salaires.senior.median):
-        pdf.section_title('REMUNERATION (brut annuel)', chr(128176))
+        pdf.section_title('REMUNERATION (brut annuel)')
         pdf.add_salary_table(fiche_originale.salaires)
 
     # Perspectives (depuis la fiche originale)
     if fiche_originale.perspectives:
-        pdf.section_title('PERSPECTIVES D\'EMPLOI', chr(128200))
+        pdf.section_title('PERSPECTIVES D\'EMPLOI')
 
         info_text = f'Tendance du marche: {fiche_originale.perspectives.tendance.value.title()}'
         if fiche_originale.perspectives.tension:
@@ -420,12 +420,12 @@ def generer_pdf_variante(variante: VarianteFiche, fiche_originale: FicheMetier, 
 
     # Conditions de travail
     if variante.conditions_travail:
-        pdf.section_title('CONDITIONS DE TRAVAIL', chr(128188))
+        pdf.section_title('CONDITIONS DE TRAVAIL')
         pdf.add_list_items(variante.conditions_travail, (96, 125, 139))
 
     # Environnements professionnels
     if variante.environnements:
-        pdf.section_title('ENVIRONNEMENTS PROFESSIONNELS', chr(127970))
+        pdf.section_title('ENVIRONNEMENTS PROFESSIONNELS')
         pdf.add_list_items(variante.environnements, (63, 81, 181))
 
     # Métadonnées
