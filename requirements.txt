@@ -38,6 +38,9 @@ language-tool-python>=2.8
 python-dotenv>=1.0.0
 tenacity>=8.2.0
 
+# Generation PDF
+fpdf2>=2.7.0
+
 # Tests
 pytest>=8.0.0
 pytest-asyncio>=0.23.0
