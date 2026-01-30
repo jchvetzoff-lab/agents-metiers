@@ -184,13 +184,17 @@ class MonthlyUpdateScheduler:
             # Mettre à jour la fiche
             result = await agent.run(codes_rome=[code_rome])
 
-            # Log audit
-            self.repository.add_audit_log(AuditLog(
-                type_evenement=TypeEvenement.MODIFICATION,
-                code_rome=code_rome,
-                agent="MonthlyUpdateScheduler",
-                description=f"Mise à jour manuelle via bouton Streamlit"
-            ))
+            # Log audit (avec gestion d'erreur)
+            try:
+                self.repository.add_audit_log(AuditLog(
+                    type_evenement=TypeEvenement.MODIFICATION,
+                    code_rome=code_rome,
+                    agent="MonthlyUpdateScheduler",
+                    description=f"Mise à jour manuelle via bouton Streamlit"
+                ))
+            except Exception as log_error:
+                logger.warning(f"Impossible d'écrire le log d'audit (permissions) : {log_error}")
+                # Continue quand même, le log n'est pas critique
 
             return {
                 "status": "success",
