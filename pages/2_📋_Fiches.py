@@ -6,6 +6,7 @@ import pandas as pd
 from datetime import datetime
 import sys
 from pathlib import Path
+import asyncio
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -16,6 +17,20 @@ from database.models import (
 )
 from config import get_config
 
+# Import conditionnel du scheduler
+try:
+    from scheduler.monthly_update import get_scheduler
+    SCHEDULER_DISPONIBLE = True
+except ImportError:
+    SCHEDULER_DISPONIBLE = False
+
+# Import conditionnel du client Anthropic
+try:
+    import anthropic
+    ANTHROPIC_DISPONIBLE = True
+except ImportError:
+    ANTHROPIC_DISPONIBLE = False
+
 
 @st.cache_resource
 def get_repo():
@@ -24,6 +39,18 @@ def get_repo():
     repo = Repository(config.db_path)
     repo.init_db()
     return repo
+
+
+def get_claude_client():
+    """Retourne le client Claude si configuré."""
+    if not ANTHROPIC_DISPONIBLE:
+        return None
+
+    config = get_config()
+    if not config.api.claude_api_key:
+        return None
+
+    return anthropic.AsyncAnthropic(api_key=config.api.claude_api_key)
 
 
 def format_salaire(salaire_niveau):
@@ -180,6 +207,51 @@ def afficher_detail_fiche(fiche: FicheMetier, repo: Repository):
         else:
             st.warning("⚠️ Cette variante n'existe pas encore.")
             st.info(f"💡 Utilisez la page **Actions** pour générer les variantes manquantes.")
+
+        st.markdown("---")
+
+        # Bouton de mise à jour manuelle
+        st.markdown("### 🔄 Mise à jour de la fiche")
+
+        col_btn1, col_btn2, col_btn3 = st.columns([2, 1, 1])
+
+        with col_btn1:
+            st.caption("Mettez à jour cette fiche avec les dernières données (salaires, tendances, offres).")
+
+        with col_btn2:
+            st.caption("Coût estimé : ~$0.08")
+
+        with col_btn3:
+            if st.button(
+                "🔄 Mettre à jour maintenant",
+                type="primary",
+                disabled=not SCHEDULER_DISPONIBLE or not ANTHROPIC_DISPONIBLE,
+                key=f"update_btn_{fiche.code_rome}"
+            ):
+                if not get_claude_client():
+                    st.warning("⚠️ L'API Claude n'est pas configurée.")
+                else:
+                    with st.spinner(f"Mise à jour de {fiche.nom_masculin} en cours..."):
+                        try:
+                            # Récupérer le scheduler et mettre à jour
+                            scheduler = get_scheduler(repo, get_claude_client())
+                            result = asyncio.run(scheduler.update_single_fiche(fiche.code_rome))
+
+                            if result["status"] == "success":
+                                st.success(f"✅ Fiche {fiche.code_rome} mise à jour avec succès !")
+                                st.balloons()
+                                # Recharger la page pour afficher les nouvelles données
+                                st.rerun()
+                            else:
+                                st.error(f"❌ Erreur : {result.get('error', 'Erreur inconnue')}")
+
+                        except Exception as e:
+                            st.error(f"❌ Erreur lors de la mise à jour : {str(e)}")
+                            import traceback
+                            st.code(traceback.format_exc())
+
+        if not SCHEDULER_DISPONIBLE or not ANTHROPIC_DISPONIBLE:
+            st.warning("⚠️ Le module de mise à jour automatique n'est pas disponible. Vérifiez les dépendances.")
 
         st.markdown("---")
         st.markdown("### 📋 Fiche originale (FR, adulte, standard, masculin)")
