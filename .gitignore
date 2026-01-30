@@ -20,8 +20,9 @@ ENV/
 *.swp
 *.swo
 
-# Données locales (optionnel - décommenter si tu veux exclure la BDD)
-# database/*.db
+# Données locales (exclure la BDD pour éviter de commiter des données locales)
+database/*.db
+*.db
 
 # Logs et rapports
 data/rapports/*.log

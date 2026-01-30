@@ -10,7 +10,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from database.repository import Repository
-from database.models import StatutFiche, FicheMetier, TypeEvenement, AuditLog
+from database.models import (
+    StatutFiche, FicheMetier, TypeEvenement, AuditLog,
+    LangueSupporte, TrancheAge, FormatContenu, GenreGrammatical
+)
 from config import get_config
 
 # Import conditionnel des agents
@@ -119,6 +122,52 @@ def publier_fiches(codes_rome: list):
     return resultats
 
 
+async def generer_variantes_async(code_rome: str, langues: list, tranches_age: list, formats: list, genres: list, progress_callback=None):
+    """Génère les variantes d'une fiche de manière asynchrone."""
+    repo = get_repo()
+    client = get_claude_client()
+
+    agent = AgentRedacteurFiche(repository=repo, claude_client=client)
+
+    if progress_callback:
+        progress_callback(0.1, f"Chargement de la fiche {code_rome}...")
+
+    # Récupérer la fiche
+    fiche = repo.get_fiche(code_rome)
+    if not fiche:
+        return {"erreur": f"Fiche {code_rome} non trouvée"}
+
+    if progress_callback:
+        progress_callback(0.3, "Génération des variantes avec Claude...")
+
+    # Générer les variantes
+    variantes = await agent.generer_variantes(
+        fiche=fiche,
+        langues=[LangueSupporte(l) for l in langues],
+        tranches_age=[TrancheAge(a) for a in tranches_age],
+        formats=[FormatContenu(f) for f in formats],
+        genres=[GenreGrammatical(g) for g in genres]
+    )
+
+    if progress_callback:
+        progress_callback(0.7, f"Sauvegarde de {len(variantes)} variantes...")
+
+    # Sauvegarder les variantes
+    nb_saved = 0
+    for variante in variantes:
+        repo.save_variante(variante)
+        nb_saved += 1
+
+    if progress_callback:
+        progress_callback(1.0, "Terminé!")
+
+    return {
+        "code_rome": code_rome,
+        "nb_variantes": len(variantes),
+        "nb_saved": nb_saved
+    }
+
+
 def main():
     st.title("🔧 Actions")
     st.markdown("Lancez les agents pour enrichir, corriger et publier les fiches.")
@@ -150,7 +199,7 @@ def main():
     st.markdown("---")
 
     # Tabs pour les différentes actions
-    tab1, tab2, tab3 = st.tabs(["📝 Enrichissement", "🔧 Correction", "📢 Publication"])
+    tab1, tab2, tab3, tab4 = st.tabs(["📝 Enrichissement", "🔧 Correction", "📢 Publication", "🌐 Variantes"])
 
     # ==========================================================================
     # TAB 1: Enrichissement
@@ -370,6 +419,167 @@ def main():
                             for detail in result["details"]:
                                 icon = "✅" if detail["status"] == "publié" else "❌"
                                 st.markdown(f"{icon} **{detail['code']}** : {detail['status']}")
+
+    # ==========================================================================
+    # TAB 4: Génération de Variantes
+    # ==========================================================================
+    with tab4:
+        st.subheader("🌐 Génération de variantes multilingues")
+        st.markdown("""
+        Générez automatiquement des variantes adaptées de vos fiches métiers :
+        - **5 langues** : Français, Anglais, Espagnol, Allemand, Italien
+        - **3 tranches d'âge** : 11-15 ans, 15-18 ans, Adultes
+        - **2 formats** : Standard, FALC (Facile À Lire et à Comprendre)
+        - **3 genres** : Masculin, Féminin, Épicène
+        """)
+
+        # Statistiques
+        nb_fiches_publiees = repo.count_fiches(StatutFiche.PUBLIEE)
+        st.info(f"📊 **{nb_fiches_publiees}** fiches publiées disponibles pour génération de variantes")
+
+        # Sélection de la fiche
+        fiches_pub = repo.get_all_fiches(statut=StatutFiche.PUBLIEE, limit=100)
+
+        if not fiches_pub:
+            st.warning("⚠️ Aucune fiche publiée. Publiez d'abord des fiches enrichies.")
+        else:
+            options_fiches = {f.code_rome: f"{f.code_rome} - {f.nom_masculin}" for f in fiches_pub}
+
+            code_selectionne = st.selectbox(
+                "Sélectionnez une fiche",
+                options=list(options_fiches.keys()),
+                format_func=lambda x: options_fiches.get(x, x),
+                key="fiche_variantes"
+            )
+
+            if code_selectionne:
+                # Afficher les variantes existantes
+                nb_variantes_existantes = repo.count_variantes(code_selectionne)
+                if nb_variantes_existantes > 0:
+                    st.success(f"✅ {nb_variantes_existantes} variantes déjà générées pour cette fiche")
+
+                st.markdown("---")
+
+                # Sélection des axes de variation
+                st.markdown("### Sélectionnez les axes de variation")
+
+                col1, col2 = st.columns(2)
+
+                with col1:
+                    langues_selectionnees = st.multiselect(
+                        "🌍 Langues",
+                        options=["fr", "en", "es", "de", "it"],
+                        default=["fr", "en"],
+                        format_func=lambda x: {
+                            "fr": "🇫🇷 Français",
+                            "en": "🇬🇧 English",
+                            "es": "🇪🇸 Español",
+                            "de": "🇩🇪 Deutsch",
+                            "it": "🇮🇹 Italiano"
+                        }[x],
+                        key="langues_variantes"
+                    )
+
+                    formats_selectionnes = st.multiselect(
+                        "📝 Formats",
+                        options=["standard", "falc"],
+                        default=["standard", "falc"],
+                        format_func=lambda x: {
+                            "standard": "📝 Standard",
+                            "falc": "📖 FALC (Facile)"
+                        }[x],
+                        key="formats_variantes"
+                    )
+
+                with col2:
+                    tranches_age_selectionnees = st.multiselect(
+                        "👥 Tranches d'âge",
+                        options=["11-15", "15-18", "18+"],
+                        default=["18+"],
+                        format_func=lambda x: {
+                            "11-15": "👦 11-15 ans",
+                            "15-18": "🎓 15-18 ans",
+                            "18+": "👔 Adultes (18+)"
+                        }[x],
+                        key="ages_variantes"
+                    )
+
+                    genres_selectionnes = st.multiselect(
+                        "⚧ Genres",
+                        options=["masculin", "feminin", "epicene"],
+                        default=["masculin", "feminin", "epicene"],
+                        format_func=lambda x: {
+                            "masculin": "♂️ Masculin",
+                            "feminin": "♀️ Féminin",
+                            "epicene": "⚧ Épicène"
+                        }[x],
+                        key="genres_variantes"
+                    )
+
+                # Calcul du nombre de variantes
+                nb_variantes_a_generer = (
+                    len(langues_selectionnees) *
+                    len(tranches_age_selectionnees) *
+                    len(formats_selectionnes) *
+                    len(genres_selectionnes)
+                )
+
+                st.info(f"📊 **{nb_variantes_a_generer}** variantes seront générées")
+
+                # Estimation du coût
+                cout_estime = nb_variantes_a_generer * 0.002  # ~$0.002 par variante
+                st.caption(f"💰 Coût estimé : ~${cout_estime:.3f}")
+
+                # Bouton de génération
+                if st.button(
+                    f"🚀 Générer {nb_variantes_a_generer} variantes",
+                    type="primary",
+                    disabled=not AGENTS_DISPONIBLES or nb_variantes_a_generer == 0,
+                    key="btn_generer_variantes"
+                ):
+                    if not config.api.claude_api_key:
+                        st.warning("⚠️ L'API Claude n'est pas configurée. Génération en mode simulation.")
+
+                    progress_bar_var = st.progress(0)
+                    status_text_var = st.empty()
+
+                    def update_progress_var(value, text):
+                        progress_bar_var.progress(value)
+                        status_text_var.text(text)
+
+                    with st.spinner("Génération des variantes en cours..."):
+                        try:
+                            result = asyncio.run(generer_variantes_async(
+                                code_rome=code_selectionne,
+                                langues=langues_selectionnees,
+                                tranches_age=tranches_age_selectionnees,
+                                formats=formats_selectionnes,
+                                genres=genres_selectionnes,
+                                progress_callback=update_progress_var
+                            ))
+
+                            if "erreur" in result:
+                                st.error(f"❌ Erreur : {result['erreur']}")
+                            else:
+                                st.success(f"✅ {result['nb_variantes']} variantes générées et sauvegardées!")
+                                st.balloons()
+
+                                # Afficher les détails
+                                st.markdown(f"**Code ROME** : {result['code_rome']}")
+                                st.markdown(f"**Variantes créées** : {result['nb_saved']}")
+
+                                # Log audit
+                                repo.add_audit_log(AuditLog(
+                                    type_evenement=TypeEvenement.MODIFICATION,
+                                    code_rome=code_selectionne,
+                                    agent="StreamlitUI",
+                                    description=f"{result['nb_variantes']} variantes générées"
+                                ))
+
+                        except Exception as e:
+                            st.error(f"❌ Erreur lors de la génération : {str(e)}")
+                            import traceback
+                            st.code(traceback.format_exc())
 
     st.markdown("---")
 

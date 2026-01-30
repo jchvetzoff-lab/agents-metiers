@@ -30,6 +30,28 @@ class GenreGrammatical(str, Enum):
     EPICENE = "epicene"
 
 
+class LangueSupporte(str, Enum):
+    """Langues supportées pour les variantes."""
+    FR = "fr"
+    EN = "en"
+    ES = "es"
+    DE = "de"
+    IT = "it"
+
+
+class TrancheAge(str, Enum):
+    """Tranches d'âge pour adaptation du contenu."""
+    JEUNE_11_15 = "11-15"
+    ADOS_15_18 = "15-18"
+    ADULTE = "18+"
+
+
+class FormatContenu(str, Enum):
+    """Formats de contenu."""
+    STANDARD = "standard"
+    FALC = "falc"  # Facile À Lire et à Comprendre
+
+
 class StatutFiche(str, Enum):
     """Statut d'une fiche métier."""
     BROUILLON = "brouillon"
@@ -214,6 +236,34 @@ class DictionnaireGenre(BaseModel):
     categorie: Optional[str] = None  # ex: "informatique", "santé"
 
 
+class VarianteFiche(BaseModel):
+    """Variante d'une fiche métier (langue, âge, format, genre)."""
+    id: Optional[int] = None
+    code_rome: str
+
+    # Axes de variation
+    langue: LangueSupporte = Field(LangueSupporte.FR)
+    tranche_age: TrancheAge = Field(TrancheAge.ADULTE)
+    format_contenu: FormatContenu = Field(FormatContenu.STANDARD)
+    genre: GenreGrammatical = Field(GenreGrammatical.MASCULIN)
+
+    # Contenu adapté
+    nom: str
+    description: str = ""
+    description_courte: Optional[str] = None
+    competences: List[str] = Field(default_factory=list)
+    competences_transversales: List[str] = Field(default_factory=list)
+    formations: List[str] = Field(default_factory=list)
+    certifications: List[str] = Field(default_factory=list)
+    conditions_travail: List[str] = Field(default_factory=list)
+    environnements: List[str] = Field(default_factory=list)
+
+    # Métadonnées
+    date_creation: datetime = Field(default_factory=datetime.now)
+    date_maj: datetime = Field(default_factory=datetime.now)
+    version: int = Field(1)
+
+
 # ============================================================================
 # Tables SQLAlchemy pour la persistance
 # ============================================================================
@@ -395,3 +445,86 @@ class DictionnaireGenreDB(Base):
     feminin = Column(String(255), nullable=False)
     epicene = Column(String(255), nullable=False)
     categorie = Column(String(50), nullable=True)
+
+
+class VarianteFicheDB(Base):
+    """Table des variantes de fiches métiers."""
+    __tablename__ = "variantes_fiches"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    code_rome = Column(String(10), ForeignKey("fiches_metiers.code_rome"),
+                      nullable=False, index=True)
+
+    # Axes de variation
+    langue = Column(String(2), nullable=False, default="fr")
+    tranche_age = Column(String(10), nullable=False, default="18+")
+    format_contenu = Column(String(20), nullable=False, default="standard")
+    genre = Column(String(20), nullable=False, default="masculin")
+
+    # Contenu (JSON)
+    nom = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    description_courte = Column(String(500), nullable=True)
+    competences = Column(JSON, default=list)
+    competences_transversales = Column(JSON, default=list)
+    formations = Column(JSON, default=list)
+    certifications = Column(JSON, default=list)
+    conditions_travail = Column(JSON, default=list)
+    environnements = Column(JSON, default=list)
+
+    # Métadonnées
+    date_creation = Column(DateTime, default=datetime.now)
+    date_maj = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    version = Column(Integer, default=1)
+
+    # Index composite unique pour éviter les doublons
+    __table_args__ = (
+        Index("idx_variante_unique", "code_rome", "langue", "tranche_age",
+              "format_contenu", "genre", unique=True),
+    )
+
+    def to_pydantic(self) -> VarianteFiche:
+        """Convertit l'enregistrement DB en modèle Pydantic."""
+        return VarianteFiche(
+            id=self.id,
+            code_rome=self.code_rome,
+            langue=LangueSupporte(self.langue),
+            tranche_age=TrancheAge(self.tranche_age),
+            format_contenu=FormatContenu(self.format_contenu),
+            genre=GenreGrammatical(self.genre),
+            nom=self.nom,
+            description=self.description or "",
+            description_courte=self.description_courte,
+            competences=self.competences or [],
+            competences_transversales=self.competences_transversales or [],
+            formations=self.formations or [],
+            certifications=self.certifications or [],
+            conditions_travail=self.conditions_travail or [],
+            environnements=self.environnements or [],
+            date_creation=self.date_creation,
+            date_maj=self.date_maj,
+            version=self.version
+        )
+
+    @classmethod
+    def from_pydantic(cls, variante: VarianteFiche) -> "VarianteFicheDB":
+        """Crée un enregistrement DB depuis un modèle Pydantic."""
+        return cls(
+            code_rome=variante.code_rome,
+            langue=variante.langue.value,
+            tranche_age=variante.tranche_age.value,
+            format_contenu=variante.format_contenu.value,
+            genre=variante.genre.value,
+            nom=variante.nom,
+            description=variante.description,
+            description_courte=variante.description_courte,
+            competences=variante.competences,
+            competences_transversales=variante.competences_transversales,
+            formations=variante.formations,
+            certifications=variante.certifications,
+            conditions_travail=variante.conditions_travail,
+            environnements=variante.environnements,
+            date_creation=variante.date_creation,
+            date_maj=variante.date_maj,
+            version=variante.version
+        )

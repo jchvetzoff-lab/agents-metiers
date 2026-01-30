@@ -10,7 +10,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from database.repository import Repository
-from database.models import StatutFiche, FicheMetier
+from database.models import (
+    StatutFiche, FicheMetier, LangueSupporte, TrancheAge,
+    FormatContenu, GenreGrammatical
+)
 from config import get_config
 
 
@@ -40,9 +43,147 @@ def format_salaire(salaire_niveau):
     return "N/A"
 
 
-def afficher_detail_fiche(fiche: FicheMetier):
+def afficher_detail_fiche(fiche: FicheMetier, repo: Repository):
     """Affiche le détail complet d'une fiche dans un expander."""
     with st.expander(f"📄 Détail : {fiche.nom_masculin} ({fiche.code_rome})", expanded=True):
+        # Sélecteurs de variantes
+        st.subheader("🌐 Sélectionner une variante")
+
+        col1, col2, col3, col4 = st.columns(4)
+
+        with col1:
+            langue_labels = {
+                "fr": "🇫🇷 Français",
+                "en": "🇬🇧 English",
+                "es": "🇪🇸 Español",
+                "de": "🇩🇪 Deutsch",
+                "it": "🇮🇹 Italiano"
+            }
+            langue = st.selectbox(
+                "Langue",
+                options=["fr", "en", "es", "de", "it"],
+                format_func=lambda x: langue_labels[x],
+                key=f"langue_{fiche.code_rome}"
+            )
+
+        with col2:
+            age_labels = {
+                "11-15": "👦 11-15 ans",
+                "15-18": "🎓 15-18 ans",
+                "18+": "👔 Adultes (18+)"
+            }
+            tranche_age = st.selectbox(
+                "Public",
+                options=["11-15", "15-18", "18+"],
+                format_func=lambda x: age_labels[x],
+                index=2,  # Adulte par défaut
+                key=f"age_{fiche.code_rome}"
+            )
+
+        with col3:
+            format_labels = {
+                "standard": "📝 Standard",
+                "falc": "📖 FALC (Facile)"
+            }
+            format_contenu = st.selectbox(
+                "Format",
+                options=["standard", "falc"],
+                format_func=lambda x: format_labels[x],
+                key=f"format_{fiche.code_rome}"
+            )
+
+        with col4:
+            genre_labels = {
+                "masculin": "♂️ Masculin",
+                "feminin": "♀️ Féminin",
+                "epicene": "⚧ Épicène"
+            }
+            genre = st.selectbox(
+                "Genre",
+                options=["masculin", "feminin", "epicene"],
+                format_func=lambda x: genre_labels[x],
+                key=f"genre_{fiche.code_rome}"
+            )
+
+        # Récupérer la variante correspondante
+        variante = repo.get_variante(
+            code_rome=fiche.code_rome,
+            langue=LangueSupporte(langue),
+            tranche_age=TrancheAge(tranche_age),
+            format_contenu=FormatContenu(format_contenu),
+            genre=GenreGrammatical(genre)
+        )
+
+        if variante:
+            # Afficher la variante
+            st.success(f"✅ Variante trouvée : {variante.nom}")
+
+            # Description
+            if variante.description:
+                st.markdown("### 📝 Description")
+                st.markdown(variante.description)
+                if variante.description_courte:
+                    st.caption(f"*{variante.description_courte}*")
+
+            # Compétences
+            col_comp1, col_comp2 = st.columns(2)
+
+            with col_comp1:
+                if variante.competences:
+                    st.markdown("### 🎯 Compétences techniques")
+                    for comp in variante.competences:
+                        st.markdown(f"- {comp}")
+
+            with col_comp2:
+                if variante.competences_transversales:
+                    st.markdown("### 🤝 Compétences transversales")
+                    for comp in variante.competences_transversales:
+                        st.markdown(f"- {comp}")
+
+            # Formations et certifications
+            col_form1, col_form2 = st.columns(2)
+
+            with col_form1:
+                if variante.formations:
+                    st.markdown("### 🎓 Formations")
+                    for form in variante.formations:
+                        st.markdown(f"- {form}")
+
+            with col_form2:
+                if variante.certifications:
+                    st.markdown("### 📜 Certifications")
+                    for cert in variante.certifications:
+                        st.markdown(f"- {cert}")
+
+            # Conditions de travail
+            col_cond1, col_cond2 = st.columns(2)
+
+            with col_cond1:
+                if variante.conditions_travail:
+                    st.markdown("### 🏢 Conditions de travail")
+                    for cond in variante.conditions_travail:
+                        st.markdown(f"- {cond}")
+
+            with col_cond2:
+                if variante.environnements:
+                    st.markdown("### 🌍 Environnements")
+                    for env in variante.environnements:
+                        st.markdown(f"- {env}")
+
+            # Métadonnées de la variante
+            st.markdown("---")
+            st.caption(
+                f"Variante créée le {variante.date_creation.strftime('%d/%m/%Y')} | "
+                f"MAJ le {variante.date_maj.strftime('%d/%m/%Y')} | "
+                f"Version {variante.version}"
+            )
+        else:
+            st.warning("⚠️ Cette variante n'existe pas encore.")
+            st.info(f"💡 Utilisez la page **Actions** pour générer les variantes manquantes.")
+
+        st.markdown("---")
+        st.markdown("### 📋 Fiche originale (FR, adulte, standard, masculin)")
+
         # En-tête avec statut
         col1, col2, col3 = st.columns([2, 1, 1])
 
@@ -325,7 +466,7 @@ def main():
     if code_selectionne:
         fiche_detail = next((f for f in fiches_page if f.code_rome == code_selectionne), None)
         if fiche_detail:
-            afficher_detail_fiche(fiche_detail)
+            afficher_detail_fiche(fiche_detail, repo)
 
 
 if __name__ == "__main__":

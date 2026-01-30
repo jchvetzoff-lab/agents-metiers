@@ -12,8 +12,10 @@ from sqlalchemy.orm import sessionmaker, Session
 
 from .models import (
     Base, FicheMetierDB, SalaireDB, HistoriqueVeilleDB, AuditLogDB, DictionnaireGenreDB,
-    FicheMetier, Salaire, HistoriqueVeille, AuditLog, DictionnaireGenre,
-    TypeEvenement, StatutFiche, NiveauExperience
+    VarianteFicheDB,
+    FicheMetier, Salaire, HistoriqueVeille, AuditLog, DictionnaireGenre, VarianteFiche,
+    TypeEvenement, StatutFiche, NiveauExperience, LangueSupporte, TrancheAge,
+    FormatContenu, GenreGrammatical
 )
 
 
@@ -431,3 +433,142 @@ class Repository:
             file_path = output_dir / f"{fiche.code_rome}.json"
             file_path.write_text(fiche.to_json(), encoding="utf-8")
         return len(fiches)
+
+    # =========================================================================
+    # Variantes de Fiches
+    # =========================================================================
+
+    def save_variante(self, variante: VarianteFiche) -> VarianteFiche:
+        """
+        Sauvegarde ou met à jour une variante (upsert).
+
+        Args:
+            variante: Variante à sauvegarder
+
+        Returns:
+            Variante sauvegardée avec ID
+        """
+        with self.session() as session:
+            # Recherche variante existante par clé composite
+            existing = session.execute(
+                select(VarianteFicheDB).where(
+                    VarianteFicheDB.code_rome == variante.code_rome,
+                    VarianteFicheDB.langue == variante.langue.value,
+                    VarianteFicheDB.tranche_age == variante.tranche_age.value,
+                    VarianteFicheDB.format_contenu == variante.format_contenu.value,
+                    VarianteFicheDB.genre == variante.genre.value
+                )
+            ).scalar_one_or_none()
+
+            if existing:
+                # Mise à jour
+                existing.nom = variante.nom
+                existing.description = variante.description
+                existing.description_courte = variante.description_courte
+                existing.competences = variante.competences
+                existing.competences_transversales = variante.competences_transversales
+                existing.formations = variante.formations
+                existing.certifications = variante.certifications
+                existing.conditions_travail = variante.conditions_travail
+                existing.environnements = variante.environnements
+                existing.date_maj = datetime.now()
+                existing.version += 1
+                session.flush()
+                return existing.to_pydantic()
+            else:
+                # Création
+                db_variante = VarianteFicheDB.from_pydantic(variante)
+                session.add(db_variante)
+                session.flush()
+                return db_variante.to_pydantic()
+
+    def get_variante(
+        self,
+        code_rome: str,
+        langue: LangueSupporte = LangueSupporte.FR,
+        tranche_age: TrancheAge = TrancheAge.ADULTE,
+        format_contenu: FormatContenu = FormatContenu.STANDARD,
+        genre: GenreGrammatical = GenreGrammatical.MASCULIN
+    ) -> Optional[VarianteFiche]:
+        """
+        Récupère une variante spécifique.
+
+        Args:
+            code_rome: Code ROME de la fiche
+            langue: Langue de la variante
+            tranche_age: Tranche d'âge cible
+            format_contenu: Format du contenu
+            genre: Genre grammatical
+
+        Returns:
+            Variante si trouvée, None sinon
+        """
+        with self.session() as session:
+            result = session.execute(
+                select(VarianteFicheDB).where(
+                    VarianteFicheDB.code_rome == code_rome,
+                    VarianteFicheDB.langue == langue.value,
+                    VarianteFicheDB.tranche_age == tranche_age.value,
+                    VarianteFicheDB.format_contenu == format_contenu.value,
+                    VarianteFicheDB.genre == genre.value
+                )
+            ).scalar_one_or_none()
+            return result.to_pydantic() if result else None
+
+    def count_variantes(self, code_rome: str) -> int:
+        """
+        Compte le nombre de variantes pour une fiche.
+
+        Args:
+            code_rome: Code ROME de la fiche
+
+        Returns:
+            Nombre de variantes
+        """
+        with self.session() as session:
+            return session.execute(
+                select(func.count(VarianteFicheDB.id)).where(
+                    VarianteFicheDB.code_rome == code_rome
+                )
+            ).scalar()
+
+    def get_all_variantes(self, code_rome: str) -> List[VarianteFiche]:
+        """
+        Récupère toutes les variantes d'une fiche.
+
+        Args:
+            code_rome: Code ROME de la fiche
+
+        Returns:
+            Liste des variantes
+        """
+        with self.session() as session:
+            results = session.execute(
+                select(VarianteFicheDB).where(
+                    VarianteFicheDB.code_rome == code_rome
+                ).order_by(
+                    VarianteFicheDB.langue,
+                    VarianteFicheDB.tranche_age,
+                    VarianteFicheDB.format_contenu,
+                    VarianteFicheDB.genre
+                )
+            ).scalars().all()
+            return [r.to_pydantic() for r in results]
+
+    def delete_variantes(self, code_rome: str) -> int:
+        """
+        Supprime toutes les variantes d'une fiche.
+
+        Args:
+            code_rome: Code ROME de la fiche
+
+        Returns:
+            Nombre de variantes supprimées
+        """
+        with self.session() as session:
+            result = session.execute(
+                delete(VarianteFicheDB).where(
+                    VarianteFicheDB.code_rome == code_rome
+                )
+            )
+            return result.rowcount
