@@ -37,17 +37,22 @@ class FichePDF(FPDF):
         self.set_text_color(120, 120, 120)
         self.cell(0, 10, f'Page {self.page_no()} - Genere le {datetime.now().strftime("%d/%m/%Y a %H:%M")}', 0, 0, 'C')
 
-    def add_badge(self, text: str, x: int, y: int, color=(74, 57, 192)):
+    def add_badge(self, text: str, x: int, y: int, color=(74, 57, 192), max_width=None):
         """Ajoute un badge coloré."""
         self.set_xy(x, y)
         self.set_fill_color(*color)
         self.set_text_color(255, 255, 255)
-        self.set_font('Arial', 'B', 10)
+        self.set_font('Arial', 'B', 9)
 
-        # Calculer la largeur du texte
-        text_width = self.get_string_width(text) + 10
+        # Calculer la largeur du texte avec limite
+        text_width = self.get_string_width(text) + 8
+        if max_width and text_width > max_width:
+            text_width = max_width
+            # Réduire la taille de police si nécessaire
+            self.set_font('Arial', 'B', 8)
+
         self.set_line_width(0)
-        self.cell(text_width, 7, text, 0, 0, 'C', True)
+        self.cell(text_width, 6, text, 0, 0, 'C', True)
         self.set_draw_color(0, 0, 0)
         self.set_line_width(0.2)
 
@@ -117,8 +122,8 @@ class FichePDF(FPDF):
         self.set_text_color(255, 255, 255)
         self.set_font('Arial', 'B', 10)
 
-        # En-têtes du tableau
-        col_width = 47
+        # En-têtes du tableau (largeurs ajustées pour tenir dans la page)
+        col_width = 45
         self.cell(col_width, 8, 'Niveau', 1, 0, 'C', True)
         self.cell(col_width, 8, 'Minimum', 1, 0, 'C', True)
         self.cell(col_width, 8, 'Median', 1, 0, 'C', True)
@@ -188,27 +193,18 @@ def generer_pdf_fiche(fiche: FicheMetier, output_path: Optional[Path] = None) ->
     pdf = FichePDF()
     pdf.add_page()
 
-    # Titre principal avec badge Code ROME
+    # Titre principal
     pdf.set_font('Arial', 'B', 22)
     pdf.set_text_color(26, 26, 46)
     pdf.cell(0, 12, fiche.nom_masculin, 0, 1, 'C')
-    pdf.ln(2)
+    pdf.ln(3)
 
-    # Badge Code ROME et statut
-    x_center = 105 - 25
-    pdf.add_badge(f'Code ROME: {fiche.code_rome}', x_center, pdf.get_y())
-    pdf.ln(10)
-
-    statut_color = {
-        'brouillon': (255, 152, 0),
-        'en_validation': (33, 150, 243),
-        'publiee': (76, 175, 80),
-        'archivee': (158, 158, 158)
-    }.get(fiche.metadata.statut.value, (120, 120, 120))
-
-    pdf.add_badge(f'Statut: {fiche.metadata.statut.value.replace("_", " ").title()}',
-                  x_center + 60, pdf.get_y() - 7, statut_color)
-    pdf.ln(8)
+    # Badges Code ROME et statut (centrés)
+    pdf.set_font('Arial', 'B', 10)
+    pdf.set_text_color(100, 100, 100)
+    badge_text = f'Code ROME: {fiche.code_rome} | Statut: {fiche.metadata.statut.value.replace("_", " ").title()}'
+    pdf.cell(0, 6, badge_text, 0, 1, 'C')
+    pdf.ln(5)
 
     # Encadré avec les appellations genrées
     pdf.set_fill_color(240, 247, 255)
@@ -327,9 +323,9 @@ def generer_pdf_variante(variante: VarianteFiche, fiche_originale: FicheMetier, 
     pdf.set_font('Arial', 'B', 22)
     pdf.set_text_color(26, 26, 46)
     pdf.cell(0, 12, variante.nom, 0, 1, 'C')
-    pdf.ln(2)
+    pdf.ln(3)
 
-    # Badges pour les caractéristiques de la variante
+    # Informations de la variante (texte simple, pas de badges)
     langue_labels = {
         'fr': 'Francais',
         'en': 'English',
@@ -355,28 +351,20 @@ def generer_pdf_variante(variante: VarianteFiche, fiche_originale: FicheMetier, 
         'epicene': 'Epicene'
     }
 
-    # Badge Code ROME
-    y_badges = pdf.get_y()
-    pdf.add_badge(f'Code: {variante.code_rome}', 15, y_badges)
+    # Ligne 1 : Code ROME et Langue
+    pdf.set_font('Arial', 'B', 10)
+    pdf.set_text_color(100, 100, 100)
+    info_line1 = f'Code ROME: {variante.code_rome} | Langue: {langue_labels.get(variante.langue.value, variante.langue.value)}'
+    pdf.cell(0, 6, info_line1, 0, 1, 'C')
 
-    # Badge Langue
-    pdf.add_badge(langue_labels.get(variante.langue.value, variante.langue.value),
-                  55, y_badges, (33, 150, 243))
-
-    # Badge Public
-    pdf.add_badge(f'Public: {age_labels.get(variante.tranche_age.value, variante.tranche_age.value)}',
-                  100, y_badges, (255, 152, 0))
-
-    # Badge Format
-    pdf.add_badge(format_labels.get(variante.format_contenu.value, variante.format_contenu.value),
-                  155, y_badges, (76, 175, 80))
-
-    pdf.ln(12)
-
-    # Badge Genre
-    pdf.add_badge(f'Genre: {genre_labels.get(variante.genre.value, variante.genre.value)}',
-                  80, pdf.get_y(), (156, 39, 176))
-    pdf.ln(10)
+    # Ligne 2 : Public, Format, Genre
+    info_line2 = (
+        f'Public: {age_labels.get(variante.tranche_age.value, variante.tranche_age.value)} | '
+        f'Format: {format_labels.get(variante.format_contenu.value, variante.format_contenu.value)} | '
+        f'Genre: {genre_labels.get(variante.genre.value, variante.genre.value)}'
+    )
+    pdf.cell(0, 6, info_line2, 0, 1, 'C')
+    pdf.ln(5)
 
     # Description
     if variante.description:
