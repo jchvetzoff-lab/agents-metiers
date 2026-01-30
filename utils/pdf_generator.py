@@ -106,7 +106,7 @@ class FichePDF(FPDF):
             # Puce colorée
             self.set_text_color(*color)
             self.set_font('Arial', 'B', 10)
-            self.cell(5, 5, chr(149), 0, 0)  # Puce ronde
+            self.cell(5, 5, '-', 0, 0)  # Tiret
 
             # Texte de l'item
             self.set_text_color(40, 40, 40)
@@ -219,9 +219,9 @@ def generer_pdf_fiche(fiche: FicheMetier, output_path: Optional[Path] = None) ->
     pdf.set_text_color(40, 40, 40)
     pdf.set_fill_color(255, 255, 255)
 
-    pdf.cell(63, 6, f'Masculin: {fiche.nom_masculin}', 1, 0, 'L', True)
-    pdf.cell(63, 6, f'Feminin: {fiche.nom_feminin}', 1, 0, 'L', True)
-    pdf.cell(62, 6, f'Epicene: {fiche.nom_epicene}', 1, 1, 'L', True)
+    pdf.cell(60, 6, f'Masculin: {fiche.nom_masculin}', 1, 0, 'L', True)
+    pdf.cell(60, 6, f'Feminin: {fiche.nom_feminin}', 1, 0, 'L', True)
+    pdf.cell(60, 6, f'Epicene: {fiche.nom_epicene}', 1, 1, 'L', True)
     pdf.ln(5)
 
     # Description
