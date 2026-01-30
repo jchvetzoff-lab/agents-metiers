@@ -22,6 +22,7 @@ Système multi-agents autonome pour la création et maintenance automatique de f
 | Système de journalisation | `logging_system/journal.py` | ✅ Fonctionnel |
 | Interface Streamlit | `streamlit_app.py` + `pages/` | ✅ Fonctionnel + sélecteurs variantes |
 | **Système Variantes** | `database/models.py` + `repository.py` | ✅ Fonctionnel (90 variantes/fiche) |
+| **Export PDF** | `utils/pdf_generator.py` | ✅ Fonctionnel (fpdf2) |
 | **Déploiement Cloud** | `.streamlit/` + guides | ✅ Configuré pour Streamlit Cloud |
 
 ### ✅ Données ROME Importées (27 janv. 2026)
@@ -91,6 +92,40 @@ Configuration complète pour déploiement automatique :
 
 Documentation : `QUICKSTART.md` et `STREAMLIT_CLOUD_DEPLOY.md`
 
+### ✅ Export PDF des Fiches (30 janv. 2026)
+
+Génération automatique de fiches métiers au format PDF professionnel :
+
+**Caractéristiques** :
+- Design professionnel avec thème violet (#4A39C0)
+- En-tête et pied de page personnalisés
+- Mise en page structurée (sections, listes, métadonnées)
+- Support complet des variantes (langue, âge, format, genre)
+- Export direct depuis l'interface Streamlit
+
+**Fonctionnalités** :
+- **PDF Variante** : Génère le PDF de la variante sélectionnée
+  - Nom adapté selon langue et genre
+  - Contenu traduit et adapté au public cible
+  - Labels multilingues (FR, EN, ES, DE, IT)
+  - Informations de la variante (langue, public, format, genre)
+- **PDF Fiche Originale** : Génère le PDF de la fiche française complète
+  - Version adulte, standard, masculin
+  - Toutes les sections (description, compétences, salaires, perspectives)
+
+**Architecture** :
+- Module `utils/pdf_generator.py` avec fpdf2
+- Classe `FichePDF` pour mise en page cohérente
+- Encodage latin-1 pour compatibilité maximale
+- Génération à la volée (pas de stockage)
+
+**Interface Streamlit** :
+- Bouton "📥 Télécharger PDF" pour chaque variante
+- Bouton "📥 Télécharger PDF" pour la fiche originale
+- Nom de fichier structuré : `CODE_ROME_langue_age_format_genre.pdf`
+
+**Librairie** : fpdf2 (pure Python, sans dépendances système)
+
 ### ⏸️ En Attente de Credentials
 
 - **France Travail API** : francetravail.io inaccessible
@@ -154,6 +189,22 @@ Configuration complète pour déploiement automatique.
 **Guide rapide** : Voir `QUICKSTART.md` (4 étapes, 15 minutes)
 **Guide complet** : Voir `STREAMLIT_CLOUD_DEPLOY.md`
 
+### 5. ✅ Export PDF des Fiches (Terminé - 30 janv. 2026)
+Téléchargement direct des fiches au format PDF professionnel.
+
+**Depuis l'interface Streamlit** :
+- Page **Fiches** > Sélectionner une fiche > Bouton "📥 Télécharger PDF"
+- Téléchargement de la **variante sélectionnée** (langue, âge, format, genre)
+- Téléchargement de la **fiche originale** (FR, adulte, standard, masculin)
+
+**Caractéristiques des PDFs** :
+- Design professionnel avec thème violet
+- Toutes les sections : description, compétences, formations, salaires, perspectives
+- En-tête et pied de page avec date de génération
+- Nom de fichier structuré : `CODE_ROME_langue_age_format_genre.pdf`
+
+**Module** : `utils/pdf_generator.py` (fpdf2, pure Python)
+
 ---
 
 ## À FAIRE (Prochaines Étapes)
@@ -167,7 +218,6 @@ Réessayer la création d'application sur https://francetravail.io :
 - **AgentAnalyseCompetences** : Compétences transférables entre métiers
 - **AgentScrapingOffres** : Scraper Indeed/LinkedIn pour salaires
 - **API REST (FastAPI)** : Exposer les fiches à d'autres apps
-- **Export PDF** : Générer des fiches PDF propres
 - **Alertes email** : Notifier quand un métier évolue
 - **Base externe** : PostgreSQL via Supabase pour Streamlit Cloud
 
@@ -184,6 +234,7 @@ Réessayer la création d'application sur https://francetravail.io :
 - **Scraping** : BeautifulSoup
 - **Planification** : APScheduler
 - **IA** : API Claude (Anthropic)
+- **Export PDF** : fpdf2
 
 ## Structure du Projet
 
@@ -217,6 +268,9 @@ agents-metiers/
 ├── tests/
 │   ├── test_variantes.py          # Tests unitaires variantes
 │   └── test_e2e_variantes.py      # Test de bout en bout variantes
+├── utils/
+│   ├── __init__.py                # Exports module utilitaire
+│   └── pdf_generator.py           # Génération PDF (fpdf2)
 ├── .streamlit/
 │   ├── config.toml                # Configuration Streamlit (thème violet)
 │   └── secrets.toml.example       # Template pour secrets
