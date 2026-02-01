@@ -546,9 +546,11 @@ def main():
     with col_search2:
         rechercher_clicked = st.button("🔍 Rechercher", type="primary", use_container_width=True)
 
-    # Si le bouton est cliqué et un métier est sélectionné, afficher la fiche
+    # Si le bouton est cliqué et un métier est sélectionné, stocker pour afficher la fiche
     if rechercher_clicked and metier_selectionne != "Sélectionnez un métier...":
         code_rome_recherche = nom_to_code[metier_selectionne]
+        st.session_state.fiche_recherchee = code_rome_recherche
+        # Filtrer aussi le tableau
         fiches = [f for f in toutes_fiches if f.code_rome == code_rome_recherche]
         st.session_state.page_fiches = 0
 
@@ -571,15 +573,11 @@ def main():
 
     df = pd.DataFrame(data)
 
-    # Afficher le tableau avec sélection cliquable
-    st.caption("👆 Cliquez sur une ligne pour voir le détail de la fiche")
-
-    event = st.dataframe(
+    # Afficher le tableau simple (sans checkboxes)
+    st.dataframe(
         df,
         use_container_width=True,
         hide_index=True,
-        on_select="rerun",
-        selection_mode="single-row",
         column_config={
             "Code ROME": st.column_config.TextColumn("Code ROME", width="small"),
             "Nom": st.column_config.TextColumn("Nom du métier", width="large"),
@@ -590,13 +588,13 @@ def main():
         }
     )
 
-    # Afficher automatiquement le détail de la fiche sélectionnée
-    if event.selection.rows:
-        selected_idx = event.selection.rows[0]
-        fiche_selectionnee = fiches_page[selected_idx]
+    st.markdown("---")
 
-        st.markdown("---")
-        afficher_detail_fiche(fiche_selectionnee, repo)
+    # Afficher automatiquement le détail de la fiche recherchée
+    if "fiche_recherchee" in st.session_state and st.session_state.fiche_recherchee:
+        fiche_a_afficher = repo.get_fiche(st.session_state.fiche_recherchee)
+        if fiche_a_afficher:
+            afficher_detail_fiche(fiche_a_afficher, repo)
 
 
 if __name__ == "__main__":
