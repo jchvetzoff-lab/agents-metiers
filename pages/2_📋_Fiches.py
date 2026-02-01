@@ -556,13 +556,15 @@ def main():
 
     st.markdown("---")
 
-    # Créer le DataFrame pour l'affichage
+    # Créer le DataFrame pour l'affichage avec colonne Voir
     data = []
+    codes_rome_ordre = []
     for f in fiches_page:
         tension_val = f.perspectives.tension if f.perspectives else 0
         tension_str = f"{tension_val:.0%}" if tension_val else "-"
 
         data.append({
+            "👁️": False,  # Colonne checkbox pour voir
             "Code ROME": f.code_rome,
             "Nom": f.nom_masculin,
             "Statut": f.metadata.statut.value.replace("_", " ").title(),
@@ -570,62 +572,52 @@ def main():
             "MAJ": f.metadata.date_maj.strftime("%d/%m/%Y"),
             "Version": f.metadata.version
         })
+        codes_rome_ordre.append(f.code_rome)
 
     df = pd.DataFrame(data)
 
-    # Afficher le tableau simple (sans checkboxes)
-    st.dataframe(
+    # Afficher le tableau éditable avec colonne Voir
+    edited_df = st.data_editor(
         df,
         use_container_width=True,
         hide_index=True,
+        disabled=["Code ROME", "Nom", "Statut", "Tension", "MAJ", "Version"],
         column_config={
+            "👁️": st.column_config.CheckboxColumn(
+                "👁️",
+                help="Cliquez pour voir la fiche",
+                width="small"
+            ),
             "Code ROME": st.column_config.TextColumn("Code ROME", width="small"),
             "Nom": st.column_config.TextColumn("Nom du métier", width="large"),
             "Statut": st.column_config.TextColumn("Statut", width="small"),
             "Tension": st.column_config.TextColumn("Tension", width="small"),
             "MAJ": st.column_config.TextColumn("MAJ", width="small"),
             "Version": st.column_config.NumberColumn("V.", width="small")
-        }
+        },
+        key="fiches_table"
     )
 
-    st.markdown("---")
+    # Détecter quelle ligne a été cochée
+    lignes_cochees = edited_df[edited_df["👁️"] == True]
 
-    # Sélectionner une fiche du tableau pour voir le détail
-    st.subheader("👁️ Voir le détail d'une fiche")
+    if not lignes_cochees.empty:
+        # Prendre la première ligne cochée
+        idx_coche = lignes_cochees.index[0]
+        code_rome_selectionne = codes_rome_ordre[idx_coche]
 
-    if fiches_page:
-        codes_disponibles = [f.code_rome for f in fiches_page]
-        noms_mapping = {f.code_rome: f"{f.nom_masculin} ({f.code_rome})" for f in fiches_page}
-
-        col_select1, col_select2 = st.columns([4, 1])
-
-        with col_select1:
-            code_selectionne = st.selectbox(
-                "Choisissez une fiche de la page actuelle",
-                options=[""] + codes_disponibles,
-                format_func=lambda x: "Sélectionnez une fiche..." if x == "" else noms_mapping.get(x, x),
-                key="fiche_selectionnee_tableau",
-                label_visibility="collapsed"
-            )
-
-        with col_select2:
-            voir_clicked = st.button("👁️ Voir", type="primary", use_container_width=True, disabled=not code_selectionne)
-
-        # Afficher la fiche sélectionnée via le selectbox
-        if voir_clicked and code_selectionne:
-            st.session_state.fiche_a_afficher = code_selectionne
-
-    # Afficher le détail de la fiche (soit recherchée, soit sélectionnée du tableau)
-    fiche_a_afficher = None
-
-    if "fiche_a_afficher" in st.session_state and st.session_state.fiche_a_afficher:
-        fiche_a_afficher = repo.get_fiche(st.session_state.fiche_a_afficher)
-    elif "fiche_recherchee" in st.session_state and st.session_state.fiche_recherchee:
-        fiche_a_afficher = repo.get_fiche(st.session_state.fiche_recherchee)
-
-    if fiche_a_afficher:
+        # Afficher la fiche
         st.markdown("---")
-        afficher_detail_fiche(fiche_a_afficher, repo)
+        fiche_selectionnee = repo.get_fiche(code_rome_selectionne)
+        if fiche_selectionnee:
+            afficher_detail_fiche(fiche_selectionnee, repo)
+
+    # Afficher aussi la fiche recherchée si elle existe
+    elif "fiche_recherchee" in st.session_state and st.session_state.fiche_recherchee:
+        st.markdown("---")
+        fiche_recherchee = repo.get_fiche(st.session_state.fiche_recherchee)
+        if fiche_recherchee:
+            afficher_detail_fiche(fiche_recherchee, repo)
 
 
 if __name__ == "__main__":
