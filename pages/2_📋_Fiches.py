@@ -521,6 +521,29 @@ def main():
 
     st.markdown("---")
 
+    # Barre de recherche rapide au-dessus du tableau
+    st.markdown("### 🔍 Recherche rapide")
+    col_search1, col_search2 = st.columns([3, 1])
+
+    with col_search1:
+        recherche_rapide = st.text_input(
+            "Rechercher un métier",
+            placeholder="Tapez un nom de métier, une compétence, un mot-clé...",
+            label_visibility="collapsed",
+            key="recherche_rapide"
+        )
+
+    with col_search2:
+        if st.button("🔍 Rechercher", type="primary", use_container_width=True):
+            if recherche_rapide:
+                fiches = repo.search_fiches(recherche_rapide, limit=500)
+                if statut_filtre:
+                    fiches = [f for f in fiches if f.metadata.statut == statut_filtre]
+                st.session_state.page_fiches = 0
+                st.rerun()
+
+    st.markdown("---")
+
     # Créer le DataFrame pour l'affichage
     data = []
     for f in fiches_page:
