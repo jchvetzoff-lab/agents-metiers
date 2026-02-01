@@ -590,11 +590,42 @@ def main():
 
     st.markdown("---")
 
-    # Afficher automatiquement le détail de la fiche recherchée
-    if "fiche_recherchee" in st.session_state and st.session_state.fiche_recherchee:
+    # Sélectionner une fiche du tableau pour voir le détail
+    st.subheader("👁️ Voir le détail d'une fiche")
+
+    if fiches_page:
+        codes_disponibles = [f.code_rome for f in fiches_page]
+        noms_mapping = {f.code_rome: f"{f.nom_masculin} ({f.code_rome})" for f in fiches_page}
+
+        col_select1, col_select2 = st.columns([4, 1])
+
+        with col_select1:
+            code_selectionne = st.selectbox(
+                "Choisissez une fiche de la page actuelle",
+                options=[""] + codes_disponibles,
+                format_func=lambda x: "Sélectionnez une fiche..." if x == "" else noms_mapping.get(x, x),
+                key="fiche_selectionnee_tableau",
+                label_visibility="collapsed"
+            )
+
+        with col_select2:
+            voir_clicked = st.button("👁️ Voir", type="primary", use_container_width=True, disabled=not code_selectionne)
+
+        # Afficher la fiche sélectionnée via le selectbox
+        if voir_clicked and code_selectionne:
+            st.session_state.fiche_a_afficher = code_selectionne
+
+    # Afficher le détail de la fiche (soit recherchée, soit sélectionnée du tableau)
+    fiche_a_afficher = None
+
+    if "fiche_a_afficher" in st.session_state and st.session_state.fiche_a_afficher:
+        fiche_a_afficher = repo.get_fiche(st.session_state.fiche_a_afficher)
+    elif "fiche_recherchee" in st.session_state and st.session_state.fiche_recherchee:
         fiche_a_afficher = repo.get_fiche(st.session_state.fiche_recherchee)
-        if fiche_a_afficher:
-            afficher_detail_fiche(fiche_a_afficher, repo)
+
+    if fiche_a_afficher:
+        st.markdown("---")
+        afficher_detail_fiche(fiche_a_afficher, repo)
 
 
 if __name__ == "__main__":
