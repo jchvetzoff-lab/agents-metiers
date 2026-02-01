@@ -521,111 +521,59 @@ def main():
 
     st.markdown("---")
 
-    # Barre de recherche rapide avec autocomplétion
-    st.markdown("### 🔍 Recherche rapide")
+    # Afficher le tableau avec boutons
+    st.markdown("### 📋 Liste des fiches métiers")
 
-    # Préparer la liste de tous les métiers pour l'autocomplétion
-    toutes_fiches = repo.get_all_fiches(limit=2000)
-
-    # Créer un mapping nom -> code ROME
-    nom_to_code = {f.nom_masculin: f.code_rome for f in toutes_fiches}
-    options_recherche = ["Sélectionnez un métier..."] + sorted(list(nom_to_code.keys()))
-
-    col_search1, col_search2 = st.columns([4, 1])
-
-    with col_search1:
-        metier_selectionne = st.selectbox(
-            "Tapez pour rechercher un métier",
-            options=options_recherche,
-            index=0,
-            key="recherche_autocomplete",
-            label_visibility="collapsed",
-            help="Tapez les premières lettres pour filtrer les suggestions"
-        )
-
-    with col_search2:
-        rechercher_clicked = st.button("🔍 Rechercher", type="primary", use_container_width=True)
-
-    # Si le bouton est cliqué et un métier est sélectionné, stocker pour afficher la fiche
-    if rechercher_clicked and metier_selectionne != "Sélectionnez un métier...":
-        code_rome_recherche = nom_to_code[metier_selectionne]
-        st.session_state.fiche_recherchee = code_rome_recherche
-        # Filtrer aussi le tableau
-        fiches = [f for f in toutes_fiches if f.code_rome == code_rome_recherche]
-        st.session_state.page_fiches = 0
+    # En-tête du tableau
+    header_cols = st.columns([0.8, 2.5, 1, 0.8, 0.8, 0.5, 0.8])
+    with header_cols[0]:
+        st.markdown("**Code ROME**")
+    with header_cols[1]:
+        st.markdown("**Nom du métier**")
+    with header_cols[2]:
+        st.markdown("**Statut**")
+    with header_cols[3]:
+        st.markdown("**Tension**")
+    with header_cols[4]:
+        st.markdown("**MAJ**")
+    with header_cols[5]:
+        st.markdown("**V.**")
+    with header_cols[6]:
+        st.markdown("**Action**")
 
     st.markdown("---")
 
-    # Créer le DataFrame pour l'affichage
-    data = []
-    for f in fiches_page:
+    # Afficher chaque ligne avec un bouton
+    for idx, f in enumerate(fiches_page):
         tension_val = f.perspectives.tension if f.perspectives else 0
         tension_str = f"{tension_val:.0%}" if tension_val else "-"
 
-        data.append({
-            "Code ROME": f.code_rome,
-            "Nom": f.nom_masculin,
-            "Statut": f.metadata.statut.value.replace("_", " ").title(),
-            "Tension": tension_str,
-            "MAJ": f.metadata.date_maj.strftime("%d/%m/%Y"),
-            "Version": f.metadata.version
-        })
+        cols = st.columns([0.8, 2.5, 1, 0.8, 0.8, 0.5, 0.8])
 
-    df = pd.DataFrame(data)
-
-    # Afficher le tableau simple (sans checkboxes)
-    st.dataframe(
-        df,
-        use_container_width=True,
-        hide_index=True,
-        column_config={
-            "Code ROME": st.column_config.TextColumn("Code ROME", width="small"),
-            "Nom": st.column_config.TextColumn("Nom du métier", width="large"),
-            "Statut": st.column_config.TextColumn("Statut", width="small"),
-            "Tension": st.column_config.TextColumn("Tension", width="small"),
-            "MAJ": st.column_config.TextColumn("MAJ", width="small"),
-            "Version": st.column_config.NumberColumn("V.", width="small")
-        }
-    )
+        with cols[0]:
+            st.text(f.code_rome)
+        with cols[1]:
+            st.text(f.nom_masculin)
+        with cols[2]:
+            st.text(f.metadata.statut.value.replace("_", " ").title())
+        with cols[3]:
+            st.text(tension_str)
+        with cols[4]:
+            st.text(f.metadata.date_maj.strftime("%d/%m/%Y"))
+        with cols[5]:
+            st.text(str(f.metadata.version))
+        with cols[6]:
+            if st.button("👁️ Voir", key=f"voir_{f.code_rome}_{idx}", type="primary", use_container_width=True):
+                st.session_state.fiche_a_afficher = f.code_rome
+                st.rerun()
 
     st.markdown("---")
 
-    # Sélectionner une fiche du tableau pour voir le détail
-    st.subheader("👁️ Voir le détail d'une fiche")
-
-    if fiches_page:
-        codes_disponibles = [f.code_rome for f in fiches_page]
-        noms_mapping = {f.code_rome: f"{f.nom_masculin} ({f.code_rome})" for f in fiches_page}
-
-        col_select1, col_select2 = st.columns([4, 1])
-
-        with col_select1:
-            code_selectionne = st.selectbox(
-                "Choisissez une fiche de la page actuelle",
-                options=[""] + codes_disponibles,
-                format_func=lambda x: "Sélectionnez une fiche..." if x == "" else noms_mapping.get(x, x),
-                key="fiche_selectionnee_tableau",
-                label_visibility="collapsed"
-            )
-
-        with col_select2:
-            voir_clicked = st.button("👁️ Voir", type="primary", use_container_width=True, disabled=not code_selectionne)
-
-        # Afficher la fiche sélectionnée via le selectbox
-        if voir_clicked and code_selectionne:
-            st.session_state.fiche_a_afficher = code_selectionne
-
-    # Afficher le détail de la fiche (soit recherchée, soit sélectionnée du tableau)
-    fiche_a_afficher = None
-
+    # Afficher le détail de la fiche sélectionnée
     if "fiche_a_afficher" in st.session_state and st.session_state.fiche_a_afficher:
         fiche_a_afficher = repo.get_fiche(st.session_state.fiche_a_afficher)
-    elif "fiche_recherchee" in st.session_state and st.session_state.fiche_recherchee:
-        fiche_a_afficher = repo.get_fiche(st.session_state.fiche_recherchee)
-
-    if fiche_a_afficher:
-        st.markdown("---")
-        afficher_detail_fiche(fiche_a_afficher, repo)
+        if fiche_a_afficher:
+            afficher_detail_fiche(fiche_a_afficher, repo)
 
 
 if __name__ == "__main__":
