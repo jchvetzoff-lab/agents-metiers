@@ -521,26 +521,26 @@ def main():
 
     st.markdown("---")
 
-    # Barre de recherche rapide au-dessus du tableau
+    # Barre de recherche rapide avec autocomplétion
     st.markdown("### 🔍 Recherche rapide")
-    col_search1, col_search2 = st.columns([3, 1])
 
-    with col_search1:
-        recherche_rapide = st.text_input(
-            "Rechercher un métier",
-            placeholder="Tapez un nom de métier, une compétence, un mot-clé...",
-            label_visibility="collapsed",
-            key="recherche_rapide"
-        )
+    # Préparer la liste de tous les métiers pour l'autocomplétion
+    toutes_fiches = repo.get_all_fiches(limit=2000)
+    options_recherche = [""] + [f"{f.code_rome} - {f.nom_masculin}" for f in toutes_fiches]
 
-    with col_search2:
-        if st.button("🔍 Rechercher", type="primary", use_container_width=True):
-            if recherche_rapide:
-                fiches = repo.search_fiches(recherche_rapide, limit=500)
-                if statut_filtre:
-                    fiches = [f for f in fiches if f.metadata.statut == statut_filtre]
-                st.session_state.page_fiches = 0
-                st.rerun()
+    metier_selectionne = st.selectbox(
+        "Tapez pour rechercher un métier (autocomplétion)",
+        options=options_recherche,
+        index=0,
+        key="recherche_autocomplete",
+        help="Commencez à taper et les suggestions apparaîtront automatiquement"
+    )
+
+    # Si un métier est sélectionné via l'autocomplétion, filtrer les fiches
+    if metier_selectionne:
+        code_rome_recherche = metier_selectionne.split(" - ")[0]
+        fiches = [f for f in toutes_fiches if f.code_rome == code_rome_recherche]
+        st.session_state.page_fiches = 0
 
     st.markdown("---")
 
