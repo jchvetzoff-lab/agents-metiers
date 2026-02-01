@@ -538,11 +538,15 @@ def main():
 
     df = pd.DataFrame(data)
 
-    # Afficher le tableau avec sélection
-    st.dataframe(
+    # Afficher le tableau avec sélection cliquable
+    st.caption("👆 Cliquez sur une ligne pour voir le détail de la fiche")
+
+    event = st.dataframe(
         df,
         use_container_width=True,
         hide_index=True,
+        on_select="rerun",
+        selection_mode="single-row",
         column_config={
             "Code ROME": st.column_config.TextColumn("Code ROME", width="small"),
             "Nom": st.column_config.TextColumn("Nom du métier", width="large"),
@@ -553,25 +557,13 @@ def main():
         }
     )
 
-    st.markdown("---")
+    # Afficher automatiquement le détail de la fiche sélectionnée
+    if event.selection.rows:
+        selected_idx = event.selection.rows[0]
+        fiche_selectionnee = fiches_page[selected_idx]
 
-    # Sélection d'une fiche pour le détail
-    st.subheader("📄 Voir le détail d'une fiche")
-
-    codes_disponibles = [f.code_rome for f in fiches_page]
-    noms_mapping = {f.code_rome: f"{f.code_rome} - {f.nom_masculin}" for f in fiches_page}
-
-    code_selectionne = st.selectbox(
-        "Sélectionnez une fiche",
-        options=codes_disponibles,
-        format_func=lambda x: noms_mapping.get(x, x),
-        index=0 if codes_disponibles else None
-    )
-
-    if code_selectionne:
-        fiche_detail = next((f for f in fiches_page if f.code_rome == code_selectionne), None)
-        if fiche_detail:
-            afficher_detail_fiche(fiche_detail, repo)
+        st.markdown("---")
+        afficher_detail_fiche(fiche_selectionnee, repo)
 
 
 if __name__ == "__main__":
