@@ -13,8 +13,8 @@ class FichePDF(FPDF):
 
     def __init__(self):
         super().__init__()
-        self.set_auto_page_break(auto=True, margin=25)
-        self.set_margins(25, 25, 25)
+        self.set_auto_page_break(auto=True, margin=20)
+        self.set_margins(20, 20, 20)
 
     def header(self):
         """En-tête simple."""
@@ -50,14 +50,18 @@ def generer_pdf_fiche(fiche: FicheMetier, output_path: Optional[Path] = None) ->
     pdf.ln(5)
 
     # Appellations
+    pdf.set_x(pdf.l_margin)
     pdf.set_font('Arial', 'B', 11)
     pdf.set_text_color(0, 0, 0)
     pdf.multi_cell(0, 6, 'APPELLATIONS')
     pdf.ln(2)
 
+    pdf.set_x(pdf.l_margin)
     pdf.set_font('Arial', '', 10)
     pdf.multi_cell(0, 5, f'Masculin: {fiche.nom_masculin}')
+    pdf.set_x(pdf.l_margin)
     pdf.multi_cell(0, 5, f'Feminin: {fiche.nom_feminin}')
+    pdf.set_x(pdf.l_margin)
     pdf.multi_cell(0, 5, f'Epicene: {fiche.nom_epicene}')
     pdf.ln(3)
 
