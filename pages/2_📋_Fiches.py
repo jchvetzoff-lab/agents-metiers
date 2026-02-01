@@ -526,7 +526,10 @@ def main():
 
     # Préparer la liste de tous les métiers pour l'autocomplétion
     toutes_fiches = repo.get_all_fiches(limit=2000)
-    options_recherche = [""] + [f"{f.code_rome} - {f.nom_masculin}" for f in toutes_fiches]
+
+    # Créer un mapping nom -> code ROME
+    nom_to_code = {f.nom_masculin: f.code_rome for f in toutes_fiches}
+    options_recherche = [""] + list(nom_to_code.keys())
 
     metier_selectionne = st.selectbox(
         "Tapez pour rechercher un métier (autocomplétion)",
@@ -538,7 +541,7 @@ def main():
 
     # Si un métier est sélectionné via l'autocomplétion, filtrer les fiches
     if metier_selectionne:
-        code_rome_recherche = metier_selectionne.split(" - ")[0]
+        code_rome_recherche = nom_to_code[metier_selectionne]
         fiches = [f for f in toutes_fiches if f.code_rome == code_rome_recherche]
         st.session_state.page_fiches = 0
 
