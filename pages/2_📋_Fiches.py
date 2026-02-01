@@ -529,18 +529,25 @@ def main():
 
     # Créer un mapping nom -> code ROME
     nom_to_code = {f.nom_masculin: f.code_rome for f in toutes_fiches}
-    options_recherche = [""] + list(nom_to_code.keys())
+    options_recherche = ["Sélectionnez un métier..."] + sorted(list(nom_to_code.keys()))
 
-    metier_selectionne = st.selectbox(
-        "Tapez pour rechercher un métier (autocomplétion)",
-        options=options_recherche,
-        index=0,
-        key="recherche_autocomplete",
-        help="Commencez à taper et les suggestions apparaîtront automatiquement"
-    )
+    col_search1, col_search2 = st.columns([4, 1])
 
-    # Si un métier est sélectionné via l'autocomplétion, filtrer les fiches
-    if metier_selectionne:
+    with col_search1:
+        metier_selectionne = st.selectbox(
+            "Tapez pour rechercher un métier",
+            options=options_recherche,
+            index=0,
+            key="recherche_autocomplete",
+            label_visibility="collapsed",
+            help="Tapez les premières lettres pour filtrer les suggestions"
+        )
+
+    with col_search2:
+        rechercher_clicked = st.button("🔍 Rechercher", type="primary", use_container_width=True)
+
+    # Si le bouton est cliqué et un métier est sélectionné, afficher la fiche
+    if rechercher_clicked and metier_selectionne != "Sélectionnez un métier...":
         code_rome_recherche = nom_to_code[metier_selectionne]
         fiches = [f for f in toutes_fiches if f.code_rome == code_rome_recherche]
         st.session_state.page_fiches = 0
