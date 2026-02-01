@@ -427,6 +427,8 @@ def afficher_detail_fiche(fiche: FicheMetier, repo: Repository):
 
             except Exception as e:
                 st.error(f"❌ Erreur lors de la génération du PDF : {str(e)}")
+                import traceback
+                st.code(traceback.format_exc())
 
 
 def main():
