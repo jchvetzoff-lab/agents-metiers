@@ -24,6 +24,37 @@ Système multi-agents autonome pour la création et maintenance automatique de f
 | **Système Variantes** | `database/models.py` + `repository.py` | ✅ Fonctionnel (90 variantes/fiche) |
 | **Export PDF** | `utils/pdf_generator.py` | ✅ Fonctionnel (fpdf2) |
 | **Déploiement Cloud** | `.streamlit/` + guides | ✅ Configuré pour Streamlit Cloud |
+| **Design System SOJAI** | `.streamlit/style.css` + `utils/ui_helpers.py` | ✅ Appliqué sur toutes les pages (2 fév. 2026) |
+
+### ✅ Design System SOJAI (2 fév. 2026)
+
+Transformation complète de l'interface Streamlit avec le design system professionnel inspiré de [Diagnocat.com](https://diagnocat.com/en).
+
+**Design System Implémenté** :
+- **Palette de couleurs** : Violet principal (#4A39C0), Rose accent (#FF3254), Fond violet clair (#F9F8FF)
+- **Typographie** : Inter (corps), Playfair Display (titres), hiérarchie typographique professionnelle
+- **Espacements** : 60-100px verticaux, 24-40px padding cards, 24px border-radius
+- **Animations** : fadeIn, float, shimmer, hover effects (+8px translateY)
+- **Composants** : Cards stylées, badges pill, gradients violet-rose, listes à coches
+
+**Fichiers créés** :
+- `.streamlit/style.css` (1 121 lignes) — CSS complet avec variables, animations, composants
+- `utils/ui_helpers.py` (220 lignes) — 9 helpers réutilisables (sojai_card, metric_card, gradient_text, section_header, etc.)
+- `pages/4_📖_Guide.py` (450 lignes) — Page de documentation complète avec tutoriels, FAQ, workflow recommandé
+
+**Pages refactorisées** :
+- ✅ `streamlit_app.py` — Page d'accueil avec hero section, métriques stylées, navigation cards
+- ✅ `pages/1_📊_Dashboard.py` — Graphiques avec palette SOJAI, métriques stylées, logs élégants
+- ✅ `pages/2_📋_Fiches.py` — Badges de statut, indicateurs de tension, cards élégantes, sélecteurs variantes
+- ✅ `pages/3_🔧_Actions.py` — Onglets stylés + **NOUVEAU tab "🆕 Créer une fiche"**
+- ✅ `pages/4_📖_Guide.py` — **NOUVELLE page** documentation complète
+
+**Commits** :
+- `e83cf5f` — Ajout design system SOJAI + Page Guide
+- `b39dcb4` — Dashboard + Fiches refactorisés
+- `c03a4f6` — Actions + Page d'accueil + finalisations
+
+**Résultat** : Interface 100% professionnelle, fluide et cohérente visuellement.
 
 ### ✅ Données ROME Importées (27 janv. 2026)
 
@@ -205,6 +236,81 @@ Téléchargement direct des fiches au format PDF professionnel.
 
 **Module** : `utils/pdf_generator.py` (fpdf2, pure Python)
 
+### 6. ✅ Design System SOJAI (Terminé - 2 fév. 2026)
+Transformation complète de l'interface avec design professionnel inspiré de Diagnocat.
+
+**Implémentation** :
+- `.streamlit/style.css` — 1 121 lignes de CSS avec variables, animations, composants
+- `utils/ui_helpers.py` — 9 helpers réutilisables (sojai_card, metric_card, gradient_text, etc.)
+- `pages/4_📖_Guide.py` — Nouvelle page de documentation complète
+
+**Design System** :
+- **Couleurs** : Violet #4A39C0, Rose #FF3254, Fond violet clair #F9F8FF
+- **Typographie** : Inter (corps), Playfair Display (titres)
+- **Animations** : fadeIn, float, shimmer, hover effects
+- **Composants** : Cards (24px radius), badges pill (100px), gradients, listes à coches
+
+**Pages refactorisées** : Accueil, Dashboard, Fiches, Actions, Guide (5 pages)
+
+**Lancer l'interface** :
+```bash
+streamlit run streamlit_app.py
+```
+
+---
+
+## 🚧 Migration Next.js Planifiée (Février 2026)
+
+**Objectif** : Transformer l'interface Streamlit en application web Next.js professionnelle pour remplacer l'aspect "cheap" de Streamlit.
+
+### Architecture Proposée
+
+**Frontend** : Next.js 15 + React 19 + TypeScript
+- Framework : Next.js avec App Router
+- Styling : Tailwind CSS 4 (design system SOJAI déjà prêt)
+- Animations : Framer Motion + GSAP
+- Graphiques : Recharts ou Plotly.js
+- État : Zustand (si nécessaire)
+
+**Backend** : FastAPI (Python)
+- API REST pour exposer la base de données SQLite
+- Endpoints : `/api/fiches`, `/api/stats`, `/api/enrichir`, `/api/variantes`
+- Conservation de tous les agents existants (aucune modification)
+- Migration simple du code existant
+
+**Avantages vs Streamlit** :
+- ✅ Design 100% personnalisable, professionnel
+- ✅ Animations fluides (Framer Motion, transitions)
+- ✅ Navigation SPA instantanée (pas de rechargements)
+- ✅ UX moderne et interactive
+- ✅ SEO optimisé (SSR)
+- ✅ Déploiement gratuit sur Vercel (auto-deploy)
+
+**Structure planifiée** :
+```
+agents-metiers-web/
+├── frontend/              # Next.js app
+│   ├── src/
+│   │   ├── app/          # Pages (dashboard, fiches, actions, guide)
+│   │   ├── components/   # Composants React réutilisables
+│   │   ├── lib/          # API client, utils
+│   │   └── styles/       # Tailwind + design system SOJAI
+│   └── package.json
+│
+└── backend/               # FastAPI (code Python actuel)
+    ├── main.py           # FastAPI app avec routes
+    ├── agents/           # Agents existants (inchangés)
+    ├── database/         # Repository existant
+    └── requirements.txt
+```
+
+**Durée estimée** : ~2 jours
+- Backend API (FastAPI) : 2-3h
+- Frontend Next.js (4 pages) : 1-2 jours
+- Tests + déploiement : 2-3h
+
+**Statut** : ⏳ En attente de validation utilisateur
+
 ---
 
 ## À FAIRE (Prochaines Étapes)
@@ -242,10 +348,11 @@ Réessayer la création d'application sur https://francetravail.io :
 agents-metiers/
 ├── main.py                 # Point d'entrée CLI
 ├── streamlit_app.py        # Interface web Streamlit (accueil)
-├── pages/                  # Pages Streamlit
-│   ├── 1_📊_Dashboard.py   # Stats et graphiques
+├── pages/                  # Pages Streamlit (design SOJAI)
+│   ├── 1_📊_Dashboard.py   # Stats et graphiques stylés
 │   ├── 2_📋_Fiches.py      # Tableau des fiches + recherche + sélecteurs variantes
-│   └── 3_🔧_Actions.py     # Enrichissement, correction, publication, variantes
+│   ├── 3_🔧_Actions.py     # Enrichissement, correction, publication, variantes + création
+│   └── 4_📖_Guide.py       # Guide complet d'utilisation (NOUVEAU - 2 fév. 2026)
 ├── config.py               # Configuration globale
 ├── requirements.txt        # Dépendances
 ├── .env                    # Variables d'environnement (API keys)
@@ -270,10 +377,12 @@ agents-metiers/
 │   └── test_e2e_variantes.py      # Test de bout en bout variantes
 ├── utils/
 │   ├── __init__.py                # Exports module utilitaire
+│   ├── ui_helpers.py              # 9 helpers UI SOJAI (NOUVEAU - 2 fév. 2026)
 │   └── pdf_generator.py           # Génération PDF (fpdf2)
 ├── .streamlit/
 │   ├── config.toml                # Configuration Streamlit (thème violet)
-│   └── secrets.toml.example       # Template pour secrets
+│   ├── secrets.toml.example       # Template pour secrets
+│   └── style.css                  # Design system SOJAI complet (NOUVEAU - 2 fév. 2026)
 ├── VARIANTES_README.md            # Documentation système variantes
 ├── STREAMLIT_CLOUD_DEPLOY.md      # Guide complet déploiement Cloud
 ├── QUICKSTART.md                  # Guide rapide déploiement (4 étapes)
@@ -415,17 +524,32 @@ Chaque fiche possède 2 dates :
 
 ---
 
-## 🚀 État du Projet (30 janv. 2026)
+## 🚀 État du Projet (2 fév. 2026)
 
 **Système complet et opérationnel** :
 - ✅ 1 584 fiches ROME importées
-- ✅ Interface Streamlit complète (Dashboard, Fiches, Actions)
+- ✅ Interface Streamlit complète (Dashboard, Fiches, Actions, Guide)
+- ✅ **Design System SOJAI** appliqué sur toutes les pages (2 fév. 2026)
 - ✅ Enrichissement automatique via Claude API
 - ✅ Système de variantes multilingues (90 variantes/fiche)
+- ✅ Export PDF professionnel
 - ✅ Déploiement Streamlit Cloud configuré
 - ✅ Tests unitaires et E2E passants
-- ✅ Documentation complète (3 guides)
+- ✅ Documentation complète (4 guides)
+
+**Interface professionnelle avec design SOJAI** :
+- Pages refactorisées : Accueil, Dashboard, Fiches, Actions, Guide
+- Design system complet : 1 121 lignes CSS + 9 helpers UI
+- Palette violet/rose, animations fluides, composants élégants
+
+**Prochaine étape planifiée** :
+- 🚧 Migration vers Next.js + React pour remplacer Streamlit (design 100% personnalisable)
 
 **Prêt pour production** avec API Claude configurée.
 
 **Repository GitHub** : https://github.com/jchvetzoff-lab/agents-metiers
+
+**Derniers commits** :
+- `c03a4f6` — Design SOJAI complet: Actions + Page d'accueil + finalisations
+- `b39dcb4` — Design SOJAI: Dashboard + Fiches refactorisés
+- `e83cf5f` — Ajout design system SOJAI + Page Guide
