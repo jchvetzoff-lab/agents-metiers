@@ -1,5 +1,5 @@
 """
-Page Actions - Enrichissement batch, correction, publication.
+Page Actions - Enrichissement batch, correction, publication avec design SOJAI.
 """
 import streamlit as st
 import asyncio
@@ -15,6 +15,19 @@ from database.models import (
     LangueSupporte, TrancheAge, FormatContenu, GenreGrammatical
 )
 from config import get_config
+from utils.ui_helpers import (
+    load_custom_css, gradient_text, section_header, sojai_card, metric_card
+)
+
+# Configuration de la page
+st.set_page_config(
+    page_title="Actions - Agents Métiers",
+    page_icon="🔧",
+    layout="wide"
+)
+
+# Charger le CSS personnalisé
+load_custom_css()
 
 # Import conditionnel des agents
 try:
@@ -51,6 +64,24 @@ def get_claude_client():
         return None
 
     return anthropic.AsyncAnthropic(api_key=config.api.claude_api_key)
+
+
+async def creer_fiche_async(nom_metier: str, progress_callback=None):
+    """Crée une nouvelle fiche à partir d'un nom de métier."""
+    repo = get_repo()
+    client = get_claude_client()
+
+    agent = AgentRedacteurFiche(repository=repo, claude_client=client)
+
+    if progress_callback:
+        progress_callback(0.1, f"Création de la fiche '{nom_metier}'...")
+
+    result = await agent.creer_fiche_from_nom(nom_metier)
+
+    if progress_callback:
+        progress_callback(1.0, "Fiche créée!")
+
+    return result
 
 
 async def enrichir_fiches_async(codes_rome: list, progress_callback=None):
@@ -102,7 +133,6 @@ def publier_fiches(codes_rome: list):
                 fiche.metadata.date_maj = datetime.now()
                 repo.update_fiche(fiche)
 
-                # Log audit
                 repo.add_audit_log(AuditLog(
                     type_evenement=TypeEvenement.PUBLICATION,
                     code_rome=code,
@@ -132,7 +162,6 @@ async def generer_variantes_async(code_rome: str, langues: list, tranches_age: l
     if progress_callback:
         progress_callback(0.1, f"Chargement de la fiche {code_rome}...")
 
-    # Récupérer la fiche
     fiche = repo.get_fiche(code_rome)
     if not fiche:
         return {"erreur": f"Fiche {code_rome} non trouvée"}
@@ -140,7 +169,6 @@ async def generer_variantes_async(code_rome: str, langues: list, tranches_age: l
     if progress_callback:
         progress_callback(0.3, "Génération des variantes avec Claude...")
 
-    # Générer les variantes
     variantes = await agent.generer_variantes(
         fiche=fiche,
         langues=[LangueSupporte(l) for l in langues],
@@ -152,7 +180,6 @@ async def generer_variantes_async(code_rome: str, langues: list, tranches_age: l
     if progress_callback:
         progress_callback(0.7, f"Sauvegarde de {len(variantes)} variantes...")
 
-    # Sauvegarder les variantes
     nb_saved = 0
     for variante in variantes:
         repo.save_variante(variante)
@@ -169,62 +196,161 @@ async def generer_variantes_async(code_rome: str, langues: list, tranches_age: l
 
 
 def main():
-    st.title("🔧 Actions")
-    st.markdown("Lancez les agents pour enrichir, corriger et publier les fiches.")
+    # En-tête avec gradient
+    st.markdown("""
+    <h1 class="gradient-text" style="text-align: center; margin-bottom: 16px;">
+        🔧 Actions
+    </h1>
+    <p style="text-align: center; color: var(--text-muted); font-size: 20px; margin-bottom: 60px;">
+        Lancez les agents IA pour créer, enrichir, corriger et publier vos fiches métiers
+    </p>
+    """, unsafe_allow_html=True)
 
     repo = get_repo()
     config = get_config()
 
-    # Vérifications système
+    # Vérifications système avec cards stylées
+    st.markdown("<div style='margin-bottom: 40px;'>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        if AGENTS_DISPONIBLES:
-            st.success("✅ Agents disponibles")
-        else:
-            st.error("❌ Agents non disponibles")
+        status = "✅ Disponibles" if AGENTS_DISPONIBLES else "❌ Non disponibles"
+        color = "var(--primary-purple)" if AGENTS_DISPONIBLES else "var(--pink-accent)"
+        st.markdown(f"""
+        <div class="sojai-card" style="padding: 20px; text-align: center;">
+            <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Agents IA</div>
+            <div style="font-weight: 600; color: {color}; font-size: 16px;">{status}</div>
+        </div>
+        """, unsafe_allow_html=True)
 
     with col2:
-        if ANTHROPIC_DISPONIBLE:
-            st.success("✅ Anthropic SDK installé")
-        else:
-            st.warning("⚠️ Anthropic SDK non installé")
+        status_anthropic = "✅ Installé" if ANTHROPIC_DISPONIBLE else "❌ Non installé"
+        color_anthropic = "var(--primary-purple)" if ANTHROPIC_DISPONIBLE else "var(--pink-accent)"
+        st.markdown(f"""
+        <div class="sojai-card" style="padding: 20px; text-align: center;">
+            <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Anthropic SDK</div>
+            <div style="font-weight: 600; color: {color_anthropic}; font-size: 16px;">{status_anthropic}</div>
+        </div>
+        """, unsafe_allow_html=True)
 
     with col3:
-        if config.api.claude_api_key:
-            st.success("✅ API Key configurée")
-        else:
-            st.warning("⚠️ API Key non configurée")
+        status_key = "✅ Configurée" if config.api.claude_api_key else "❌ Manquante"
+        color_key = "var(--primary-purple)" if config.api.claude_api_key else "var(--pink-accent)"
+        st.markdown(f"""
+        <div class="sojai-card" style="padding: 20px; text-align: center;">
+            <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">API Key Claude</div>
+            <div style="font-weight: 600; color: {color_key}; font-size: 16px;">{status_key}</div>
+        </div>
+        """, unsafe_allow_html=True)
 
-    st.markdown("---")
+    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin: 60px 0;'></div>", unsafe_allow_html=True)
 
-    # Tabs pour les différentes actions
-    tab1, tab2, tab3, tab4 = st.tabs(["📝 Enrichissement", "🔧 Correction", "📢 Publication", "🌐 Variantes"])
+    # Tabs stylisés
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        "🆕 Créer une fiche",
+        "📝 Enrichissement",
+        "🔧 Correction",
+        "📢 Publication",
+        "🌐 Variantes"
+    ])
 
-    # ==========================================================================
-    # TAB 1: Enrichissement
-    # ==========================================================================
+    # ==================================================================
+    # TAB 1: CRÉER UNE FICHE
+    # ==================================================================
     with tab1:
-        st.subheader("📝 Enrichissement des fiches")
-        st.markdown("""
-        L'agent **RedacteurFiche** utilise Claude pour enrichir les fiches brouillon :
-        - Description complète du métier
-        - Compétences techniques et transversales
-        - Formations et certifications
-        - Estimations salariales
-        - Perspectives d'évolution
-        """)
+        section_header(
+            "Créer une nouvelle fiche métier",
+            "L'agent génère automatiquement une fiche complète à partir d'un simple nom de métier.",
+            badge_text="NOUVEAU"
+        )
 
-        # Compteurs
+        st.markdown("<div style='margin: 30px 0;'>", unsafe_allow_html=True)
+
+        # Formulaire de création
+        nom_metier_input = st.text_input(
+            "Nom du métier",
+            placeholder="Ex: Prompt Engineer, Data Analyst, UX Designer...",
+            help="Entrez le nom du métier que vous souhaitez créer"
+        )
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        if st.button("🆕 Créer la fiche", type="primary", disabled=not AGENTS_DISPONIBLES or not nom_metier_input):
+            if not config.api.claude_api_key:
+                st.warning("⚠️ L'API Claude n'est pas configurée. La création utilisera le mode simulation.")
+
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+
+            def update_progress(value, text):
+                progress_bar.progress(value)
+                status_text.text(text)
+
+            with st.spinner(f"Création de '{nom_metier_input}' en cours..."):
+                try:
+                    result = asyncio.run(creer_fiche_async(nom_metier_input, update_progress))
+
+                    if result.get("status") == "success":
+                        st.success(f"✅ Fiche créée avec succès !")
+                        st.balloons()
+
+                        fiche = result.get("fiche")
+                        if fiche:
+                            st.markdown(f"""
+                            <div class="sojai-card" style="margin-top: 20px;">
+                                <h3 style="color: var(--primary-purple); margin-bottom: 12px;">{fiche.nom_masculin}</h3>
+                                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 16px;">
+                                    <div>
+                                        <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">Code ROME</div>
+                                        <div style="font-weight: 600;">{fiche.code_rome}</div>
+                                    </div>
+                                    <div>
+                                        <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">Statut</div>
+                                        <div style="font-weight: 600;">{fiche.metadata.statut.value.replace('_', ' ').title()}</div>
+                                    </div>
+                                </div>
+                                <p style="color: var(--text-muted); font-size: 14px; margin: 0;">
+                                    {fiche.description[:200] if fiche.description else 'Description générée'}...
+                                </p>
+                            </div>
+                            """, unsafe_allow_html=True)
+                    else:
+                        st.error(f"❌ Erreur : {result.get('error', 'Erreur inconnue')}")
+
+                except Exception as e:
+                    st.error(f"❌ Erreur lors de la création : {str(e)}")
+
+    # ==================================================================
+    # TAB 2: ENRICHISSEMENT
+    # ==================================================================
+    with tab2:
+        section_header(
+            "Enrichissement automatique des fiches",
+            "L'agent RedacteurFiche utilise Claude pour compléter les fiches brouillon avec toutes les informations nécessaires.",
+            badge_text="IA"
+        )
+
         nb_brouillons = repo.count_fiches(StatutFiche.BROUILLON)
-        st.info(f"📊 **{nb_brouillons}** fiches en statut brouillon disponibles pour enrichissement")
+
+        st.markdown(f"""
+        <div class="sojai-card" style="margin: 30px 0; padding: 24px; background: var(--bg-light-purple);">
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <div style="font-size: 40px;">📊</div>
+                <div>
+                    <div style="font-size: 32px; font-weight: 700; color: var(--primary-purple);">{nb_brouillons}</div>
+                    <div style="color: var(--text-muted); font-size: 14px;">fiches en brouillon disponibles</div>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
         # Options
         col1, col2 = st.columns(2)
 
         with col1:
             mode_enrichissement = st.radio(
-                "Mode",
+                "Mode d'enrichissement",
                 ["Batch automatique", "Fiches spécifiques"],
                 index=0
             )
@@ -239,7 +365,6 @@ def main():
                 )
                 codes_a_traiter = None
             else:
-                # Sélection manuelle
                 fiches_brouillon = repo.get_all_fiches(statut=StatutFiche.BROUILLON, limit=100)
                 options = {f.code_rome: f"{f.code_rome} - {f.nom_masculin}" for f in fiches_brouillon}
 
@@ -251,6 +376,19 @@ def main():
                 )
                 codes_a_traiter = codes_selectionnes
                 batch_size = len(codes_selectionnes)
+
+        st.markdown("<div style='margin: 20px 0;'>", unsafe_allow_html=True)
+
+        # Estimation du coût
+        cout_estime = batch_size * 0.08
+        st.markdown(f"""
+        <div style="padding: 16px; background: var(--bg-light-purple); border-radius: 12px; margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: var(--text-muted); font-size: 14px;">💰 Coût estimé</span>
+                <span style="font-weight: 700; color: var(--primary-purple); font-size: 20px;">~${cout_estime:.2f}</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
         # Bouton d'exécution
         if st.button("🚀 Lancer l'enrichissement", type="primary", disabled=not AGENTS_DISPONIBLES or batch_size == 0):
@@ -269,18 +407,15 @@ def main():
                     if codes_a_traiter:
                         result = asyncio.run(enrichir_fiches_async(codes_a_traiter, update_progress))
                     else:
-                        # Récupérer les codes des fiches brouillon
                         fiches = repo.get_all_fiches(statut=StatutFiche.BROUILLON, limit=batch_size)
                         codes = [f.code_rome for f in fiches]
                         result = asyncio.run(enrichir_fiches_async(codes, update_progress))
 
-                    # Afficher les résultats
                     st.success(f"✅ Enrichissement terminé : {result.get('fiches_enrichies', 0)} fiche(s) enrichie(s)")
 
                     if result.get("erreurs", 0) > 0:
                         st.warning(f"⚠️ {result['erreurs']} erreur(s) rencontrée(s)")
 
-                    # Détails
                     with st.expander("📋 Détails"):
                         for detail in result.get("details", []):
                             icon = "✅" if detail["status"] == "enrichie" else "❌"
@@ -289,21 +424,31 @@ def main():
                 except Exception as e:
                     st.error(f"❌ Erreur lors de l'enrichissement : {str(e)}")
 
-    # ==========================================================================
-    # TAB 2: Correction
-    # ==========================================================================
-    with tab2:
-        st.subheader("🔧 Correction orthographique")
-        st.markdown("""
-        L'agent **CorrecteurLangue** utilise Claude pour corriger :
-        - Orthographe et grammaire
-        - Typographie (espaces, ponctuation)
-        - Cohérence du style
-        """)
+        st.markdown("</div>", unsafe_allow_html=True)
 
-        # Compteurs
+    # ==================================================================
+    # TAB 3: CORRECTION
+    # ==================================================================
+    with tab3:
+        section_header(
+            "Correction orthographique et grammaticale",
+            "L'agent CorrecteurLangue utilise Claude pour corriger l'orthographe, la grammaire et la typographie.",
+            badge_text="QUALITÉ"
+        )
+
         nb_en_validation = repo.count_fiches(StatutFiche.EN_VALIDATION)
-        st.info(f"📊 **{nb_en_validation}** fiches en validation disponibles pour correction")
+
+        st.markdown(f"""
+        <div class="sojai-card" style="margin: 30px 0; padding: 24px; background: var(--bg-light-purple);">
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <div style="font-size: 40px;">🔧</div>
+                <div>
+                    <div style="font-size: 32px; font-weight: 700; color: var(--primary-purple);">{nb_en_validation}</div>
+                    <div style="color: var(--text-muted); font-size: 14px;">fiches en validation disponibles</div>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
         # Options
         col1, col2 = st.columns(2)
@@ -331,7 +476,8 @@ def main():
             else:
                 codes_correction = None
 
-        # Bouton d'exécution
+        st.markdown("<div style='margin: 20px 0;'>", unsafe_allow_html=True)
+
         if st.button("🔧 Lancer la correction", type="primary", disabled=not AGENTS_DISPONIBLES, key="btn_correction"):
             if not config.api.claude_api_key:
                 st.warning("⚠️ L'API Claude n'est pas configurée.")
@@ -358,24 +504,35 @@ def main():
                 except Exception as e:
                     st.error(f"❌ Erreur lors de la correction : {str(e)}")
 
-    # ==========================================================================
-    # TAB 3: Publication
-    # ==========================================================================
-    with tab3:
-        st.subheader("📢 Publication des fiches")
-        st.markdown("""
-        Publiez les fiches validées pour les rendre disponibles.
-        Seules les fiches en statut **"En validation"** peuvent être publiées.
-        """)
+        st.markdown("</div>", unsafe_allow_html=True)
 
-        # Compteurs
+    # ==================================================================
+    # TAB 4: PUBLICATION
+    # ==================================================================
+    with tab4:
+        section_header(
+            "Publication des fiches validées",
+            "Publiez les fiches en validation pour les rendre officiellement disponibles.",
+            badge_text="PUBLICATION"
+        )
+
         nb_en_validation = repo.count_fiches(StatutFiche.EN_VALIDATION)
-        st.info(f"📊 **{nb_en_validation}** fiches prêtes à être publiées")
+
+        st.markdown(f"""
+        <div class="sojai-card" style="margin: 30px 0; padding: 24px; background: var(--bg-light-purple);">
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <div style="font-size: 40px;">📢</div>
+                <div>
+                    <div style="font-size: 32px; font-weight: 700; color: var(--primary-purple);">{nb_en_validation}</div>
+                    <div style="color: var(--text-muted); font-size: 14px;">fiches prêtes à être publiées</div>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
         if nb_en_validation == 0:
             st.warning("Aucune fiche en validation. Lancez d'abord l'enrichissement.")
         else:
-            # Options
             mode_publication = st.radio(
                 "Mode publication",
                 ["Publier toutes les fiches en validation", "Sélectionner les fiches"],
@@ -396,7 +553,8 @@ def main():
             else:
                 codes_publication = None
 
-            # Bouton de publication
+            st.markdown("<div style='margin: 20px 0;'>", unsafe_allow_html=True)
+
             if st.button("📢 Publier", type="primary", key="btn_publication"):
                 with st.spinner("Publication en cours..."):
                     if codes_publication:
@@ -420,24 +578,32 @@ def main():
                                 icon = "✅" if detail["status"] == "publié" else "❌"
                                 st.markdown(f"{icon} **{detail['code']}** : {detail['status']}")
 
-    # ==========================================================================
-    # TAB 4: Génération de Variantes
-    # ==========================================================================
-    with tab4:
-        st.subheader("🌐 Génération de variantes multilingues")
-        st.markdown("""
-        Générez automatiquement des variantes adaptées de vos fiches métiers :
-        - **5 langues** : Français, Anglais, Espagnol, Allemand, Italien
-        - **3 tranches d'âge** : 11-15 ans, 15-18 ans, Adultes
-        - **2 formats** : Standard, FALC (Facile À Lire et à Comprendre)
-        - **3 genres** : Masculin, Féminin, Épicène
-        """)
+            st.markdown("</div>", unsafe_allow_html=True)
 
-        # Statistiques
+    # ==================================================================
+    # TAB 5: VARIANTES
+    # ==================================================================
+    with tab5:
+        section_header(
+            "Génération de variantes multilingues",
+            "Générez automatiquement des versions adaptées de vos fiches : 5 langues × 3 âges × 2 formats × 3 genres = jusqu'à 90 variantes par fiche.",
+            badge_text="MULTILINGUE"
+        )
+
         nb_fiches_publiees = repo.count_fiches(StatutFiche.PUBLIEE)
-        st.info(f"📊 **{nb_fiches_publiees}** fiches publiées disponibles pour génération de variantes")
 
-        # Sélection de la fiche
+        st.markdown(f"""
+        <div class="sojai-card" style="margin: 30px 0; padding: 24px; background: var(--bg-light-purple);">
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <div style="font-size: 40px;">🌍</div>
+                <div>
+                    <div style="font-size: 32px; font-weight: 700; color: var(--primary-purple);">{nb_fiches_publiees}</div>
+                    <div style="color: var(--text-muted); font-size: 14px;">fiches publiées disponibles pour génération</div>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
         fiches_pub = repo.get_all_fiches(statut=StatutFiche.PUBLIEE, limit=100)
 
         if not fiches_pub:
@@ -453,14 +619,11 @@ def main():
             )
 
             if code_selectionne:
-                # Afficher les variantes existantes
                 nb_variantes_existantes = repo.count_variantes(code_selectionne)
                 if nb_variantes_existantes > 0:
                     st.success(f"✅ {nb_variantes_existantes} variantes déjà générées pour cette fiche")
 
                 st.markdown("---")
-
-                # Sélection des axes de variation
                 st.markdown("### Sélectionnez les axes de variation")
 
                 col1, col2 = st.columns(2)
@@ -524,13 +687,24 @@ def main():
                     len(genres_selectionnes)
                 )
 
-                st.info(f"📊 **{nb_variantes_a_generer}** variantes seront générées")
-
                 # Estimation du coût
-                cout_estime = nb_variantes_a_generer * 0.002  # ~$0.002 par variante
-                st.caption(f"💰 Coût estimé : ~${cout_estime:.3f}")
+                cout_estime = nb_variantes_a_generer * 0.002
 
-                # Bouton de génération
+                st.markdown(f"""
+                <div style="padding: 20px; background: var(--bg-light-purple); border-radius: 16px; margin: 20px 0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="color: var(--text-muted); font-size: 14px; margin-bottom: 4px;">Nombre de variantes à générer</div>
+                            <div style="font-size: 32px; font-weight: 700; color: var(--primary-purple);">{nb_variantes_a_generer}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="color: var(--text-muted); font-size: 14px; margin-bottom: 4px;">Coût estimé</div>
+                            <div style="font-size: 24px; font-weight: 700; color: var(--pink-accent);">~${cout_estime:.3f}</div>
+                        </div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
                 if st.button(
                     f"🚀 Générer {nb_variantes_a_generer} variantes",
                     type="primary",
@@ -564,11 +738,9 @@ def main():
                                 st.success(f"✅ {result['nb_variantes']} variantes générées et sauvegardées!")
                                 st.balloons()
 
-                                # Afficher les détails
                                 st.markdown(f"**Code ROME** : {result['code_rome']}")
                                 st.markdown(f"**Variantes créées** : {result['nb_saved']}")
 
-                                # Log audit
                                 repo.add_audit_log(AuditLog(
                                     type_evenement=TypeEvenement.MODIFICATION,
                                     code_rome=code_selectionne,
@@ -578,28 +750,45 @@ def main():
 
                         except Exception as e:
                             st.error(f"❌ Erreur lors de la génération : {str(e)}")
-                            import traceback
-                            st.code(traceback.format_exc())
 
-    st.markdown("---")
+    st.markdown("<div style='margin: 60px 0;'></div>", unsafe_allow_html=True)
 
-    # Historique des actions récentes
-    st.subheader("📜 Dernières actions")
+    # Historique des actions avec style SOJAI
+    section_header(
+        "Dernières actions",
+        "Les 10 actions les plus récentes effectuées par les agents",
+        badge_text="LOGS"
+    )
 
     logs = repo.get_audit_logs(limit=10)
 
     if logs:
         for log in logs:
-            col1, col2, col3 = st.columns([1, 1, 3])
+            icon = {
+                "creation": "🆕",
+                "modification": "✏️",
+                "correction": "🔧",
+                "validation": "✔️",
+                "publication": "📢",
+                "archivage": "📦",
+            }.get(log.type_evenement.value, "📌")
 
-            with col1:
-                st.caption(log.timestamp.strftime("%d/%m %H:%M"))
-
-            with col2:
-                st.markdown(f"**{log.type_evenement.value}**")
-
-            with col3:
-                st.markdown(f"{log.description} ({log.code_rome or 'N/A'})")
+            st.markdown(f"""
+            <div class="sojai-card" style="padding: 16px; margin-bottom: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
+                        <div style="font-size: 24px;">{icon}</div>
+                        <div>
+                            <div style="font-weight: 600; color: var(--text-dark); font-size: 14px;">{log.type_evenement.value.replace('_', ' ').title()}</div>
+                            <div style="color: var(--text-muted); font-size: 12px;">{log.description} ({log.code_rome or 'N/A'})</div>
+                        </div>
+                    </div>
+                    <div style="color: var(--text-muted); font-size: 11px; text-align: right;">
+                        {log.timestamp.strftime("%d/%m/%Y")}<br>{log.timestamp.strftime("%H:%M")}
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
     else:
         st.info("Aucune action récente.")
 
