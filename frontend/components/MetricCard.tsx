@@ -1,30 +1,45 @@
 interface MetricCardProps {
   label: string;
   value: string | number;
-  delta?: string;
   icon?: string;
+  trend?: "up" | "down" | "neutral";
+  trendValue?: string;
 }
 
-export default function MetricCard({ label, value, delta, icon = "📊" }: MetricCardProps) {
-  const deltaColor = delta?.startsWith("+") ? "text-primary-purple" : "text-primary-pink";
+export default function MetricCard({ label, value, icon, trend, trendValue }: MetricCardProps) {
+  const trendColors = {
+    up: "text-emerald-600",
+    down: "text-red-600",
+    neutral: "text-gray-500",
+  };
 
   return (
-    <div className="sojai-card">
-      <div className="flex justify-between items-start">
-        <div className="flex-1">
-          <div className="text-xs text-text-muted uppercase tracking-wide mb-2">
+    <div className="sojai-card relative overflow-hidden">
+      {/* Gradient Background on hover */}
+      <div className="absolute inset-0 bg-gradient-purple-pink opacity-0 group-hover:opacity-5 transition-opacity duration-300"></div>
+
+      {/* Content */}
+      <div className="relative z-10">
+        <div className="flex items-start justify-between mb-3">
+          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
             {label}
-          </div>
-          <div className="text-3xl font-bold text-primary-purple mb-1">
-            {value}
-          </div>
-          {delta && (
-            <div className={`text-sm font-semibold ${deltaColor}`}>
-              {delta}
-            </div>
+          </span>
+          {icon && (
+            <span className="text-3xl opacity-40 group-hover:scale-110 transition-transform">
+              {icon}
+            </span>
           )}
         </div>
-        <div className="text-3xl opacity-50">{icon}</div>
+
+        <div className="text-4xl font-bold gradient-text mb-2">{value}</div>
+
+        {trendValue && trend && (
+          <div className={`text-sm font-semibold flex items-center gap-1 ${trendColors[trend]}`}>
+            {trend === "up" && <span>↑</span>}
+            {trend === "down" && <span>↓</span>}
+            {trendValue}
+          </div>
+        )}
       </div>
     </div>
   );

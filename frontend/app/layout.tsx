@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
+import BackgroundAnimation from "@/components/BackgroundAnimation";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -27,10 +28,13 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <body
-        className={`${inter.variable} ${playfair.variable} font-sans antialiased bg-white text-text-dark`}
+        className={`${inter.variable} ${playfair.variable} font-sans antialiased bg-white text-text-dark relative`}
       >
-        <Navbar />
-        {children}
+        <BackgroundAnimation />
+        <div className="relative z-10">
+          <Navbar />
+          {children}
+        </div>
       </body>
     </html>
   );

@@ -3,148 +3,211 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --primary-purple: #4A39C0;
-    --pink-accent: #FF3254;
-    --bg-light-purple: #F9F8FF;
-    --bg-white: #FFFFFF;
-    --badge-purple-bg: #E4E1FF;
-    --text-dark: #1A1A2E;
-    --text-muted: rgba(26, 26, 46, 0.7);
-    --border-subtle: rgba(0, 0, 0, 0.08);
-    --border-hover: rgba(74, 57, 192, 0.2);
-    --radius-card: 24px;
-    --radius-pill: 100px;
-  }
-
-  * {
-    @apply border-border;
-  }
-
   body {
-    @apply bg-white text-text-dark;
+    @apply bg-white text-gray-900 antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply tracking-tight;
   }
 }
 
 @layer components {
-  /* Gradient Text (comme SOJAI) */
+  /* Gradient Text SOJAI */
   .gradient-text {
-    background: linear-gradient(135deg, var(--primary-purple) 0%, var(--pink-accent) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    @apply bg-gradient-purple-pink bg-clip-text text-transparent;
   }
 
-  /* Card SOJAI */
+  /* Glass Card Effect */
+  .glass-card {
+    @apply bg-white/80 backdrop-blur-lg border border-gray-200/50 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300;
+  }
+
+  /* SOJAI Card - Plus spacieux */
   .sojai-card {
-    @apply bg-white border border-border-subtle rounded-card p-6
-           transition-all duration-200 hover:border-border-hover
-           hover:shadow-xl hover:-translate-y-2;
+    @apply bg-white border border-gray-100 rounded-2xl p-10 transition-all duration-300 hover:border-purple hover:shadow-xl hover:-translate-y-1;
   }
 
-  /* Badge */
+  /* Icon Box with Glow */
+  .icon-box {
+    @apply w-16 h-16 rounded-2xl bg-gradient-purple-pink flex items-center justify-center text-white text-3xl shadow-lg hover:animate-glow transition-all;
+  }
+
+  /* Badge SOJAI */
   .badge {
-    @apply inline-block px-6 py-3 rounded-pill text-xs font-semibold uppercase tracking-wide;
+    @apply inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold;
   }
 
   .badge-purple {
-    @apply bg-badge-purple text-primary-purple;
+    @apply bg-purple-100 text-purple;
   }
 
   .badge-pink {
-    @apply bg-red-50 text-primary-pink;
+    @apply bg-pink-50 text-pink;
   }
 
-  /* Button */
+  .badge-success {
+    @apply bg-emerald-50 text-emerald-700;
+  }
+
+  .badge-warning {
+    @apply bg-amber-50 text-amber-700;
+  }
+
+  /* Buttons avec hover magnifique */
   .btn {
-    @apply px-8 py-4 rounded-pill font-semibold text-base
-           transition-all duration-200 inline-flex items-center gap-2;
+    @apply inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full text-base font-semibold transition-all duration-300;
   }
 
   .btn-primary {
-    @apply bg-primary-purple text-white hover:bg-opacity-90 hover:shadow-lg;
+    @apply bg-gradient-purple-pink text-white shadow-lg hover:shadow-2xl hover:scale-105 active:scale-95;
   }
 
   .btn-secondary {
-    @apply border-2 border-primary-purple text-primary-purple
-           hover:bg-primary-purple hover:text-white;
+    @apply bg-white text-purple border-2 border-purple hover:bg-purple hover:text-white shadow-md hover:shadow-xl;
   }
 
-  /* Check List */
-  .check-list {
-    @apply space-y-3;
+  .btn-ghost {
+    @apply text-gray-600 hover:text-purple hover:bg-purple-50;
   }
 
-  .check-list li {
-    @apply flex items-start gap-3;
+  /* Input moderne */
+  input, select, textarea {
+    @apply w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple focus:border-transparent transition-all;
   }
 
-  .check-icon {
-    @apply flex-shrink-0 w-6 h-6 rounded-full bg-primary-purple text-white
-           flex items-center justify-center text-sm font-bold;
+  /* Table élégante */
+  .table-wrapper {
+    @apply overflow-hidden rounded-2xl border border-gray-100 shadow-sm;
   }
 
-  /* Section Header */
+  table {
+    @apply w-full;
+  }
+
+  th {
+    @apply text-left px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider bg-gray-50 border-b border-gray-100;
+  }
+
+  td {
+    @apply px-6 py-4 border-b border-gray-50 text-sm;
+  }
+
+  tr:hover {
+    @apply bg-purple-50/50 transition-colors;
+  }
+
+  /* Section Header - Plus espacé */
   .section-header {
-    @apply text-center mb-16;
+    @apply text-center mb-20 animate-fade-in;
   }
 
   .section-title {
-    @apply text-4xl md:text-5xl font-serif font-bold mb-6;
+    @apply text-3xl md:text-4xl font-bold mb-8 leading-tight;
   }
 
   .section-description {
-    @apply text-lg md:text-xl text-text-muted max-w-3xl mx-auto leading-relaxed;
+    @apply text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed;
+  }
+
+  /* Stats Card avec effet */
+  .stat-card {
+    @apply sojai-card text-center relative overflow-hidden;
+  }
+
+  .stat-card::before {
+    content: '';
+    @apply absolute inset-0 bg-gradient-purple-pink opacity-0 group-hover:opacity-5 transition-opacity duration-300;
+  }
+
+  .stat-value {
+    @apply text-5xl font-bold gradient-text mb-2;
+  }
+
+  .stat-label {
+    @apply text-sm text-gray-600 uppercase tracking-wide;
+  }
+
+  /* Feature Card magnifique */
+  .feature-card {
+    @apply sojai-card;
+  }
+
+  .feature-icon {
+    @apply text-6xl mb-6 group-hover:scale-110 transition-transform duration-300;
+  }
+
+  .feature-title {
+    @apply text-2xl font-bold mb-4 text-gray-900 group-hover:text-purple transition-colors;
+  }
+
+  .feature-description {
+    @apply text-gray-600 leading-relaxed;
+  }
+
+  /* Check List avec animation */
+  .check-list li {
+    @apply flex items-start gap-3 mb-3;
+  }
+
+  .check-icon {
+    @apply w-6 h-6 rounded-full bg-gradient-purple-pink flex items-center justify-center text-white text-sm flex-shrink-0 shadow-md;
+  }
+
+  /* Loading Spinner */
+  .spinner {
+    @apply inline-block w-6 h-6 border-4 border-gray-200 border-t-purple rounded-full animate-spin;
+  }
+
+  /* Navbar avec glass effect */
+  .navbar {
+    @apply sticky top-0 z-50 bg-white/80 backdrop-blur-lg border-b border-gray-100 shadow-sm;
+  }
+
+  /* Gradient Background */
+  .bg-gradient-mesh {
+    background: linear-gradient(135deg, #F9F8FF 0%, #E4E1FF 50%, #FFCCD4 100%);
+  }
+
+  /* Glow effect */
+  .glow {
+    @apply shadow-lg shadow-purple/30;
+  }
+
+  /* Hero section avec parallax effect */
+  .hero {
+    @apply relative overflow-hidden;
+  }
+
+  .hero::before {
+    content: '';
+    @apply absolute inset-0 bg-gradient-mesh opacity-30 -z-10;
   }
 }
 
 @layer utilities {
-  /* Animations SOJAI */
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+  .text-balance {
+    text-wrap: balance;
   }
+}
 
-  @keyframes float {
-    0%, 100% {
-      transform: translateY(0px);
-    }
-    50% {
-      transform: translateY(-20px);
-    }
-  }
+/* Animations des zones lumineuses - Plus rapides */
+@keyframes drift1 {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(300px, -150px) rotate(8deg); }
+  50% { transform: translate(-200px, 200px) rotate(-8deg); }
+  75% { transform: translate(350px, 150px) rotate(5deg); }
+}
 
-  @keyframes shimmer {
-    0% {
-      background-position: -1000px 0;
-    }
-    100% {
-      background-position: 1000px 0;
-    }
-  }
+@keyframes drift2 {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(-300px, 150px) rotate(-8deg); }
+  50% { transform: translate(200px, -200px) rotate(8deg); }
+  75% { transform: translate(-350px, -150px) rotate(-5deg); }
+}
 
-  .animate-fade-in {
-    animation: fadeIn 0.6s ease-out;
-  }
-
-  .animate-float {
-    animation: float 3s ease-in-out infinite;
-  }
-
-  .animate-shimmer {
-    animation: shimmer 2s linear infinite;
-    background: linear-gradient(
-      90deg,
-      var(--bg-light-purple) 0%,
-      var(--badge-purple-bg) 50%,
-      var(--bg-light-purple) 100%
-    );
-    background-size: 1000px 100%;
-  }
+@keyframes drift3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(150px, -150px) scale(1.15); }
+  66% { transform: translate(-150px, 150px) scale(0.85); }
 }

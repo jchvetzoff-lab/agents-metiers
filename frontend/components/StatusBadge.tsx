@@ -2,26 +2,26 @@ interface StatusBadgeProps {
   statut: string;
 }
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+const STATUS_CONFIG: Record<string, { label: string; className: string; icon: string }> = {
   brouillon: {
-    label: "🟠 Brouillon",
-    color: "text-orange-700",
-    bg: "bg-orange-50",
+    label: "Brouillon",
+    className: "badge-warning",
+    icon: "📝",
   },
   en_validation: {
-    label: "🔵 En validation",
-    color: "text-blue-700",
-    bg: "bg-blue-50",
+    label: "En validation",
+    className: "badge-purple",
+    icon: "🔍",
   },
   publiee: {
-    label: "🟢 Publiée",
-    color: "text-green-700",
-    bg: "bg-green-50",
+    label: "Publiée",
+    className: "badge-success",
+    icon: "✅",
   },
   archivee: {
-    label: "⚪ Archivée",
-    color: "text-gray-700",
-    bg: "bg-gray-50",
+    label: "Archivée",
+    className: "bg-gray-100 text-gray-600",
+    icon: "📦",
   },
 };
 
@@ -29,10 +29,9 @@ export default function StatusBadge({ statut }: StatusBadgeProps) {
   const config = STATUS_CONFIG[statut] || STATUS_CONFIG.brouillon;
 
   return (
-    <span
-      className={`inline-flex items-center px-3 py-1 rounded-pill text-xs font-semibold ${config.bg} ${config.color}`}
-    >
-      {config.label}
+    <span className={`badge ${config.className} gap-1.5`}>
+      <span>{config.icon}</span>
+      <span>{config.label}</span>
     </span>
   );
 }

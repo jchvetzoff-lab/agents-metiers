@@ -8,13 +8,15 @@ export default function SectionHeader({ badge, title, description }: SectionHead
   return (
     <div className="section-header">
       {badge && (
-        <div className="badge badge-purple mb-6">
+        <span className="badge badge-purple mb-6 text-base animate-scale-in">
           {badge}
-        </div>
+        </span>
       )}
-      <h2 className="section-title">{title}</h2>
+      <h2 className="section-title animate-slide-up">{title}</h2>
       {description && (
-        <p className="section-description">{description}</p>
+        <p className="section-description animate-slide-up" style={{ animationDelay: "0.1s" }}>
+          {description}
+        </p>
       )}
     </div>
   );
