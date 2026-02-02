@@ -4,16 +4,12 @@
 
 @layer base {
   html {
-    overflow-x: hidden;
-    overscroll-behavior: none;
+    overscroll-behavior-y: none;
   }
 
   body {
     @apply bg-white text-gray-900 antialiased;
-    overflow-x: hidden;
     overscroll-behavior-y: none;
-    position: relative;
-    min-height: 100vh;
   }
 
   h1, h2, h3, h4, h5, h6 {
