@@ -1,0 +1,42 @@
+# Environnement
+.env
+ID agent.txt
+.env.local
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Données locales (exclure la BDD pour éviter de commiter des données locales)
+database/*.db
+*.db
+
+# Logs et rapports
+data/rapports/*.log
+*.log
+
+# Cache Streamlit (mais on garde config.toml et secrets.toml.example)
+.streamlit/secrets.toml
+.streamlit/credentials.toml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Tests
+.pytest_cache/
+.coverage
+htmlcov/

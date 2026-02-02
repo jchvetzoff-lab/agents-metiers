@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cycle de Mise à Jour des Dates - Agents Métiers</title>
+    <style>
+        @page {
+            margin: 2cm;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #1A1A2E;
+            max-width: 210mm;
+            margin: 0 auto;
+            padding: 20px;
+            background: white;
+        }
+
+        h1 {
+            color: #4A39C0;
+            font-size: 28px;
+            border-bottom: 3px solid #4A39C0;
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+
+        h2 {
+            color: #4A39C0;
+            font-size: 22px;
+            margin-top: 30px;
+            border-left: 4px solid #4A39C0;
+            padding-left: 15px;
+        }
+
+        h3 {
+            color: #FF3254;
+            font-size: 18px;
+            margin-top: 25px;
+        }
+
+        .metadata {
+            background: #F9F8FF;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            border-left: 4px solid #4A39C0;
+        }
+
+        .metadata p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+        .highlight-box {
+            background: #E4E1FF;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #4A39C0;
+        }
+
+        .highlight-box h3 {
+            margin-top: 0;
+            color: #4A39C0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+
+        thead {
+            background: #4A39C0;
+            color: white;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+
+        tbody tr:nth-child(even) {
+            background: #F9F8FF;
+        }
+
+        tbody tr:hover {
+            background: #E4E1FF;
+        }
+
+        .success {
+            color: #2ecc71;
+            font-weight: bold;
+        }
+
+        .error {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+
+        .code-block {
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            overflow-x: auto;
+            margin: 15px 0;
+            border-left: 3px solid #4A39C0;
+        }
+
+        .workflow-diagram {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border: 2px solid #4A39C0;
+        }
+
+        .workflow-step {
+            background: #F9F8FF;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 3px solid #FF3254;
+        }
+
+        .workflow-step strong {
+            color: #4A39C0;
+        }
+
+        .arrow {
+            text-align: center;
+            color: #4A39C0;
+            font-size: 24px;
+            margin: 5px 0;
+        }
+
+        ul {
+            margin: 15px 0;
+            padding-left: 25px;
+        }
+
+        li {
+            margin: 8px 0;
+        }
+
+        .important {
+            background: #FFF3CD;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #FFC107;
+            margin: 20px 0;
+        }
+
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #4A39C0;
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+        }
+
+        @media print {
+            body {
+                max-width: 100%;
+            }
+
+            .no-print {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>📅 Cycle de Mise à Jour des Dates</h1>
+    <h2 style="border: none; padding: 0;">Système Multi-Agents pour Fiches Métiers</h2>
+
+    <div class="metadata">
+        <p><strong>Projet :</strong> agents-metiers</p>
+        <p><strong>Date :</strong> 30 janvier 2026</p>
+        <p><strong>Version :</strong> 2.0 (avec système de variantes)</p>
+        <p><strong>Repository :</strong> github.com/jchvetzoff-lab/agents-metiers</p>
+    </div>
+
+    <div class="highlight-box">
+        <h3>Vue d'Ensemble</h3>
+        <p>Chaque fiche métier dans le système possède <strong>2 dates principales</strong> qui sont gérées automatiquement par les agents et le système de base de données :</p>
+        <ul>
+            <li><strong>date_creation</strong> : Date de création initiale de la fiche (ne change jamais)</li>
+            <li><strong>date_maj</strong> : Date de dernière mise à jour (mise à jour automatiquement à chaque modification)</li>
+        </ul>
+    </div>
+
+    <h2>1. Les Deux Dates Principales</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Champ</th>
+                <th>Description</th>
+                <th>Gestion</th>
+                <th>Fréquence de changement</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>date_creation</code></td>
+                <td>Date de création de la fiche</td>
+                <td><span class="success">✓</span> Définie UNE SEULE FOIS à la création</td>
+                <td><strong>Ne change jamais</strong></td>
+            </tr>
+            <tr>
+                <td><code>date_maj</code></td>
+                <td>Date de dernière mise à jour</td>
+                <td><span class="success">✓</span> Mise à jour AUTOMATIQUEMENT à chaque modification</td>
+                <td><strong>À chaque modification</strong></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>2. Déclencheurs Automatiques de Mise à Jour</h2>
+
+    <p>Voici tous les cas où <code>date_maj</code> est automatiquement mise à jour :</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Action</th>
+                <th>Agent / Composant</th>
+                <th>Ce qui change</th>
+                <th>Automatique</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Création</strong></td>
+                <td>AgentRedacteurFiche</td>
+                <td>date_creation + date_maj = maintenant<br>version = 1</td>
+                <td><span class="success">✓ OUI</span></td>
+            </tr>
+            <tr>
+                <td><strong>Enrichissement</strong></td>
+                <td>AgentRedacteurFiche</td>
+                <td>date_maj = maintenant<br>version += 1<br>statut = EN_VALIDATION</td>
+                <td><span class="success">✓ OUI</span></td>
+            </tr>
+            <tr>
+                <td><strong>Correction orthographique</strong></td>
+                <td>AgentCorrecteurLangue</td>
+                <td>date_maj = maintenant<br>version += 1</td>
+                <td><span class="success">✓ OUI</span></td>
+            </tr>
+            <tr>
+                <td><strong>Génération des genres</strong></td>
+                <td>AgentGenerationGenre</td>
+                <td>date_maj = maintenant<br>version += 1</td>
+                <td><span class="success">✓ OUI</span></td>
+            </tr>
+            <tr>
+                <td><strong>Publication</strong></td>
+                <td>Interface Streamlit</td>
+                <td>date_maj = maintenant<br>statut = PUBLIEE</td>
+                <td><span class="success">✓ OUI</span></td>
+            </tr>
+            <tr>
+                <td><strong>Génération variante</strong></td>
+                <td>AgentRedacteurFiche<br>(méthode generer_variantes)</td>
+                <td>Création de nouvelles variantes<br>avec leur propre date_creation</td>
+                <td><span class="success">✓ OUI</span></td>
+            </tr>
+            <tr>
+                <td><strong>Mise à jour variante</strong></td>
+                <td>Repository.save_variante()</td>
+                <td>date_maj = maintenant<br>version += 1</td>
+                <td><span class="success">✓ OUI</span></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>3. Workflow Complet - Cycle de Vie d'une Fiche</h2>
+
+    <div class="workflow-diagram">
+        <div class="workflow-step">
+            <strong>ÉTAPE 1 : CRÉATION</strong> (AgentRedacteurFiche)<br>
+            date_creation = 2026-01-30 10:00<br>
+            date_maj = 2026-01-30 10:00<br>
+            version = 1<br>
+            statut = BROUILLON
+        </div>
+
+        <div class="arrow">↓</div>
+
+        <div class="workflow-step">
+            <strong>ÉTAPE 2 : ENRICHISSEMENT</strong> (AgentRedacteurFiche)<br>
+            date_creation = 2026-01-30 10:00 <em>(inchangé)</em><br>
+            date_maj = 2026-01-30 14:30 <span class="success">✓ MISE À JOUR</span><br>
+            version = 2 <span class="success">✓ INCRÉMENTÉ</span><br>
+            statut = EN_VALIDATION
+        </div>
+
+        <div class="arrow">↓</div>
+
+        <div class="workflow-step">
+            <strong>ÉTAPE 3 : CORRECTION</strong> (AgentCorrecteurLangue)<br>
+            date_creation = 2026-01-30 10:00 <em>(inchangé)</em><br>
+            date_maj = 2026-01-30 16:45 <span class="success">✓ MISE À JOUR</span><br>
+            version = 3 <span class="success">✓ INCRÉMENTÉ</span><br>
+            statut = EN_VALIDATION
+        </div>
+
+        <div class="arrow">↓</div>
+
+        <div class="workflow-step">
+            <strong>ÉTAPE 4 : PUBLICATION</strong> (Interface Streamlit)<br>
+            date_creation = 2026-01-30 10:00 <em>(inchangé)</em><br>
+            date_maj = 2026-01-30 17:00 <span class="success">✓ MISE À JOUR</span><br>
+            version = 4 <span class="success">✓ INCRÉMENTÉ</span><br>
+            statut = PUBLIEE
+        </div>
+
+        <div class="arrow">↓</div>
+
+        <div class="workflow-step">
+            <strong>ÉTAPE 5 : GÉNÉRATION VARIANTES</strong> (AgentRedacteurFiche)<br>
+            90 nouvelles variantes créées :<br>
+            - Chaque variante a sa propre date_creation<br>
+            - 5 langues × 3 âges × 2 formats × 3 genres<br>
+            - La fiche originale reste inchangée
+        </div>
+    </div>
+
+    <h2>4. Mécanisme Technique</h2>
+
+    <h3>4.1 SQLAlchemy - Mise à Jour Automatique</h3>
+
+    <p>Dans le fichier <code>database/models.py</code>, ligne 268 :</p>
+
+    <div class="code-block">
+date_maj = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    </div>
+
+    <p><strong>Signification :</strong></p>
+    <ul>
+        <li><code>default=datetime.now</code> : Valeur par défaut à la création</li>
+        <li><code>onupdate=datetime.now</code> : <strong>MISE À JOUR AUTOMATIQUE</strong> à chaque UPDATE SQL</li>
+    </ul>
+
+    <h3>4.2 Repository - Implémentation Manuelle</h3>
+
+    <p>Dans le fichier <code>database/repository.py</code>, ligne 126 :</p>
+
+    <div class="code-block">
+def update_fiche(self, fiche: FicheMetier) -> FicheMetier:
+    """Met à jour une fiche existante."""
+    # ...
+    db_fiche.date_maj = datetime.now()
+    db_fiche.version = fiche.metadata.version + 1
+    # ...
+    </div>
+
+    <div class="important">
+        <strong>⚠️ Important :</strong> Vous n'avez <strong>rien à faire manuellement</strong>. SQLAlchemy et le repository gèrent automatiquement la mise à jour de <code>date_maj</code> à chaque modification.
+    </div>
+
+    <h2>5. Cas Spécial : Variantes de Fiches</h2>
+
+    <p>Depuis le 30 janvier 2026, le système supporte la génération de variantes multilingues. Chaque variante possède ses propres dates :</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Événement</th>
+                <th>Comportement</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Création variante</strong></td>
+                <td>date_creation = maintenant<br>date_maj = maintenant<br>version = 1</td>
+            </tr>
+            <tr>
+                <td><strong>Mise à jour variante (upsert)</strong></td>
+                <td>date_creation <em>(inchangé)</em><br>date_maj = maintenant<br>version += 1</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <p><strong>Code dans</strong> <code>database/repository.py</code>, ligne 474 :</p>
+
+    <div class="code-block">
+if existing:
+    # Mise à jour (upsert)
+    existing.date_maj = datetime.now()
+    existing.version += 1
+else:
+    # Création
+    db_variante = VarianteFicheDB.from_pydantic(variante)
+    </div>
+
+    <h2>6. Points Clés à Retenir</h2>
+
+    <div class="highlight-box">
+        <h3>Résumé</h3>
+        <ol>
+            <li><strong>date_creation</strong> ne change <strong>JAMAIS</strong> après la création initiale</li>
+            <li><strong>date_maj</strong> est mise à jour <strong>AUTOMATIQUEMENT</strong> à chaque modification</li>
+            <li><strong>version</strong> est incrémentée à chaque modification</li>
+            <li><strong>SQLAlchemy</strong> garantit la mise à jour même si on oublie (via <code>onupdate=datetime.now</code>)</li>
+            <li><strong>Les agents</strong> n'ont pas besoin de gérer manuellement les dates</li>
+            <li><strong>Les variantes</strong> ont leurs propres dates indépendantes</li>
+        </ol>
+    </div>
+
+    <h2>7. Vérification des Dates</h2>
+
+    <p>Pour vérifier les dates d'une fiche via l'interface Streamlit :</p>
+
+    <ol>
+        <li>Allez sur la page <strong>Fiches</strong></li>
+        <li>Sélectionnez une fiche</li>
+        <li>En bas du détail, vous verrez :
+            <div class="code-block">
+Créée le 30/01/2026 | MAJ le 30/01/2026 | Version 4 | Source : ROME
+            </div>
+        </li>
+    </ol>
+
+    <p>Pour vérifier via Python :</p>
+
+    <div class="code-block">
+from database.repository import Repository
+from config import get_config
+
+repo = Repository(get_config().db_path)
+fiche = repo.get_fiche("M1805")
+
+print(f"Créée le : {fiche.metadata.date_creation}")
+print(f"MAJ le : {fiche.metadata.date_maj}")
+print(f"Version : {fiche.metadata.version}")
+    </div>
+
+    <div class="footer">
+        <p><strong>Projet :</strong> Agents Métiers - Système Multi-Agents pour Fiches Métiers</p>
+        <p><strong>GitHub :</strong> https://github.com/jchvetzoff-lab/agents-metiers</p>
+        <p><strong>Documentation complète :</strong> CLAUDE.md, VARIANTES_README.md</p>
+        <p>Document généré le 30 janvier 2026</p>
+    </div>
+
+    <div class="no-print" style="background: #4A39C0; color: white; padding: 20px; text-align: center; border-radius: 8px; margin-top: 30px;">
+        <h3 style="color: white; margin-top: 0;">📄 Comment Télécharger en PDF</h3>
+        <p style="margin: 10px 0;"><strong>Méthode 1 :</strong> Appuyez sur <code>Ctrl + P</code> (Windows) ou <code>Cmd + P</code> (Mac)</p>
+        <p style="margin: 10px 0;"><strong>Méthode 2 :</strong> Clic droit → Imprimer</p>
+        <p style="margin: 10px 0;">Puis choisissez <strong>"Enregistrer au format PDF"</strong> ou <strong>"Microsoft Print to PDF"</strong></p>
+    </div>
+</body>
+</html>
