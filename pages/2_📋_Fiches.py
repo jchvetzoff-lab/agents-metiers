@@ -1,5 +1,6 @@
 """
 Page Fiches - Tableau des fiches métiers avec recherche et filtrage.
+Design SOJAI appliqué pour une interface moderne et professionnelle.
 """
 import streamlit as st
 import pandas as pd
@@ -16,6 +17,9 @@ from database.models import (
     FormatContenu, GenreGrammatical
 )
 from config import get_config
+from utils.ui_helpers import (
+    load_custom_css, gradient_text, badge, sojai_card, section_header
+)
 
 # Import conditionnel du scheduler
 try:
@@ -70,11 +74,70 @@ def format_salaire(salaire_niveau):
     return "N/A"
 
 
+def render_status_badge(statut: str):
+    """Affiche un badge de statut stylé."""
+    statut_config = {
+        "brouillon": ("🟠 Brouillon", "var(--badge-purple-bg)", "var(--primary-purple)"),
+        "en_validation": ("🔵 En validation", "var(--badge-purple-bg)", "var(--primary-purple)"),
+        "publiee": ("🟢 Publiée", "#D1FAE5", "#059669"),
+        "archivee": ("⚫ Archivée", "var(--gray-200)", "var(--gray-600)")
+    }
+
+    config = statut_config.get(statut, ("⚪ Inconnu", "var(--gray-200)", "var(--gray-600)"))
+    label, bg, color = config
+
+    st.markdown(f"""
+    <span style="
+        display: inline-flex;
+        align-items: center;
+        background: {bg};
+        color: {color};
+        padding: 6px 14px;
+        border-radius: 100px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    ">{label}</span>
+    """, unsafe_allow_html=True)
+
+
+def render_tension_indicator(tension: float):
+    """Affiche un indicateur de tension stylé."""
+    if tension > 0.7:
+        color = "#DC2626"
+        label = "🔴 Élevée"
+    elif tension > 0.4:
+        color = "#F59E0B"
+        label = "🟡 Moyenne"
+    else:
+        color = "#10B981"
+        label = "🟢 Faible"
+
+    st.markdown(f"""
+    <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="
+            color: {color};
+            font-weight: 600;
+            font-size: 14px;
+        ">{label}</span>
+        <span style="color: var(--text-muted); font-size: 13px;">{tension:.0%}</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+
 def afficher_detail_fiche(fiche: FicheMetier, repo: Repository):
-    """Affiche le détail complet d'une fiche dans un expander."""
+    """Affiche le détail complet d'une fiche dans un expander stylé."""
+
     with st.expander(f"📄 Détail : {fiche.nom_masculin} ({fiche.code_rome})", expanded=True):
-        # Sélecteurs de variantes
-        st.subheader("🌐 Sélectionner une variante")
+        # === SECTION SÉLECTEURS DE VARIANTES ===
+        st.markdown("<div style='margin: 40px 0 30px 0;'>", unsafe_allow_html=True)
+        section_header(
+            "Sélectionner une variante",
+            "Choisissez la langue, le public cible, le format et le genre pour afficher la variante adaptée.",
+            badge_text="PERSONNALISATION"
+        )
+        st.markdown("</div>", unsafe_allow_html=True)
 
         col1, col2, col3, col4 = st.columns(4)
 
@@ -103,7 +166,7 @@ def afficher_detail_fiche(fiche: FicheMetier, repo: Repository):
                 "Public",
                 options=["11-15", "15-18", "18+"],
                 format_func=lambda x: age_labels[x],
-                index=2,  # Adulte par défaut
+                index=2,
                 key=f"age_{fiche.code_rome}"
             )
 
@@ -141,16 +204,23 @@ def afficher_detail_fiche(fiche: FicheMetier, repo: Repository):
             genre=GenreGrammatical(genre)
         )
 
+        st.markdown("<div style='margin: 40px 0;'>", unsafe_allow_html=True)
+
         if variante:
-            # Afficher la variante
+            # === VARIANTE TROUVÉE ===
             st.success(f"✅ Variante trouvée : {variante.nom}")
 
-            # Description
+            # Card pour la description
             if variante.description:
                 st.markdown("### 📝 Description")
-                st.markdown(variante.description)
-                if variante.description_courte:
-                    st.caption(f"*{variante.description_courte}*")
+                st.markdown(f"""
+                <div class="sojai-card" style="margin-bottom: 30px;">
+                    <p style="font-size: 16px; line-height: 1.8; color: var(--text-muted); margin: 0;">
+                        {variante.description}
+                    </p>
+                    {f'<p style="font-style: italic; color: var(--text-muted-light); font-size: 14px; margin-top: 16px;">{variante.description_courte}</p>' if variante.description_courte else ''}
+                </div>
+                """, unsafe_allow_html=True)
 
             # Compétences
             col_comp1, col_comp2 = st.columns(2)
@@ -158,14 +228,20 @@ def afficher_detail_fiche(fiche: FicheMetier, repo: Repository):
             with col_comp1:
                 if variante.competences:
                     st.markdown("### 🎯 Compétences techniques")
+                    comp_html = '<ul class="check-list">'
                     for comp in variante.competences:
-                        st.markdown(f"- {comp}")
+                        comp_html += f'<li><span class="check-icon">✓</span><span>{comp}</span></li>'
+                    comp_html += '</ul>'
+                    st.markdown(comp_html, unsafe_allow_html=True)
 
             with col_comp2:
                 if variante.competences_transversales:
                     st.markdown("### 🤝 Compétences transversales")
+                    trans_html = '<ul class="check-list">'
                     for comp in variante.competences_transversales:
-                        st.markdown(f"- {comp}")
+                        trans_html += f'<li><span class="check-icon">✓</span><span>{comp}</span></li>'
+                    trans_html += '</ul>'
+                    st.markdown(trans_html, unsafe_allow_html=True)
 
             # Formations et certifications
             col_form1, col_form2 = st.columns(2)
@@ -204,22 +280,63 @@ def afficher_detail_fiche(fiche: FicheMetier, repo: Repository):
                 f"MAJ le {variante.date_maj.strftime('%d/%m/%Y')} | "
                 f"Version {variante.version}"
             )
+
+            # Bouton téléchargement PDF pour la variante
+            st.markdown("---")
+            st.markdown("### 📄 Télécharger cette variante en PDF")
+
+            col_pdf_var1, col_pdf_var2 = st.columns([3, 1])
+
+            with col_pdf_var1:
+                st.caption(f"Version {langue_labels[langue]}, {age_labels[tranche_age].lower()}, {format_labels[format_contenu].lower()}, {genre_labels[genre].lower()}")
+
+            with col_pdf_var2:
+                try:
+                    from utils.pdf_generator import generer_pdf_variante
+
+                    # Générer le PDF
+                    pdf_bytes = generer_pdf_variante(variante, fiche)
+
+                    # Nom du fichier
+                    filename = f"{fiche.code_rome}_{langue}_{tranche_age}_{format_contenu}_{genre}.pdf"
+
+                    st.download_button(
+                        label="📥 Télécharger PDF",
+                        data=pdf_bytes,
+                        file_name=filename,
+                        mime="application/pdf",
+                        type="primary",
+                        key=f"dl_pdf_variante_{variante.id}"
+                    )
+
+                except Exception as e:
+                    st.error(f"❌ Erreur lors de la génération du PDF : {str(e)}")
+
         else:
             st.warning("⚠️ Cette variante n'existe pas encore.")
             st.info(f"💡 Utilisez la page **Actions** pour générer les variantes manquantes.")
 
-        st.markdown("---")
+        st.markdown("</div>", unsafe_allow_html=True)
 
-        # Bouton de mise à jour manuelle
-        st.markdown("### 🔄 Mise à jour de la fiche")
+        # === SECTION MISE À JOUR ===
+        st.markdown("---")
+        st.markdown("<div style='margin: 40px 0 30px 0;'>", unsafe_allow_html=True)
+        section_header(
+            "Mise à jour de la fiche",
+            "Mettez à jour cette fiche avec les dernières données (salaires, tendances, offres).",
+            badge_text="MAINTENANCE"
+        )
+        st.markdown("</div>", unsafe_allow_html=True)
 
         col_btn1, col_btn2, col_btn3 = st.columns([2, 1, 1])
 
-        with col_btn1:
-            st.caption("Mettez à jour cette fiche avec les dernières données (salaires, tendances, offres).")
-
         with col_btn2:
-            st.caption("Coût estimé : ~$0.08")
+            st.markdown("""
+            <div style="text-align: center; padding: 12px; background: var(--bg-light-purple); border-radius: 12px;">
+                <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Coût estimé</div>
+                <div style="font-size: 20px; font-weight: 700; color: var(--primary-purple);">~$0.08</div>
+            </div>
+            """, unsafe_allow_html=True)
 
         with col_btn3:
             if st.button(
@@ -233,14 +350,12 @@ def afficher_detail_fiche(fiche: FicheMetier, repo: Repository):
                 else:
                     with st.spinner(f"Mise à jour de {fiche.nom_masculin} en cours..."):
                         try:
-                            # Récupérer le scheduler et mettre à jour
                             scheduler = get_scheduler(repo, get_claude_client())
                             result = asyncio.run(scheduler.update_single_fiche(fiche.code_rome))
 
                             if result["status"] == "success":
                                 st.success(f"✅ Fiche {fiche.code_rome} mise à jour avec succès !")
                                 st.balloons()
-                                # Recharger la page pour afficher les nouvelles données
                                 st.rerun()
                             else:
                                 st.error(f"❌ Erreur : {result.get('error', 'Erreur inconnue')}")
@@ -253,135 +368,174 @@ def afficher_detail_fiche(fiche: FicheMetier, repo: Repository):
         if not SCHEDULER_DISPONIBLE or not ANTHROPIC_DISPONIBLE:
             st.warning("⚠️ Le module de mise à jour automatique n'est pas disponible. Vérifiez les dépendances.")
 
+        # === FICHE ORIGINALE ===
         st.markdown("---")
-        st.markdown("### 📋 Fiche originale (FR, adulte, standard, masculin)")
+        st.markdown("<div style='margin: 40px 0 30px 0;'>", unsafe_allow_html=True)
+        section_header(
+            "Fiche originale",
+            "Version française complète (adulte, standard, masculin)",
+            badge_text="DONNÉES ROME"
+        )
+        st.markdown("</div>", unsafe_allow_html=True)
 
-        # En-tête avec statut
+        # En-tête avec statut et tension
         col1, col2, col3 = st.columns([2, 1, 1])
 
         with col1:
-            st.markdown(f"### {fiche.nom_masculin}")
+            gradient_text(fiche.nom_masculin, "h3")
             st.caption(f"Code ROME : **{fiche.code_rome}**")
 
         with col2:
-            statut_colors = {
-                "brouillon": "🟠",
-                "en_validation": "🔵",
-                "publiee": "🟢",
-                "archivee": "⚫"
-            }
-            statut = fiche.metadata.statut.value
-            st.markdown(f"{statut_colors.get(statut, '⚪')} **Statut** : {statut.replace('_', ' ').title()}")
+            st.markdown("**Statut**")
+            render_status_badge(fiche.metadata.statut.value)
 
         with col3:
             if fiche.perspectives and fiche.perspectives.tension:
-                tension = fiche.perspectives.tension
-                color = "🔴" if tension > 0.7 else "🟡" if tension > 0.4 else "🟢"
-                st.markdown(f"{color} **Tension** : {tension:.0%}")
+                st.markdown("**Tension**")
+                render_tension_indicator(fiche.perspectives.tension)
 
-        st.markdown("---")
+        st.markdown("<div style='height: 30px;'></div>", unsafe_allow_html=True)
 
-        # Noms genrés
-        st.subheader("👤 Appellations")
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.markdown(f"**Masculin** : {fiche.nom_masculin}")
-        with col2:
-            st.markdown(f"**Féminin** : {fiche.nom_feminin}")
-        with col3:
-            st.markdown(f"**Épicène** : {fiche.nom_epicene}")
+        # Noms genrés dans une card
+        st.markdown("### 👤 Appellations")
+        st.markdown(f"""
+        <div class="sojai-card" style="padding: 24px;">
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+                <div>
+                    <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Masculin</div>
+                    <div style="font-weight: 600; color: var(--text-dark);">{fiche.nom_masculin}</div>
+                </div>
+                <div>
+                    <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Féminin</div>
+                    <div style="font-weight: 600; color: var(--text-dark);">{fiche.nom_feminin}</div>
+                </div>
+                <div>
+                    <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Épicène</div>
+                    <div style="font-weight: 600; color: var(--text-dark);">{fiche.nom_epicene}</div>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
         # Description
         if fiche.description:
-            st.subheader("📝 Description")
-            st.markdown(fiche.description)
-
-            if fiche.description_courte:
-                st.caption(f"*{fiche.description_courte}*")
+            st.markdown("### 📝 Description")
+            st.markdown(f"""
+            <div class="sojai-card">
+                <p style="font-size: 16px; line-height: 1.8; color: var(--text-muted); margin: 0;">
+                    {fiche.description}
+                </p>
+                {f'<p style="font-style: italic; color: var(--text-muted-light); font-size: 14px; margin-top: 16px;">{fiche.description_courte}</p>' if fiche.description_courte else ''}
+            </div>
+            """, unsafe_allow_html=True)
 
         # Compétences
         col1, col2 = st.columns(2)
 
         with col1:
             if fiche.competences:
-                st.subheader("🎯 Compétences techniques")
+                st.markdown("### 🎯 Compétences techniques")
+                comp_html = '<ul class="check-list">'
                 for comp in fiche.competences:
-                    st.markdown(f"- {comp}")
+                    comp_html += f'<li><span class="check-icon">✓</span><span>{comp}</span></li>'
+                comp_html += '</ul>'
+                st.markdown(comp_html, unsafe_allow_html=True)
 
         with col2:
             if fiche.competences_transversales:
-                st.subheader("🤝 Compétences transversales")
+                st.markdown("### 🤝 Compétences transversales")
+                trans_html = '<ul class="check-list">'
                 for comp in fiche.competences_transversales:
-                    st.markdown(f"- {comp}")
+                    trans_html += f'<li><span class="check-icon">✓</span><span>{comp}</span></li>'
+                trans_html += '</ul>'
+                st.markdown(trans_html, unsafe_allow_html=True)
 
         # Formations et certifications
         col1, col2 = st.columns(2)
 
         with col1:
             if fiche.formations:
-                st.subheader("🎓 Formations")
+                st.markdown("### 🎓 Formations")
                 for form in fiche.formations:
                     st.markdown(f"- {form}")
 
         with col2:
             if fiche.certifications:
-                st.subheader("📜 Certifications")
+                st.markdown("### 📜 Certifications")
                 for cert in fiche.certifications:
                     st.markdown(f"- {cert}")
 
         # Salaires
         if fiche.salaires:
-            st.subheader("💰 Salaires (brut annuel)")
+            st.markdown("### 💰 Salaires (brut annuel)")
 
-            col1, col2, col3 = st.columns(3)
-
-            with col1:
-                st.markdown("**Junior** (0-2 ans)")
-                st.markdown(format_salaire(fiche.salaires.junior))
-
-            with col2:
-                st.markdown("**Confirmé** (3-7 ans)")
-                st.markdown(format_salaire(fiche.salaires.confirme))
-
-            with col3:
-                st.markdown("**Senior** (8+ ans)")
-                st.markdown(format_salaire(fiche.salaires.senior))
-
-            if fiche.salaires.source:
-                st.caption(f"Source : {fiche.salaires.source}")
+            st.markdown(f"""
+            <div class="sojai-card">
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;">
+                    <div>
+                        <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Junior (0-2 ans)</div>
+                        <div style="font-size: 24px; font-weight: 700; color: var(--primary-purple);">{format_salaire(fiche.salaires.junior)}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Confirmé (3-7 ans)</div>
+                        <div style="font-size: 24px; font-weight: 700; color: var(--primary-purple);">{format_salaire(fiche.salaires.confirme)}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Senior (8+ ans)</div>
+                        <div style="font-size: 24px; font-weight: 700; color: var(--primary-purple);">{format_salaire(fiche.salaires.senior)}</div>
+                    </div>
+                </div>
+                {f'<p style="font-size: 12px; color: var(--text-muted-light); margin-top: 16px; margin-bottom: 0;">Source : {fiche.salaires.source}</p>' if fiche.salaires.source else ''}
+            </div>
+            """, unsafe_allow_html=True)
 
         # Perspectives
         if fiche.perspectives:
-            st.subheader("📈 Perspectives")
+            st.markdown("### 📈 Perspectives")
 
             col1, col2, col3 = st.columns(3)
 
             with col1:
-                st.markdown(f"**Tendance** : {fiche.perspectives.tendance.value.title()}")
+                st.markdown(f"""
+                <div style="padding: 16px; background: var(--bg-light-purple); border-radius: 12px;">
+                    <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Tendance</div>
+                    <div style="font-weight: 600; color: var(--text-dark);">{fiche.perspectives.tendance.value.title()}</div>
+                </div>
+                """, unsafe_allow_html=True)
 
             with col2:
                 if fiche.perspectives.nombre_offres:
-                    st.markdown(f"**Offres récentes** : {fiche.perspectives.nombre_offres}")
+                    st.markdown(f"""
+                    <div style="padding: 16px; background: var(--bg-light-purple); border-radius: 12px;">
+                        <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Offres récentes</div>
+                        <div style="font-weight: 600; color: var(--text-dark);">{fiche.perspectives.nombre_offres}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
 
             with col3:
                 if fiche.perspectives.taux_insertion:
-                    st.markdown(f"**Taux insertion** : {fiche.perspectives.taux_insertion:.0%}")
+                    st.markdown(f"""
+                    <div style="padding: 16px; background: var(--bg-light-purple); border-radius: 12px;">
+                        <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Taux insertion</div>
+                        <div style="font-weight: 600; color: var(--text-dark);">{fiche.perspectives.taux_insertion:.0%}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
 
             if fiche.perspectives.evolution_5ans:
-                st.markdown(f"*{fiche.perspectives.evolution_5ans}*")
+                st.markdown(f"<p style='color: var(--text-muted); font-style: italic; margin-top: 16px;'>{fiche.perspectives.evolution_5ans}</p>", unsafe_allow_html=True)
 
         # Conditions de travail
         col1, col2 = st.columns(2)
 
         with col1:
             if fiche.conditions_travail:
-                st.subheader("🏢 Conditions de travail")
+                st.markdown("### 🏢 Conditions de travail")
                 for cond in fiche.conditions_travail:
                     st.markdown(f"- {cond}")
 
         with col2:
             if fiche.environnements:
-                st.subheader("🌍 Environnements")
+                st.markdown("### 🌍 Environnements")
                 for env in fiche.environnements:
                     st.markdown(f"- {env}")
 
@@ -399,11 +553,11 @@ def afficher_detail_fiche(fiche: FicheMetier, repo: Repository):
 
         # Bouton téléchargement PDF pour la fiche originale
         st.markdown("---")
+        st.markdown("### 📄 Télécharger la fiche originale en PDF")
 
         col_pdf1, col_pdf2 = st.columns([3, 1])
 
         with col_pdf1:
-            st.markdown("### 📄 Télécharger la fiche originale en PDF")
             st.caption("Version française complète (adulte, standard, masculin).")
 
         with col_pdf2:
@@ -432,12 +586,22 @@ def afficher_detail_fiche(fiche: FicheMetier, repo: Repository):
 
 
 def main():
-    st.title("📋 Fiches Métiers")
+    # Charger le CSS personnalisé SOJAI
+    load_custom_css()
+
+    # En-tête avec gradient
+    gradient_text("Fiches Métiers", "h1")
+    st.markdown("""
+    <p style="font-size: 18px; color: var(--text-muted); margin-bottom: 40px;">
+        Explorez, filtrez et consultez les fiches métiers du référentiel ROME.
+    </p>
+    """, unsafe_allow_html=True)
 
     repo = get_repo()
 
-    # Sidebar avec filtres
-    st.sidebar.header("🔍 Filtres")
+    # Sidebar avec filtres stylisés
+    st.sidebar.markdown("## 🔍 Filtres")
+    st.sidebar.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
 
     # Filtre par statut
     statuts_options = {
@@ -475,7 +639,6 @@ def main():
     # Récupérer les fiches
     if recherche:
         fiches = repo.search_fiches(recherche, limit=500)
-        # Filtrer par statut si besoin
         if statut_filtre:
             fiches = [f for f in fiches if f.metadata.statut == statut_filtre]
     elif code_rome_filtre:
@@ -486,7 +649,15 @@ def main():
 
     # Nombre total
     total_resultats = len(fiches)
-    st.caption(f"**{total_resultats}** fiche(s) trouvée(s)")
+
+    # Badge avec résultats
+    st.markdown(f"""
+    <div style="display: inline-flex; align-items: center; background: var(--badge-purple-bg); color: var(--primary-purple);
+                padding: 8px 16px; border-radius: 100px; font-size: 12px; font-weight: 600; margin-bottom: 30px;">
+        <span style="font-size: 16px; margin-right: 8px;">📊</span>
+        <span>{total_resultats} fiche(s) trouvée(s)</span>
+    </div>
+    """, unsafe_allow_html=True)
 
     if not fiches:
         st.info("Aucune fiche ne correspond aux critères de recherche.")
@@ -507,7 +678,7 @@ def main():
             st.rerun()
 
     with col2:
-        st.markdown(f"<center>Page **{st.session_state.page_fiches + 1}** / {nb_pages}</center>", unsafe_allow_html=True)
+        st.markdown(f"<center style='padding-top: 8px;'>Page **{st.session_state.page_fiches + 1}** / {nb_pages}</center>", unsafe_allow_html=True)
 
     with col3:
         if st.button("Suivant ➡️", disabled=st.session_state.page_fiches >= nb_pages - 1):
@@ -521,8 +692,14 @@ def main():
 
     st.markdown("---")
 
-    # Barre de recherche rapide avec autocomplétion
-    st.markdown("### 🔍 Recherche rapide")
+    # === RECHERCHE RAPIDE AVEC AUTOCOMPLÉTION ===
+    st.markdown("<div style='margin: 40px 0 30px 0;'>", unsafe_allow_html=True)
+    section_header(
+        "Recherche rapide",
+        "Trouvez une fiche métier par son nom avec l'autocomplétion.",
+        badge_text="RECHERCHE"
+    )
+    st.markdown("</div>", unsafe_allow_html=True)
 
     # Préparer la liste de tous les métiers pour l'autocomplétion
     toutes_fiches = repo.get_all_fiches(limit=2000)
@@ -556,6 +733,11 @@ def main():
 
     st.markdown("---")
 
+    # === TABLEAU DES FICHES ===
+    st.markdown("<div style='margin: 40px 0 20px 0;'>", unsafe_allow_html=True)
+    st.markdown("### 📋 Tableau des fiches")
+    st.markdown("</div>", unsafe_allow_html=True)
+
     # Créer le DataFrame pour l'affichage avec colonne Voir
     data = []
     codes_rome_ordre = []
@@ -564,7 +746,7 @@ def main():
         tension_str = f"{tension_val:.0%}" if tension_val else "-"
 
         data.append({
-            "👁️": False,  # Colonne checkbox pour voir
+            "👁️": False,
             "Code ROME": f.code_rome,
             "Nom": f.nom_masculin,
             "Statut": f.metadata.statut.value.replace("_", " ").title(),
