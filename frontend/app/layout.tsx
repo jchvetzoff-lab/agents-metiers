@@ -26,9 +26,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr">
+    <html lang="fr" className="overflow-x-hidden">
       <body
-        className={`${inter.variable} ${playfair.variable} font-sans antialiased bg-white text-text-dark relative`}
+        className={`${inter.variable} ${playfair.variable} font-sans antialiased bg-white text-text-dark relative overflow-x-hidden`}
       >
         <BackgroundAnimation />
         <div className="relative z-10">

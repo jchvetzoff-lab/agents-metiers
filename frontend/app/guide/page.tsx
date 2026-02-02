@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function GuidePage() {
   return (
-    <main className="min-h-screen bg-white py-12 px-6">
+    <main className="min-h-screen py-12 px-6">
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="text-center mb-16">
