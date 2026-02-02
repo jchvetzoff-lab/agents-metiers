@@ -17,7 +17,14 @@ export default function GuidePage() {
 
         {/* Introduction */}
         <div className="sojai-card mb-12 bg-purple-50 border-purple-200">
-          <h2 className="text-2xl font-bold mb-6 text-purple">📌 Qu'est-ce qu'Agents Métiers ?</h2>
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-12 h-12 rounded-xl bg-purple flex items-center justify-center shadow-md">
+              <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-purple">Qu'est-ce qu'Agents Métiers ?</h2>
+          </div>
           <p className="text-lg text-gray-700 leading-relaxed mb-4">
             <strong>Agents Métiers</strong> est un outil automatique qui crée et gère les fiches de métiers.
           </p>
@@ -39,7 +46,14 @@ export default function GuidePage() {
 
         {/* Section 1 : Les 5 Agents */}
         <div className="mb-20">
-          <h2 className="text-3xl font-bold mb-8 text-gray-900">🤖 Comprendre les 5 Agents</h2>
+          <div className="flex items-center gap-4 mb-8">
+            <div className="w-14 h-14 rounded-xl bg-gradient-purple-pink flex items-center justify-center shadow-lg">
+              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <h2 className="text-3xl font-bold text-gray-900">Comprendre les 5 Agents</h2>
+          </div>
 
           <p className="text-lg text-gray-600 mb-10 leading-relaxed">
             Un <strong>"agent"</strong> est un programme automatique qui fait une tâche précise.

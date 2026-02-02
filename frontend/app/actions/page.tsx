@@ -6,9 +6,14 @@ export default function ActionsPage() {
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-16">
-          <h1 className="text-5xl font-serif font-bold mb-4">
-            <span className="gradient-text">🔧 Actions</span>
-          </h1>
+          <div className="flex items-center justify-center gap-4 mb-4">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-purple-pink flex items-center justify-center shadow-lg">
+              <svg className="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+            <h1 className="text-5xl font-serif font-bold gradient-text">Actions</h1>
+          </div>
           <p className="text-xl text-text-muted">
             Gérez vos fiches avec les agents IA
           </p>
