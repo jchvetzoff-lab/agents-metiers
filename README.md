@@ -1,36 +1,95 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Agents Métiers Frontend
 
-## Getting Started
+Interface Next.js pour le système de fiches métiers.
 
-First, run the development server:
+## Stack
+
+- **Framework**: Next.js 16 + React 19
+- **Styling**: Tailwind CSS 4
+- **State**: React Query (TanStack Query)
+- **Icons**: Lucide React
+
+## Installation
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Configuration
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Copier `.env.local.example` vers `.env.local`
+2. Configurer l'URL de l'API backend
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+cp .env.local.example .env.local
+```
 
-## Learn More
+## Développement
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+# Lancer le serveur de développement
+npm run dev
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# L'application sera disponible sur http://localhost:3000
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Production
 
-## Deploy on Vercel
+```bash
+# Build
+npm run build
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+# Lancer en production
+npm start
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Déploiement Netlify
+
+1. Connecter le repository GitHub
+2. Build command: `npm run build`
+3. Publish directory: `.next`
+4. Variables d'environnement:
+   - `NEXT_PUBLIC_API_URL`: URL de l'API backend
+
+## Pages
+
+| Page | Route | Description |
+|------|-------|-------------|
+| Dashboard | `/` | Statistiques et vue d'ensemble |
+| Fiches | `/fiches` | Liste des fiches métiers |
+| Détail Fiche | `/fiches/[code]` | Détail d'une fiche |
+| Actions | `/actions` | Enrichissement et publication |
+| Guide | `/guide` | Documentation |
+
+## Design System
+
+Basé sur le design SOJAI avec:
+- Palette violet/rose (#4A39C0, #FF3254)
+- Cards avec border-radius 16-20px
+- Badges pill-shaped
+- Animations fadeIn et hover
+
+## Structure
+
+```
+src/
+├── app/
+│   ├── page.tsx           # Dashboard
+│   ├── layout.tsx         # Layout avec sidebar
+│   ├── globals.css        # Design system
+│   ├── fiches/
+│   │   ├── page.tsx       # Liste
+│   │   └── [code]/page.tsx # Détail
+│   ├── actions/page.tsx
+│   └── guide/page.tsx
+├── components/
+│   ├── layout/
+│   │   └── Sidebar.tsx
+│   ├── ui/
+│   │   ├── Badge.tsx
+│   │   ├── StatCard.tsx
+│   │   └── TensionBar.tsx
+│   └── Providers.tsx
+└── lib/
+    └── api.ts             # Client API
+```
