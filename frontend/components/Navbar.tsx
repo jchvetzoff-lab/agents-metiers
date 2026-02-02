@@ -46,7 +46,7 @@ export default function Navbar() {
   const pathname = usePathname();
 
   return (
-    <nav className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+    <nav className="sticky top-0 z-[100] bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm">
       <div className="max-w-7xl mx-auto px-6">
         <div className="flex items-center justify-between h-20">
           {/* Logo - Plus visible et pro */}
@@ -58,7 +58,7 @@ export default function Navbar() {
               <div className="font-bold text-lg text-gray-900 group-hover:text-purple transition-colors">
                 Agents Métiers
               </div>
-              <div className="text-xs text-gray-500">Fiches métiers IA</div>
+              <div className="text-xs text-gray-500">By JAE Fondation</div>
             </div>
           </Link>
 
