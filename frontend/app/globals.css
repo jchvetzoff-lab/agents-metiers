@@ -1,0 +1,150 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --primary-purple: #4A39C0;
+    --pink-accent: #FF3254;
+    --bg-light-purple: #F9F8FF;
+    --bg-white: #FFFFFF;
+    --badge-purple-bg: #E4E1FF;
+    --text-dark: #1A1A2E;
+    --text-muted: rgba(26, 26, 46, 0.7);
+    --border-subtle: rgba(0, 0, 0, 0.08);
+    --border-hover: rgba(74, 57, 192, 0.2);
+    --radius-card: 24px;
+    --radius-pill: 100px;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-white text-text-dark;
+  }
+}
+
+@layer components {
+  /* Gradient Text (comme SOJAI) */
+  .gradient-text {
+    background: linear-gradient(135deg, var(--primary-purple) 0%, var(--pink-accent) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Card SOJAI */
+  .sojai-card {
+    @apply bg-white border border-border-subtle rounded-card p-6
+           transition-all duration-200 hover:border-border-hover
+           hover:shadow-xl hover:-translate-y-2;
+  }
+
+  /* Badge */
+  .badge {
+    @apply inline-block px-6 py-3 rounded-pill text-xs font-semibold uppercase tracking-wide;
+  }
+
+  .badge-purple {
+    @apply bg-badge-purple text-primary-purple;
+  }
+
+  .badge-pink {
+    @apply bg-red-50 text-primary-pink;
+  }
+
+  /* Button */
+  .btn {
+    @apply px-8 py-4 rounded-pill font-semibold text-base
+           transition-all duration-200 inline-flex items-center gap-2;
+  }
+
+  .btn-primary {
+    @apply bg-primary-purple text-white hover:bg-opacity-90 hover:shadow-lg;
+  }
+
+  .btn-secondary {
+    @apply border-2 border-primary-purple text-primary-purple
+           hover:bg-primary-purple hover:text-white;
+  }
+
+  /* Check List */
+  .check-list {
+    @apply space-y-3;
+  }
+
+  .check-list li {
+    @apply flex items-start gap-3;
+  }
+
+  .check-icon {
+    @apply flex-shrink-0 w-6 h-6 rounded-full bg-primary-purple text-white
+           flex items-center justify-center text-sm font-bold;
+  }
+
+  /* Section Header */
+  .section-header {
+    @apply text-center mb-16;
+  }
+
+  .section-title {
+    @apply text-4xl md:text-5xl font-serif font-bold mb-6;
+  }
+
+  .section-description {
+    @apply text-lg md:text-xl text-text-muted max-w-3xl mx-auto leading-relaxed;
+  }
+}
+
+@layer utilities {
+  /* Animations SOJAI */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-20px);
+    }
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: -1000px 0;
+    }
+    100% {
+      background-position: 1000px 0;
+    }
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.6s ease-out;
+  }
+
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  .animate-shimmer {
+    animation: shimmer 2s linear infinite;
+    background: linear-gradient(
+      90deg,
+      var(--bg-light-purple) 0%,
+      var(--badge-purple-bg) 50%,
+      var(--bg-light-purple) 100%
+    );
+    background-size: 1000px 100%;
+  }
+}
