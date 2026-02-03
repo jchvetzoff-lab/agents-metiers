@@ -65,13 +65,13 @@ export default function DashboardPage() {
             </span>
           </div>
 
-          <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">
+          <h1 className="text-6xl md:text-7xl font-bold mb-6 leading-tight">
             <span className="gradient-text">Gestion</span> des Fiches{" "}
             <br className="hidden md:block" />
             Métiers
           </h1>
 
-          <p className="text-xl text-[#1A1A2E]/60 max-w-2xl leading-relaxed">
+          <p className="text-xl md:text-2xl text-[#1A1A2E]/60 max-w-2xl leading-relaxed">
             Créez, enrichissez et gérez vos fiches métiers avec l'intelligence artificielle.
             Système multi-agents pour une gestion automatisée et efficace.
           </p>
@@ -102,10 +102,10 @@ export default function DashboardPage() {
         variants={staggerContainer}
       >
         <motion.div variants={fadeInUp} className="mb-10">
-          <h2 className="text-3xl font-bold text-[#1A1A2E] mb-3">
+          <h2 className="text-4xl font-bold text-[#1A1A2E] mb-3">
             Vue d'ensemble
           </h2>
-          <p className="text-lg text-[#1A1A2E]/60">
+          <p className="text-lg md:text-xl text-[#1A1A2E]/60">
             Statistiques en temps réel de votre base de fiches métiers
           </p>
         </motion.div>
@@ -181,7 +181,7 @@ export default function DashboardPage() {
               <TrendingUp className="w-7 h-7 text-white" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-[#1A1A2E]">Métiers en Tension</h2>
+              <h2 className="text-3xl font-bold text-[#1A1A2E]">Métiers en Tension</h2>
               <p className="text-sm text-[#1A1A2E]/60">Top 10 des métiers les plus recherchés</p>
             </div>
           </div>
@@ -242,7 +242,7 @@ export default function DashboardPage() {
               <Activity className="w-7 h-7 text-white" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-[#1A1A2E]">Activité Récente</h2>
+              <h2 className="text-3xl font-bold text-[#1A1A2E]">Activité Récente</h2>
               <p className="text-sm text-[#1A1A2E]/60">Dernières modifications du système</p>
             </div>
           </div>
