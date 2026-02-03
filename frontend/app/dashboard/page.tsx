@@ -68,7 +68,8 @@ export default function DashboardPage() {
           <MetricCard
             label="Brouillons"
             value={stats?.brouillons || 0}
-            delta={`${pctBrouillon.toFixed(0)}%`}
+            trend="neutral"
+            trendValue={`${pctBrouillon.toFixed(0)}%`}
             icon="📝"
           />
           <MetricCard
@@ -79,7 +80,8 @@ export default function DashboardPage() {
           <MetricCard
             label="Publiées"
             value={stats?.publiees || 0}
-            delta={`+${pctPubliees.toFixed(0)}%`}
+            trend="up"
+            trendValue={`${pctPubliees.toFixed(0)}%`}
             icon="✅"
           />
           <MetricCard
