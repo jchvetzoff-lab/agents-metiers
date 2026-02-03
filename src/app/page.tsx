@@ -16,6 +16,7 @@ import { getStats, getTopTension, getAuditLogs } from "@/lib/api";
 import { StatCard } from "@/components/ui/StatCard";
 import { TensionBar } from "@/components/ui/TensionBar";
 import { TendanceBadge } from "@/components/ui/Badge";
+import BackgroundOrbs from "@/components/ui/BackgroundOrbs";
 import Link from "next/link";
 
 const fadeInUp = {
@@ -49,7 +50,9 @@ export default function DashboardPage() {
   });
 
   return (
-    <div className="space-y-24">
+    <>
+      <BackgroundOrbs />
+      <div className="space-y-24">
       {/* Hero Section */}
       <motion.section
         initial="initial"
@@ -320,6 +323,7 @@ export default function DashboardPage() {
           />
         </div>
       </motion.section>
-    </div>
+      </div>
+    </>
   );
 }
