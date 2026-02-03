@@ -66,7 +66,7 @@ body {
 .main-content {
   flex: 1;
   margin-left: var(--sidebar-width);
-  padding: 32px;
+  padding: 48px 64px;
   min-height: 100vh;
   background: #F9F8FF;
 }
