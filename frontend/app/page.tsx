@@ -1,8 +1,11 @@
 import Link from "next/link";
+import BackgroundOrbs from "@/components/ui/BackgroundOrbs";
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-white">
+    <>
+      <BackgroundOrbs />
+      <main className="min-h-screen bg-white">
       {/* Hero - Spacieux */}
       <section className="py-24 px-6 bg-gradient-to-b from-purple-50 to-white">
         <div className="max-w-4xl mx-auto text-center">
@@ -293,5 +296,6 @@ export default function Home() {
         </div>
       </footer>
     </main>
+    </>
   );
 }
