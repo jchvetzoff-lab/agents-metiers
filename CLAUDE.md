@@ -56,6 +56,48 @@ Transformation complète de l'interface Streamlit avec le design system professi
 
 **Résultat** : Interface 100% professionnelle, fluide et cohérente visuellement.
 
+### ✅ Backend API Déployé sur Render.com (3 fév. 2026)
+
+Déploiement réussi du backend FastAPI en production sur Render.com après plusieurs tentatives infructueuses (Fly.io bloqué, Railway avec problèmes de cache).
+
+**Configuration finale** :
+- **Plateforme** : Render.com
+- **Région** : Frankfurt (EU Central)
+- **URL Production** : https://agents-metiers.onrender.com
+- **Environment** : Docker (Dockerfile + docker-entrypoint.sh)
+- **Variables** : ANTHROPIC_API_KEY configurée
+- **Branch déployée** : `backend-api`
+
+**Endpoints fonctionnels** :
+- `/` — API root (version, docs link)
+- `/health` — Health check (retourne `{"status":"healthy"}`)
+- `/docs` — Documentation Swagger UI interactive
+- `/redoc` — Documentation ReDoc
+- `/api/fiches` — CRUD fiches métiers
+- `/api/variantes` — Gestion des variantes multilingues
+- `/api/stats` — Statistiques système
+- `/api/actions` — Actions (enrichissement, correction, publication, génération variantes)
+- `/api/export` — Export PDF/JSON
+
+**Problèmes résolus** :
+- Port dynamique géré via script `docker-entrypoint.sh` (utilise `$PORT` de Render)
+- Suppression des fichiers `railway.toml`, `railway.json`, `nixpacks.toml` qui overridaient le Dockerfile
+- Configuration Docker explicite au lieu des buildpacks Python auto-détectés
+
+**Performance** :
+- ✅ Build time : ~6-10 secondes (cache Docker)
+- ✅ Cold start : ~10-15 secondes
+- ✅ Latence EU : <100ms depuis la France
+
+**Coût** : Plan gratuit Render (750h/mois, suffisant pour 24/7)
+
+**Repository branche API** : https://github.com/jchvetzoff-lab/agents-metiers/tree/backend-api
+
+**Commits clés** :
+- `368a7af` — Remove railway config files to use Dockerfile ENTRYPOINT
+- `7855830` — Fix: Use entrypoint script for proper PORT variable handling
+- `226d8c9` — Force rebuild with Dockerfile
+
 ### ✅ Données ROME Importées (27 janv. 2026)
 
 Import du référentiel ROME complet depuis data.gouv.fr (sept. 2025) :
@@ -524,12 +566,16 @@ Chaque fiche possède 2 dates :
 
 ---
 
-## 🚀 État du Projet (2 fév. 2026)
+## 🚀 État du Projet (3 fév. 2026)
 
 **Système complet et opérationnel** :
 - ✅ 1 584 fiches ROME importées
 - ✅ Interface Streamlit complète (Dashboard, Fiches, Actions, Guide)
 - ✅ **Design System SOJAI** appliqué sur toutes les pages (2 fév. 2026)
+- ✅ **Backend API FastAPI déployé sur Render.com** (3 fév. 2026) 🆕
+  - URL Production : https://agents-metiers.onrender.com
+  - Documentation : https://agents-metiers.onrender.com/docs
+  - Région : Frankfurt (EU Central)
 - ✅ Enrichissement automatique via Claude API
 - ✅ Système de variantes multilingues (90 variantes/fiche)
 - ✅ Export PDF professionnel
@@ -542,14 +588,85 @@ Chaque fiche possède 2 dates :
 - Design system complet : 1 121 lignes CSS + 9 helpers UI
 - Palette violet/rose, animations fluides, composants élégants
 
-**Prochaine étape planifiée** :
-- 🚧 Migration vers Next.js + React pour remplacer Streamlit (design 100% personnalisable)
-
-**Prêt pour production** avec API Claude configurée.
+**Architecture déployée** :
+- Backend API : Render.com (https://agents-metiers.onrender.com)
+- Frontend : À déployer sur Vercel/Netlify (prochaine étape)
+- Base de données : SQLite (embarquée dans le backend)
 
 **Repository GitHub** : https://github.com/jchvetzoff-lab/agents-metiers
 
 **Derniers commits** :
+- `368a7af` — Remove railway config files to use Dockerfile ENTRYPOINT
 - `c03a4f6` — Design SOJAI complet: Actions + Page d'accueil + finalisations
 - `b39dcb4` — Design SOJAI: Dashboard + Fiches refactorisés
-- `e83cf5f` — Ajout design system SOJAI + Page Guide
+
+---
+
+## 🎯 Prochaines Étapes (Février 2026)
+
+### 1. ✅ Backend API (TERMINÉ - 3 fév. 2026)
+- ✅ Déploiement sur Render.com
+- ✅ Documentation Swagger accessible
+- ✅ Endpoints fonctionnels testés
+
+### 2. 🔄 Frontend Next.js (EN COURS)
+
+**Tâches à réaliser** :
+1. **Créer le client API** (30 min)
+   - Configurer axios/fetch avec l'URL backend
+   - Créer les fonctions d'appel API (getFiches, createFiche, etc.)
+   - Gérer l'authentification si nécessaire
+
+2. **Connecter les pages** (1-2h)
+   - Dashboard : Récupérer stats depuis `/api/stats`
+   - Fiches : Liste depuis `/api/fiches`, détail depuis `/api/fiches/{code_rome}`
+   - Actions : Appels vers `/api/actions/*`
+   - Variantes : Sélection et affichage depuis `/api/variantes`
+
+3. **Déployer sur Vercel** (15 min)
+   - Push code frontend sur GitHub
+   - Créer projet Vercel depuis le repo
+   - Configurer variable d'environnement : `NEXT_PUBLIC_API_URL=https://agents-metiers.onrender.com`
+   - Deploy automatique
+
+### 3. 📊 Initialiser la base de données (10 min)
+- Importer les 1 584 fiches ROME via l'API
+- Endpoint : `POST /api/actions/import-rome`
+- Vérifier avec `GET /api/stats`
+
+### 4. 🧪 Tests End-to-End (30 min)
+- Créer une fiche depuis le frontend
+- Enrichir avec Claude API
+- Générer des variantes (FR/EN)
+- Exporter en PDF
+- Vérifier la persistance des données
+
+### 5. 🚀 Mise en Production (optionnel)
+- Configurer un domaine custom (si besoin)
+- Activer HTTPS (déjà activé sur Render/Vercel)
+- Monitoring et logs (Render Dashboard)
+- Backup de la base SQLite (si données importantes)
+
+---
+
+## 📝 Notes de Déploiement
+
+**Render.com (Backend)** :
+- Plan gratuit : 750h/mois (suffisant pour 24/7)
+- Cold start après 15 min d'inactivité (~10-15s)
+- Pour éviter le cold start : Passer au plan Starter ($7/mois)
+
+**Vercel (Frontend recommandé)** :
+- Plan gratuit : Largement suffisant
+- Deploy automatique depuis GitHub
+- Pas de cold start
+
+**Alternative : Netlify (Frontend)** :
+- Similaire à Vercel
+- Aussi gratuit et performant
+
+**Coûts estimés** :
+- Backend Render (gratuit) : $0/mois
+- Frontend Vercel (gratuit) : $0/mois
+- API Claude (usage) : ~$5-20/mois selon utilisation
+- **Total : ~$5-20/mois**
