@@ -6,9 +6,10 @@ export default function Home() {
       {/* Hero - Spacieux */}
       <section className="py-24 px-6">
         <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-4xl md:text-5xl font-bold mb-6 text-gray-900 leading-tight">
+          <h1 className="text-4xl md:text-5xl font-bold mb-2 text-gray-900 leading-tight">
             Agents Métiers
           </h1>
+          <p className="text-base text-gray-500 mb-6">By JAE Fondation</p>
 
           <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-10 leading-relaxed">
             Système multi-agents IA pour générer, enrichir et gérer automatiquement
