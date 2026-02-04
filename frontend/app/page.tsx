@@ -4,13 +4,8 @@ export default function Home() {
   return (
     <main className="min-h-screen">
       {/* Hero - Spacieux */}
-      <section className="py-24 px-6 bg-gradient-to-b from-purple-50 to-white">
+      <section className="py-24 px-6">
         <div className="max-w-4xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white border border-purple-200 text-purple text-sm font-medium mb-8 shadow-sm">
-            <span>✨</span>
-            <span>Propulsé par Claude Opus 4.5</span>
-          </div>
-
           <h1 className="text-4xl md:text-5xl font-bold mb-6 text-gray-900 leading-tight">
             Agents Métiers
           </h1>
