@@ -12,9 +12,14 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 # Ajouter le dossier parent au path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+import os
+from dotenv import load_dotenv
+
 from database.repository import Repository
 from agents.redacteur_fiche import AgentRedacteurFiche
-from app.config import get_settings
+
+# Charger les variables d'environnement
+load_dotenv()
 
 
 async def test_enrichment(code_rome: str):
@@ -25,7 +30,6 @@ async def test_enrichment(code_rome: str):
         code_rome: Code ROME de la fiche à enrichir
     """
     # Config
-    settings = get_settings()
     db_path = Path(__file__).parent.parent / "database" / "fiches_metiers.db"
     repo = Repository(db_path=str(db_path))
 
@@ -38,47 +42,49 @@ async def test_enrichment(code_rome: str):
         return
 
     print(f"✅ Fiche trouvée : {fiche.nom_masculin}")
-    print(f"   Statut actuel : {fiche.metadata.statut}")
-    print(f"   Définition : {fiche.definition[:100] if fiche.definition else 'Vide'}...")
+    print(f"   Code : {fiche.code_rome}")
+    if fiche.description:
+        print(f"   Description : {fiche.description[:100]}...")
 
     # Créer l'agent
     print(f"\n🤖 Initialisation de l'agent rédacteur...")
-    agent = AgentRedacteurFiche(
-        repository=repo,
-        anthropic_api_key=settings.anthropic_api_key
-    )
+    agent = AgentRedacteurFiche(repository=repo)
 
     # Enrichir la fiche
     print(f"\n✨ Enrichissement en cours...")
     print(f"   (Cela peut prendre 30-60 secondes)\n")
 
     try:
-        await agent.enrichir_fiche(code_rome)
+        # Enrichir avec l'objet fiche, pas le code
+        fiche_enrichie = await agent.enrichir_fiche(fiche)
 
-        # Récupérer la fiche enrichie
-        fiche_enrichie = repo.get_fiche(code_rome)
+        # Sauvegarder dans la base
+        repo.update_fiche(fiche_enrichie)
 
         print(f"\n🎉 Enrichissement terminé !\n")
         print(f"📄 Résultat :")
         print(f"   Code ROME : {fiche_enrichie.code_rome}")
         print(f"   Nom : {fiche_enrichie.nom_masculin}")
-        print(f"   Statut : {fiche_enrichie.metadata.statut}")
-        print(f"   Version : {fiche_enrichie.metadata.version}")
 
-        if fiche_enrichie.definition:
-            print(f"\n📝 Définition ({len(fiche_enrichie.definition)} caractères) :")
-            print(f"   {fiche_enrichie.definition[:200]}...")
+        if fiche_enrichie.description:
+            print(f"\n📝 Description ({len(fiche_enrichie.description)} caractères) :")
+            print(f"   {fiche_enrichie.description[:200]}...")
 
-        if fiche_enrichie.acces_emploi:
-            print(f"\n🎓 Accès à l'emploi ({len(fiche_enrichie.acces_emploi)} caractères) :")
-            print(f"   {fiche_enrichie.acces_emploi[:200]}...")
+        if fiche_enrichie.description_courte:
+            print(f"\n📋 Description courte :")
+            print(f"   {fiche_enrichie.description_courte}")
 
-        if fiche_enrichie.competences_cles:
-            print(f"\n💼 Compétences clés ({len(fiche_enrichie.competences_cles)}) :")
-            for comp in fiche_enrichie.competences_cles[:5]:
+        if fiche_enrichie.competences:
+            print(f"\n💼 Compétences ({len(fiche_enrichie.competences)}) :")
+            for comp in fiche_enrichie.competences[:5]:
                 print(f"   • {comp}")
-            if len(fiche_enrichie.competences_cles) > 5:
-                print(f"   ... et {len(fiche_enrichie.competences_cles) - 5} autres")
+            if len(fiche_enrichie.competences) > 5:
+                print(f"   ... et {len(fiche_enrichie.competences) - 5} autres")
+
+        if fiche_enrichie.formations:
+            print(f"\n🎓 Formations ({len(fiche_enrichie.formations)}) :")
+            for form in fiche_enrichie.formations[:3]:
+                print(f"   • {form}")
 
         if fiche_enrichie.secteurs_activite:
             print(f"\n🏭 Secteurs d'activité ({len(fiche_enrichie.secteurs_activite)}) :")
