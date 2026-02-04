@@ -4,7 +4,7 @@ export default function Home() {
   return (
     <main className="min-h-screen">
       {/* Hero - Spacieux */}
-      <section className="py-24 px-6">
+      <section className="py-24 px-6 bg-gradient-to-b from-purple-50/30 to-transparent">
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-2 text-gray-900 leading-tight">
             Agents Métiers
@@ -28,7 +28,7 @@ export default function Home() {
       </section>
 
       {/* 5 Agents - Très spacieux */}
-      <section className="py-24 px-6">
+      <section className="py-24 px-6 bg-white/60 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-20">
             <span className="badge badge-purple mb-6 text-sm">Comment ça marche</span>
@@ -103,7 +103,7 @@ export default function Home() {
       </section>
 
       {/* Manuel - Très aéré */}
-      <section className="py-24 px-6 bg-gray-50">
+      <section className="py-24 px-6 bg-purple-50/50">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-20">
             <span className="badge badge-pink mb-6 text-sm">Manuel d'utilisation</span>
@@ -196,7 +196,7 @@ export default function Home() {
       </section>
 
       {/* Fonctionnalités */}
-      <section className="py-24 px-6">
+      <section className="py-24 px-6 bg-gradient-to-b from-transparent to-white/80">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-20">
             <span className="badge badge-purple mb-6 text-sm">Fonctionnalités</span>
@@ -246,7 +246,7 @@ export default function Home() {
       </section>
 
       {/* CTA */}
-      <section className="py-24 px-6 bg-gradient-mesh">
+      <section className="py-24 px-6 bg-gradient-to-br from-purple-100 via-pink-50 to-purple-50">
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-6 leading-tight">
             Commencez dès maintenant
