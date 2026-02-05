@@ -181,6 +181,56 @@ async def get_fiches(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+class FicheMetierCreate(BaseModel):
+    """Modèle pour créer une fiche métier."""
+    code_rome: str
+    nom_masculin: str
+    nom_feminin: str
+    nom_epicene: str
+    definition: Optional[str] = None
+    description: Optional[str] = None
+
+
+@app.post("/api/fiches", status_code=201)
+async def create_fiche(fiche_data: FicheMetierCreate):
+    """Crée une nouvelle fiche métier."""
+    try:
+        # Vérifier si la fiche existe déjà
+        existing = repo.get_fiche(fiche_data.code_rome)
+        if existing:
+            raise HTTPException(status_code=400, detail=f"La fiche {fiche_data.code_rome} existe déjà")
+
+        # Créer la fiche
+        from database.models import FicheMetier, MetadataFiche, StatutFiche
+
+        nouvelle_fiche = FicheMetier(
+            code_rome=fiche_data.code_rome,
+            nom_masculin=fiche_data.nom_masculin,
+            nom_feminin=fiche_data.nom_feminin,
+            nom_epicene=fiche_data.nom_epicene,
+            definition=fiche_data.definition or fiche_data.description,
+            description=fiche_data.description,
+            metadata=MetadataFiche(
+                statut=StatutFiche.BROUILLON,
+                version=1
+            )
+        )
+
+        fiche_creee = repo.create_fiche(nouvelle_fiche)
+
+        return {
+            "message": "Fiche créée avec succès",
+            "code_rome": fiche_creee.code_rome,
+            "nom_masculin": fiche_creee.nom_masculin,
+            "statut": fiche_creee.statut.value
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur lors de la création: {str(e)}")
+
+
 @app.get("/api/fiches/{code_rome}")
 async def get_fiche_detail(code_rome: str):
     """Récupère le détail complet d'une fiche métier."""
