@@ -35,7 +35,11 @@ app.add_middleware(
 
 # Initialisation du repository
 config = get_config()
-repo = Repository(config.db_path)
+# Utilise PostgreSQL si DATABASE_URL est défini (production), sinon SQLite (dev)
+repo = Repository(
+    db_path=config.db_path if not config.database.database_url else None,
+    database_url=config.database.database_url
+)
 repo.init_db()
 
 

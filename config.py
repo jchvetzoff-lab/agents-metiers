@@ -18,8 +18,31 @@ class Environment(Enum):
 @dataclass
 class DatabaseConfig:
     """Configuration de la base de données."""
+    # URL de la base de données (PostgreSQL en production, SQLite en dev)
+    # Format PostgreSQL: postgresql://user:password@host:port/dbname
+    # Format SQLite: sqlite:///path/to/database.db
+    database_url: Optional[str] = field(
+        default_factory=lambda: os.getenv("DATABASE_URL")
+    )
+
+    # Chemin SQLite (utilisé si database_url est None)
     path: Path = field(default_factory=lambda: Path("database/fiches_metiers.db"))
+
     echo: bool = False  # Afficher les requêtes SQL
+
+    @property
+    def connection_string(self) -> str:
+        """Retourne la chaîne de connexion appropriée."""
+        if self.database_url:
+            # PostgreSQL en production (Render fournit DATABASE_URL)
+            # Render utilise postgres:// mais SQLAlchemy attend postgresql://
+            url = self.database_url
+            if url.startswith("postgres://"):
+                url = url.replace("postgres://", "postgresql://", 1)
+            return url
+        else:
+            # SQLite en développement local
+            return f"sqlite:///{self.path}"
 
 
 @dataclass
@@ -99,6 +122,9 @@ class Config:
 
     @property
     def db_path(self) -> Path:
+        """Retourne le chemin de la base SQLite (dev local uniquement)."""
+        if self.database.path.is_absolute():
+            return self.database.path
         return self.base_path / self.database.path
 
     def ensure_directories(self) -> None:

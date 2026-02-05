@@ -2,6 +2,7 @@
 Repository pour l'accès aux données des fiches métiers.
 """
 import json
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Dict, Any
@@ -9,6 +10,7 @@ from contextlib import contextmanager
 
 from sqlalchemy import create_engine, select, update, delete, func, or_
 from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.exc import SQLAlchemyError
 
 from .models import (
     Base, FicheMetierDB, SalaireDB, HistoriqueVeilleDB, AuditLogDB, DictionnaireGenreDB,
@@ -19,23 +21,47 @@ from .models import (
 )
 
 
+logger = logging.getLogger(__name__)
+
+
 class Repository:
     """Repository pour l'accès à la base de données."""
 
-    def __init__(self, db_path: Path, echo: bool = False):
+    def __init__(self, db_path: Optional[Path] = None, database_url: Optional[str] = None, echo: bool = False):
         """
         Initialise le repository.
 
         Args:
-            db_path: Chemin vers le fichier SQLite
+            db_path: Chemin vers le fichier SQLite (dev local)
+            database_url: URL de connexion (PostgreSQL en production)
             echo: Afficher les requêtes SQL (debug)
         """
         self.db_path = db_path
-        self.engine = create_engine(
-            f"sqlite:///{db_path}",
-            echo=echo,
-            connect_args={"check_same_thread": False}
-        )
+
+        # Déterminer la chaîne de connexion
+        if database_url:
+            # PostgreSQL (production)
+            # Render utilise postgres:// mais SQLAlchemy attend postgresql://
+            connection_string = database_url
+            if connection_string.startswith("postgres://"):
+                connection_string = connection_string.replace("postgres://", "postgresql://", 1)
+
+            self.engine = create_engine(
+                connection_string,
+                echo=echo,
+                pool_pre_ping=True,  # Vérifier la connexion avant utilisation
+                pool_recycle=3600,   # Recycler les connexions toutes les heures
+            )
+        elif db_path:
+            # SQLite (développement local)
+            self.engine = create_engine(
+                f"sqlite:///{db_path}",
+                echo=echo,
+                connect_args={"check_same_thread": False}
+            )
+        else:
+            raise ValueError("db_path ou database_url doit être fourni")
+
         self.SessionLocal = sessionmaker(bind=self.engine)
 
     def init_db(self) -> None:
@@ -52,9 +78,15 @@ class Repository:
         session = self.SessionLocal()
         try:
             yield session
+            session.flush()  # Valider les changements avant commit
             session.commit()
-        except Exception:
+        except SQLAlchemyError as e:
             session.rollback()
+            logger.error(f"Database error: {type(e).__name__}: {e}")
+            raise
+        except Exception as e:
+            session.rollback()
+            logger.error(f"Unexpected error in session: {type(e).__name__}: {e}")
             raise
         finally:
             session.close()
