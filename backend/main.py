@@ -156,13 +156,13 @@ async def get_fiches(
                 nom_masculin=fiche.nom_masculin,
                 nom_feminin=fiche.nom_feminin,
                 nom_epicene=fiche.nom_epicene,
-                statut=fiche.statut.value,
+                statut=fiche.metadata.statut.value,
                 description=fiche.description,
                 description_courte=fiche.description_courte,
-                date_creation=fiche.date_creation,
-                date_maj=fiche.date_maj,
-                version=fiche.version,
-                has_competences=bool(fiche.competences_techniques or fiche.competences_transversales),
+                date_creation=fiche.metadata.date_creation,
+                date_maj=fiche.metadata.date_maj,
+                version=fiche.metadata.version,
+                has_competences=bool(fiche.competences or fiche.competences_transversales),
                 has_formations=bool(fiche.formations),
                 has_salaires=bool(fiche.salaires),
                 has_perspectives=bool(fiche.perspectives),
@@ -222,7 +222,7 @@ async def create_fiche(fiche_data: FicheMetierCreate):
             "message": "Fiche créée avec succès",
             "code_rome": fiche_creee.code_rome,
             "nom_masculin": fiche_creee.nom_masculin,
-            "statut": fiche_creee.statut.value
+            "statut": fiche_creee.metadata.statut.value
         }
 
     except HTTPException:
@@ -245,10 +245,10 @@ async def get_fiche_detail(code_rome: str):
             "nom_masculin": fiche.nom_masculin,
             "nom_feminin": fiche.nom_feminin,
             "nom_epicene": fiche.nom_epicene,
-            "statut": fiche.statut.value,
+            "statut": fiche.metadata.statut.value,
             "description": fiche.description,
             "description_courte": fiche.description_courte,
-            "competences_techniques": fiche.competences_techniques,
+            "competences": fiche.competences,
             "competences_transversales": fiche.competences_transversales,
             "formations": fiche.formations,
             "certifications": fiche.certifications,
@@ -256,9 +256,9 @@ async def get_fiche_detail(code_rome: str):
             "environnements": fiche.environnements,
             "salaires": fiche.salaires.model_dump() if fiche.salaires else None,
             "perspectives": fiche.perspectives.model_dump() if fiche.perspectives else None,
-            "date_creation": fiche.date_creation,
-            "date_maj": fiche.date_maj,
-            "version": fiche.version,
+            "date_creation": fiche.metadata.date_creation,
+            "date_maj": fiche.metadata.date_maj,
+            "version": fiche.metadata.version,
             "nb_variantes": repo.count_variantes(code_rome)
         }
     except HTTPException:
