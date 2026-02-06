@@ -204,12 +204,12 @@ async def create_fiche(fiche_data: FicheMetierCreate):
         from database.models import FicheMetier, MetadataFiche, StatutFiche
 
         nouvelle_fiche = FicheMetier(
+            id=fiche_data.code_rome,  # id = code_rome
             code_rome=fiche_data.code_rome,
             nom_masculin=fiche_data.nom_masculin,
             nom_feminin=fiche_data.nom_feminin,
             nom_epicene=fiche_data.nom_epicene,
-            definition=fiche_data.definition or fiche_data.description,
-            description=fiche_data.description,
+            description=fiche_data.definition or fiche_data.description or "",
             metadata=MetadataFiche(
                 statut=StatutFiche.BROUILLON,
                 version=1
