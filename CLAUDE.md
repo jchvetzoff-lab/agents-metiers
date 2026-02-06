@@ -199,22 +199,79 @@ Génération automatique de fiches métiers au format PDF professionnel :
 
 **Librairie** : fpdf2 (pure Python, sans dépendances système)
 
-### ⏸️ En Attente de Credentials
+### ✅ API France Travail ROME Fonctionnelle (5 fév. 2026)
 
-- **France Travail API** : francetravail.io inaccessible
-  - Alternative : https://api.gouv.fr/producteurs/france-travail
-  - Nécessaire pour : AgentVeilleSalaires, AgentVeilleMetiers
-- **INSEE API** : Non configuré
-  - Nécessaire pour : Données salariales nationales
+Intégration réussie des APIs ROME v4 de France Travail après résolution des problèmes d'authentification.
+
+**Scopes OAuth2 corrects** (découverts le 5 fév. 2026) :
+```
+api_rome-metiersv1 nomenclatureRome        # API Métiers
+api_rome-fiches-metiersv1 nomenclatureRome  # API Fiches
+```
+
+**Endpoints validés** :
+| API | Endpoint | Usage |
+|-----|----------|-------|
+| Métiers | `GET /partenaire/rome-metiers/v1/metiers/metier/{code}` | Récupérer un métier par code ROME |
+| Fiches | `GET /partenaire/rome-fiches-metiers/v1/fiches-rome/fiche-metier/{code}` | Récupérer une fiche complète |
+
+**Client opérationnel** : `sources/france_travail_rome.py`
+- Classe `FranceTravailROMEClient`
+- Authentification OAuth2 avec cache de token
+- Méthodes async : `get_metier()`, `get_fiche_metier()`, `list_metiers()`
+
+**Données récupérables** :
+- Libellé du métier (masculin, féminin, épicène)
+- Définition complète
+- Profil RIASEC (majeur/mineur)
+- Transitions (écologique, numérique, démographique)
+- Compétences mobilisées (principales, émergentes)
+- Savoirs requis par catégorie
+- Contextes de travail
+
+**Test réussi** (M1805 - Développeur informatique) :
+```python
+# API Métiers
+Status: 200
+Code: M1805
+Libellé: Développeur / Développeuse informatique
+RIASEC: I/C
+
+# API Fiches
+9 groupes de compétences
+5 groupes de savoirs
+```
+
+### ✅ PostgreSQL sur Render (5 fév. 2026)
+
+Migration de SQLite vers PostgreSQL pour persistance des données en production.
+
+**Problème résolu** :
+- SQLite sur Render = données perdues à chaque redéploiement (containers éphémères)
+- PostgreSQL = base séparée, données persistantes
+
+**Configuration** :
+- Base PostgreSQL créée sur Render (plan gratuit, 1 GB)
+- Variable `DATABASE_URL` ajoutée au backend
+- Auto-détection : PostgreSQL (prod) / SQLite (dev local)
+
+**Fichiers modifiés** :
+- `config.py` : Support `DATABASE_URL` + propriété `connection_string`
+- `database/repository.py` : Détection automatique du type de base
+- `backend/main.py` : Utilisation de la nouvelle config
+- `requirements.txt` : Ajout de `psycopg2-binary`
+
+**Guide de configuration** : `POSTGRESQL_RENDER_SETUP.md`
 
 ### 🔧 Configuration Actuelle
 
 ```bash
 # Fichier .env (créé et configuré)
-ANTHROPIC_API_KEY=sk-ant-xxx  # ✅ Configuré
-FRANCE_TRAVAIL_CLIENT_ID=     # ❌ À obtenir
-FRANCE_TRAVAIL_CLIENT_SECRET= # ❌ À obtenir
-INSEE_API_KEY=                # ❌ À obtenir
+ANTHROPIC_API_KEY=sk-ant-xxx       # ✅ Configuré
+FRANCE_TRAVAIL_CLIENT_ID=xxx       # ✅ Configuré (5 fév. 2026)
+FRANCE_TRAVAIL_CLIENT_SECRET=xxx   # ✅ Configuré (5 fév. 2026)
+DATABASE_URL=postgresql://...      # ✅ Configuré sur Render (5 fév. 2026)
+INSEE_API_KEY=                     # ❌ À obtenir (optionnel)
 ```
 
 ---
@@ -566,22 +623,29 @@ Chaque fiche possède 2 dates :
 
 ---
 
-## 🚀 État du Projet (3 fév. 2026)
+## 🚀 État du Projet (6 fév. 2026)
 
 **Système complet et opérationnel** :
 - ✅ 1 584 fiches ROME importées
 - ✅ Interface Streamlit complète (Dashboard, Fiches, Actions, Guide)
 - ✅ **Design System SOJAI** appliqué sur toutes les pages (2 fév. 2026)
-- ✅ **Backend API FastAPI déployé sur Render.com** (3 fév. 2026) 🆕
+- ✅ **Backend API FastAPI déployé sur Render.com** (3 fév. 2026)
   - URL Production : https://agents-metiers.onrender.com
   - Documentation : https://agents-metiers.onrender.com/docs
   - Région : Frankfurt (EU Central)
+- ✅ **PostgreSQL configuré sur Render** (5 fév. 2026) 🆕
+  - Base persistante (données conservées après redéploiement)
+  - Auto-détection SQLite (dev) / PostgreSQL (prod)
+- ✅ **API France Travail ROME fonctionnelle** (5 fév. 2026) 🆕
+  - Client `FranceTravailROMEClient` opérationnel
+  - Scopes OAuth2 corrects trouvés et validés
+  - Endpoints testés et fonctionnels
 - ✅ Enrichissement automatique via Claude API
 - ✅ Système de variantes multilingues (90 variantes/fiche)
 - ✅ Export PDF professionnel
 - ✅ Déploiement Streamlit Cloud configuré
 - ✅ Tests unitaires et E2E passants
-- ✅ Documentation complète (4 guides)
+- ✅ Documentation complète (5 guides)
 
 **Interface professionnelle avec design SOJAI** :
 - Pages refactorisées : Accueil, Dashboard, Fiches, Actions, Guide
@@ -590,15 +654,15 @@ Chaque fiche possède 2 dates :
 
 **Architecture déployée** :
 - Backend API : Render.com (https://agents-metiers.onrender.com)
+- Base de données : **PostgreSQL sur Render** (persistante) 🆕
 - Frontend : À déployer sur Vercel/Netlify (prochaine étape)
-- Base de données : SQLite (embarquée dans le backend)
 
 **Repository GitHub** : https://github.com/jchvetzoff-lab/agents-metiers
 
 **Derniers commits** :
+- `b9751e4` — Add POST /api/fiches endpoint for creating fiches
+- `7202dcb` — Phase 1 - Sécurité et infrastructure production-ready
 - `368a7af` — Remove railway config files to use Dockerfile ENTRYPOINT
-- `c03a4f6` — Design SOJAI complet: Actions + Page d'accueil + finalisations
-- `b39dcb4` — Design SOJAI: Dashboard + Fiches refactorisés
 
 ---
 
@@ -609,13 +673,40 @@ Chaque fiche possède 2 dates :
 - ✅ Documentation Swagger accessible
 - ✅ Endpoints fonctionnels testés
 
-### 2. 🔄 Frontend Next.js (EN COURS)
+### 2. ✅ PostgreSQL (TERMINÉ - 5 fév. 2026)
+- ✅ Base PostgreSQL créée sur Render
+- ✅ Backend configuré avec DATABASE_URL
+- ✅ Tests réussis (`/health`, `/api/stats`)
+- ✅ Données persistantes après redéploiement
+
+### 3. ✅ API France Travail ROME (TERMINÉ - 5 fév. 2026)
+- ✅ Scopes OAuth2 corrects identifiés
+- ✅ Endpoints validés et testés
+- ✅ Client `FranceTravailROMEClient` opérationnel
+- ✅ Récupération métiers + fiches fonctionnelle
+
+### 4. 🔄 Test Enrichissement (EN COURS)
+
+**Pipeline à valider** :
+1. Récupérer fiches depuis API ROME France Travail
+2. Les créer dans PostgreSQL via backend
+3. Les enrichir avec Claude
+4. Vérifier les résultats
+
+**Script de test** : `scripts/test_enrichissement_complet.py`
+
+### 5. 📊 Importer les 1 584 fiches ROME (PROCHAINE ÉTAPE)
+- Utiliser l'API France Travail ROME pour récupérer les données complètes
+- Enrichir avec Claude (compétences, description, perspectives)
+- Sauvegarder dans PostgreSQL
+- Script batch avec rate limiting
+
+### 6. 🔄 Frontend Next.js (À FAIRE)
 
 **Tâches à réaliser** :
 1. **Créer le client API** (30 min)
    - Configurer axios/fetch avec l'URL backend
    - Créer les fonctions d'appel API (getFiches, createFiche, etc.)
-   - Gérer l'authentification si nécessaire
 
 2. **Connecter les pages** (1-2h)
    - Dashboard : Récupérer stats depuis `/api/stats`
@@ -627,34 +718,24 @@ Chaque fiche possède 2 dates :
    - Push code frontend sur GitHub
    - Créer projet Vercel depuis le repo
    - Configurer variable d'environnement : `NEXT_PUBLIC_API_URL=https://agents-metiers.onrender.com`
-   - Deploy automatique
 
-### 3. 📊 Initialiser la base de données (10 min)
-- Importer les 1 584 fiches ROME via l'API
-- Endpoint : `POST /api/actions/import-rome`
-- Vérifier avec `GET /api/stats`
-
-### 4. 🧪 Tests End-to-End (30 min)
+### 7. 🧪 Tests End-to-End
 - Créer une fiche depuis le frontend
 - Enrichir avec Claude API
 - Générer des variantes (FR/EN)
 - Exporter en PDF
 - Vérifier la persistance des données
 
-### 5. 🚀 Mise en Production (optionnel)
-- Configurer un domaine custom (si besoin)
-- Activer HTTPS (déjà activé sur Render/Vercel)
-- Monitoring et logs (Render Dashboard)
-- Backup de la base SQLite (si données importantes)
-
 ---
 
 ## 📝 Notes de Déploiement
 
-**Render.com (Backend)** :
-- Plan gratuit : 750h/mois (suffisant pour 24/7)
+**Render.com (Backend + PostgreSQL)** :
+- Backend : Plan gratuit (750h/mois, suffisant pour 24/7)
+- PostgreSQL : Plan gratuit (1 GB stockage, suffisant)
 - Cold start après 15 min d'inactivité (~10-15s)
 - Pour éviter le cold start : Passer au plan Starter ($7/mois)
+- Variable `DATABASE_URL` configurée automatiquement
 
 **Vercel (Frontend recommandé)** :
 - Plan gratuit : Largement suffisant
@@ -667,6 +748,33 @@ Chaque fiche possède 2 dates :
 
 **Coûts estimés** :
 - Backend Render (gratuit) : $0/mois
+- PostgreSQL Render (gratuit) : $0/mois
 - Frontend Vercel (gratuit) : $0/mois
 - API Claude (usage) : ~$5-20/mois selon utilisation
+- API France Travail : Gratuit
 - **Total : ~$5-20/mois**
+
+---
+
+## 🔧 Scripts Utiles
+
+### Test API France Travail ROME
+```bash
+# Tester le client ROME
+python scripts/test_rome_client_final.py
+
+# Tester le bon endpoint
+python scripts/test_correct_endpoint.py
+```
+
+### Test Enrichissement Complet
+```bash
+# Pipeline complet : API ROME → PostgreSQL → Claude
+python scripts/test_enrichissement_complet.py
+```
+
+### Configuration PostgreSQL
+```bash
+# Voir le guide complet
+cat POSTGRESQL_RENDER_SETUP.md
+```
