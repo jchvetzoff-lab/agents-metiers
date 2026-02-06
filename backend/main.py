@@ -27,7 +27,7 @@ app = FastAPI(
 # Configuration CORS pour le frontend Next.js
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001"],
+    allow_origins=["*"],  # Autoriser tous les domaines (Netlify, localhost, etc.)
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -156,13 +156,13 @@ async def get_fiches(
                 nom_masculin=fiche.nom_masculin,
                 nom_feminin=fiche.nom_feminin,
                 nom_epicene=fiche.nom_epicene,
-                statut=fiche.statut.value,
+                statut=fiche.metadata.statut.value,
                 description=fiche.description,
                 description_courte=fiche.description_courte,
-                date_creation=fiche.date_creation,
-                date_maj=fiche.date_maj,
-                version=fiche.version,
-                has_competences=bool(fiche.competences_techniques or fiche.competences_transversales),
+                date_creation=fiche.metadata.date_creation,
+                date_maj=fiche.metadata.date_maj,
+                version=fiche.metadata.version,
+                has_competences=bool(fiche.competences or fiche.competences_transversales),
                 has_formations=bool(fiche.formations),
                 has_salaires=bool(fiche.salaires),
                 has_perspectives=bool(fiche.perspectives),
@@ -204,12 +204,12 @@ async def create_fiche(fiche_data: FicheMetierCreate):
         from database.models import FicheMetier, MetadataFiche, StatutFiche
 
         nouvelle_fiche = FicheMetier(
+            id=fiche_data.code_rome,  # id = code_rome
             code_rome=fiche_data.code_rome,
             nom_masculin=fiche_data.nom_masculin,
             nom_feminin=fiche_data.nom_feminin,
             nom_epicene=fiche_data.nom_epicene,
-            definition=fiche_data.definition or fiche_data.description,
-            description=fiche_data.description,
+            description=fiche_data.definition or fiche_data.description or "",
             metadata=MetadataFiche(
                 statut=StatutFiche.BROUILLON,
                 version=1
@@ -222,7 +222,7 @@ async def create_fiche(fiche_data: FicheMetierCreate):
             "message": "Fiche créée avec succès",
             "code_rome": fiche_creee.code_rome,
             "nom_masculin": fiche_creee.nom_masculin,
-            "statut": fiche_creee.statut.value
+            "statut": fiche_creee.metadata.statut.value
         }
 
     except HTTPException:
@@ -245,10 +245,10 @@ async def get_fiche_detail(code_rome: str):
             "nom_masculin": fiche.nom_masculin,
             "nom_feminin": fiche.nom_feminin,
             "nom_epicene": fiche.nom_epicene,
-            "statut": fiche.statut.value,
+            "statut": fiche.metadata.statut.value,
             "description": fiche.description,
             "description_courte": fiche.description_courte,
-            "competences_techniques": fiche.competences_techniques,
+            "competences": fiche.competences,
             "competences_transversales": fiche.competences_transversales,
             "formations": fiche.formations,
             "certifications": fiche.certifications,
@@ -256,15 +256,73 @@ async def get_fiche_detail(code_rome: str):
             "environnements": fiche.environnements,
             "salaires": fiche.salaires.model_dump() if fiche.salaires else None,
             "perspectives": fiche.perspectives.model_dump() if fiche.perspectives else None,
-            "date_creation": fiche.date_creation,
-            "date_maj": fiche.date_maj,
-            "version": fiche.version,
+            "date_creation": fiche.metadata.date_creation,
+            "date_maj": fiche.metadata.date_maj,
+            "version": fiche.metadata.version,
             "nb_variantes": repo.count_variantes(code_rome)
         }
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+class FicheMetierUpdate(BaseModel):
+    """Modèle pour mettre à jour une fiche métier."""
+    description: Optional[str] = None
+    description_courte: Optional[str] = None
+    competences: Optional[List[str]] = None
+    competences_transversales: Optional[List[str]] = None
+    formations: Optional[List[str]] = None
+    certifications: Optional[List[str]] = None
+    conditions_travail: Optional[List[str]] = None
+    environnements: Optional[List[str]] = None
+    secteurs_activite: Optional[List[str]] = None
+    salaires: Optional[dict] = None
+    perspectives: Optional[dict] = None
+    statut: Optional[str] = None
+
+
+@app.patch("/api/fiches/{code_rome}")
+async def update_fiche(code_rome: str, update_data: FicheMetierUpdate):
+    """Met à jour une fiche métier existante."""
+    try:
+        fiche = repo.get_fiche(code_rome)
+        if not fiche:
+            raise HTTPException(status_code=404, detail=f"Fiche {code_rome} non trouvée")
+
+        # Appliquer les mises à jour
+        fiche_dict = fiche.model_dump()
+        update_dict = update_data.model_dump(exclude_none=True)
+
+        for key, value in update_dict.items():
+            if key == "statut":
+                fiche_dict["metadata"]["statut"] = value
+            elif key == "salaires" and value:
+                fiche_dict["salaires"] = value
+            elif key == "perspectives" and value:
+                fiche_dict["perspectives"] = value
+            else:
+                fiche_dict[key] = value
+
+        # Mettre à jour les métadonnées
+        fiche_dict["metadata"]["date_maj"] = datetime.now()
+        fiche_dict["metadata"]["version"] = fiche_dict["metadata"].get("version", 1) + 1
+
+        # Recréer la fiche et sauvegarder
+        updated_fiche = FicheMetier(**fiche_dict)
+        repo.update_fiche(updated_fiche)
+
+        return {
+            "message": "Fiche mise à jour",
+            "code_rome": code_rome,
+            "version": updated_fiche.metadata.version
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur mise à jour: {str(e)}")
 
 
 @app.get("/api/fiches/{code_rome}/variantes")
