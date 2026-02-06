@@ -267,6 +267,64 @@ async def get_fiche_detail(code_rome: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+class FicheMetierUpdate(BaseModel):
+    """Modèle pour mettre à jour une fiche métier."""
+    description: Optional[str] = None
+    description_courte: Optional[str] = None
+    competences: Optional[List[str]] = None
+    competences_transversales: Optional[List[str]] = None
+    formations: Optional[List[str]] = None
+    certifications: Optional[List[str]] = None
+    conditions_travail: Optional[List[str]] = None
+    environnements: Optional[List[str]] = None
+    secteurs_activite: Optional[List[str]] = None
+    salaires: Optional[dict] = None
+    perspectives: Optional[dict] = None
+    statut: Optional[str] = None
+
+
+@app.patch("/api/fiches/{code_rome}")
+async def update_fiche(code_rome: str, update_data: FicheMetierUpdate):
+    """Met à jour une fiche métier existante."""
+    try:
+        fiche = repo.get_fiche(code_rome)
+        if not fiche:
+            raise HTTPException(status_code=404, detail=f"Fiche {code_rome} non trouvée")
+
+        # Appliquer les mises à jour
+        fiche_dict = fiche.model_dump()
+        update_dict = update_data.model_dump(exclude_none=True)
+
+        for key, value in update_dict.items():
+            if key == "statut":
+                fiche_dict["metadata"]["statut"] = value
+            elif key == "salaires" and value:
+                fiche_dict["salaires"] = value
+            elif key == "perspectives" and value:
+                fiche_dict["perspectives"] = value
+            else:
+                fiche_dict[key] = value
+
+        # Mettre à jour les métadonnées
+        fiche_dict["metadata"]["date_maj"] = datetime.now()
+        fiche_dict["metadata"]["version"] = fiche_dict["metadata"].get("version", 1) + 1
+
+        # Recréer la fiche et sauvegarder
+        updated_fiche = FicheMetier(**fiche_dict)
+        repo.update_fiche(updated_fiche)
+
+        return {
+            "message": "Fiche mise à jour",
+            "code_rome": code_rome,
+            "version": updated_fiche.metadata.version
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur mise à jour: {str(e)}")
+
+
 @app.get("/api/fiches/{code_rome}/variantes")
 async def get_variantes(code_rome: str):
     """Récupère toutes les variantes d'une fiche."""
