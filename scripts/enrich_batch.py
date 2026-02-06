@@ -25,7 +25,7 @@ load_dotenv()
 # Configuration
 API_URL = os.getenv("API_BACKEND_URL", "https://agents-metiers.onrender.com")
 CLAUDE_MODEL = "claude-sonnet-4-20250514"
-BATCH_SIZE = 100  # Nombre de fiches à traiter
+BATCH_SIZE = int(os.getenv("BATCH_SIZE", "90"))  # Nombre de fiches à traiter
 DELAY_BETWEEN_CALLS = 1  # Secondes entre chaque appel Claude
 
 
