@@ -36,13 +36,21 @@ export interface SalaireNiveau {
   median: number | null;
 }
 
+export interface MobiliteItem {
+  nom: string;
+  contexte: string;
+}
+
 export interface FicheDetail extends FicheMetier {
+  acces_metier?: string;
   competences: string[];
   competences_transversales: string[];
+  savoirs: string[];
   formations: string[];
   certifications: string[];
   conditions_travail: string[];
   environnements: string[];
+  secteurs_activite: string[];
   salaires?: {
     junior: SalaireNiveau;
     confirme: SalaireNiveau;
@@ -54,6 +62,16 @@ export interface FicheDetail extends FicheMetier {
     evolution_5ans: string | null;
     nombre_offres: number | null;
     taux_insertion: number | null;
+  };
+  types_contrats?: {
+    cdi: number;
+    cdd: number;
+    interim: number;
+    autre: number;
+  };
+  mobilite?: {
+    metiers_proches: MobiliteItem[];
+    evolutions: MobiliteItem[];
   };
 }
 
