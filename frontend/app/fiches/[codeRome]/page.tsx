@@ -97,13 +97,13 @@ export default function FicheDetailPage() {
         )}
 
         {/* Compétences */}
-        {fiche.competences_techniques.length > 0 && (
+        {fiche.competences && fiche.competences.length > 0 && (
           <div className="sojai-card mb-8">
             <h2 className="text-2xl font-serif font-bold mb-4">
               🔧 Compétences Techniques
             </h2>
             <ul className="check-list">
-              {fiche.competences_techniques.map((comp, i) => (
+              {fiche.competences.map((comp, i) => (
                 <li key={i}>
                   <span className="check-icon">✓</span>
                   <span>{comp}</span>
@@ -114,7 +114,7 @@ export default function FicheDetailPage() {
         )}
 
         {/* Compétences Transversales */}
-        {fiche.competences_transversales.length > 0 && (
+        {fiche.competences_transversales && fiche.competences_transversales.length > 0 && (
           <div className="sojai-card mb-8">
             <h2 className="text-2xl font-serif font-bold mb-4">
               🎯 Compétences Transversales
@@ -131,7 +131,7 @@ export default function FicheDetailPage() {
         )}
 
         {/* Formations */}
-        {fiche.formations.length > 0 && (
+        {fiche.formations && fiche.formations.length > 0 && (
           <div className="sojai-card mb-8">
             <h2 className="text-2xl font-serif font-bold mb-4">🎓 Formations</h2>
             <ul className="check-list">
@@ -146,34 +146,35 @@ export default function FicheDetailPage() {
         )}
 
         {/* Salaires */}
-        {fiche.salaires && (
+        {fiche.salaires && (fiche.salaires.junior?.median || fiche.salaires.confirme?.median || fiche.salaires.senior?.median) && (
           <div className="sojai-card mb-8">
-            <h2 className="text-2xl font-serif font-bold mb-4">💰 Salaires</h2>
+            <h2 className="text-2xl font-serif font-bold mb-4">💰 Salaires annuels bruts</h2>
             <div className="grid grid-cols-3 gap-4">
-              <div className="text-center">
-                <div className="text-sm text-text-muted uppercase mb-1">
-                  Minimum
+              {[
+                { label: "Junior", data: fiche.salaires.junior },
+                { label: "Confirmé", data: fiche.salaires.confirme },
+                { label: "Senior", data: fiche.salaires.senior },
+              ].map(({ label, data }) => (
+                <div key={label} className="text-center">
+                  <div className="text-sm text-text-muted uppercase mb-1">
+                    {label}
+                  </div>
+                  {data?.median ? (
+                    <>
+                      <div className="text-2xl font-bold text-primary-purple">
+                        {data.median.toLocaleString("fr-FR")} €
+                      </div>
+                      {data.min && data.max && (
+                        <div className="text-xs text-text-muted mt-1">
+                          {data.min.toLocaleString("fr-FR")} – {data.max.toLocaleString("fr-FR")} €
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-sm text-text-muted">—</div>
+                  )}
                 </div>
-                <div className="text-2xl font-bold text-primary-purple">
-                  {fiche.salaires.min.toLocaleString()} {fiche.salaires.devise}
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="text-sm text-text-muted uppercase mb-1">
-                  Moyen
-                </div>
-                <div className="text-2xl font-bold text-primary-purple">
-                  {fiche.salaires.moyen.toLocaleString()} {fiche.salaires.devise}
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="text-sm text-text-muted uppercase mb-1">
-                  Maximum
-                </div>
-                <div className="text-2xl font-bold text-primary-purple">
-                  {fiche.salaires.max.toLocaleString()} {fiche.salaires.devise}
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         )}
@@ -189,24 +190,32 @@ export default function FicheDetailPage() {
                 <span className="text-sm text-text-muted uppercase">
                   Tendance
                 </span>
-                <p className="text-lg font-semibold">{fiche.perspectives.tendance}</p>
+                <p className="text-lg font-semibold capitalize">{fiche.perspectives.tendance}</p>
               </div>
               <div>
                 <span className="text-sm text-text-muted uppercase">
-                  Tension
+                  Tension du marché
                 </span>
                 <div className="flex items-center gap-2">
                   <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-primary-purple"
-                      style={{ width: `${fiche.perspectives.tension * 100}%` }}
+                      style={{ width: `${(fiche.perspectives.tension ?? 0.5) * 100}%` }}
                     ></div>
                   </div>
                   <span className="text-sm font-semibold">
-                    {(fiche.perspectives.tension * 100).toFixed(0)}%
+                    {((fiche.perspectives.tension ?? 0.5) * 100).toFixed(0)}%
                   </span>
                 </div>
               </div>
+              {fiche.perspectives.evolution_5ans && (
+                <div>
+                  <span className="text-sm text-text-muted uppercase">
+                    Évolution à 5 ans
+                  </span>
+                  <p className="text-base mt-1">{fiche.perspectives.evolution_5ans}</p>
+                </div>
+              )}
             </div>
           </div>
         )}

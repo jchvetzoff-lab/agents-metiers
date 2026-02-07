@@ -30,24 +30,30 @@ export interface Stats {
   archivees: number;
 }
 
+export interface SalaireNiveau {
+  min: number | null;
+  max: number | null;
+  median: number | null;
+}
+
 export interface FicheDetail extends FicheMetier {
-  competences_techniques: string[];
+  competences: string[];
   competences_transversales: string[];
   formations: string[];
   certifications: string[];
   conditions_travail: string[];
   environnements: string[];
   salaires?: {
-    min: number;
-    max: number;
-    moyen: number;
-    devise: string;
+    junior: SalaireNiveau;
+    confirme: SalaireNiveau;
+    senior: SalaireNiveau;
   };
   perspectives?: {
     tendance: string;
     tension: number;
-    secteurs_porteurs: string[];
-    evolution: string;
+    evolution_5ans: string | null;
+    nombre_offres: number | null;
+    taux_insertion: number | null;
   };
 }
 
