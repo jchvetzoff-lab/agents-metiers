@@ -15,7 +15,7 @@ AGENTS_METIERS_PATH = Path(__file__).parent.parent.parent / "agents-metiers"
 sys.path.insert(0, str(AGENTS_METIERS_PATH))
 
 from database.repository import Repository
-from database.models import StatutFiche, FicheMetier, VarianteFiche
+from database.models import StatutFiche, FicheMetier, VarianteFiche, MobiliteMetier, TypesContrats
 from config import get_config
 
 app = FastAPI(
@@ -41,6 +41,29 @@ repo = Repository(
     database_url=config.database.database_url
 )
 repo.init_db()
+
+# Migration : ajouter les nouvelles colonnes si elles n'existent pas
+def run_migrations():
+    """Ajoute les colonnes manquantes à la table fiches_metiers."""
+    from sqlalchemy import text, inspect
+    engine = repo.engine
+    inspector = inspect(engine)
+    existing_cols = {c["name"] for c in inspector.get_columns("fiches_metiers")}
+    new_columns = {
+        "savoirs": "JSON DEFAULT '[]'",
+        "acces_metier": "TEXT",
+        "types_contrats": "JSON DEFAULT '{}'",
+        "mobilite": "JSON DEFAULT '{}'",
+    }
+    with engine.begin() as conn:
+        for col_name, col_type in new_columns.items():
+            if col_name not in existing_cols:
+                conn.execute(text(f'ALTER TABLE fiches_metiers ADD COLUMN {col_name} {col_type}'))
+
+try:
+    run_migrations()
+except Exception as e:
+    print(f"Migration warning: {e}")
 
 
 # ==================== MODELS ====================
@@ -239,7 +262,6 @@ async def get_fiche_detail(code_rome: str):
         if not fiche:
             raise HTTPException(status_code=404, detail=f"Fiche {code_rome} non trouvée")
 
-        # Convertir en dict pour inclure toutes les données
         return {
             "code_rome": fiche.code_rome,
             "nom_masculin": fiche.nom_masculin,
@@ -248,14 +270,19 @@ async def get_fiche_detail(code_rome: str):
             "statut": fiche.metadata.statut.value,
             "description": fiche.description,
             "description_courte": fiche.description_courte,
+            "acces_metier": fiche.acces_metier,
             "competences": fiche.competences,
             "competences_transversales": fiche.competences_transversales,
+            "savoirs": fiche.savoirs,
             "formations": fiche.formations,
             "certifications": fiche.certifications,
             "conditions_travail": fiche.conditions_travail,
             "environnements": fiche.environnements,
             "salaires": fiche.salaires.model_dump() if fiche.salaires else None,
             "perspectives": fiche.perspectives.model_dump() if fiche.perspectives else None,
+            "types_contrats": fiche.types_contrats.model_dump() if fiche.types_contrats else None,
+            "mobilite": fiche.mobilite.model_dump() if fiche.mobilite else None,
+            "secteurs_activite": fiche.secteurs_activite,
             "date_creation": fiche.metadata.date_creation,
             "date_maj": fiche.metadata.date_maj,
             "version": fiche.metadata.version,
@@ -271,8 +298,10 @@ class FicheMetierUpdate(BaseModel):
     """Modèle pour mettre à jour une fiche métier."""
     description: Optional[str] = None
     description_courte: Optional[str] = None
+    acces_metier: Optional[str] = None
     competences: Optional[List[str]] = None
     competences_transversales: Optional[List[str]] = None
+    savoirs: Optional[List[str]] = None
     formations: Optional[List[str]] = None
     certifications: Optional[List[str]] = None
     conditions_travail: Optional[List[str]] = None
@@ -280,6 +309,8 @@ class FicheMetierUpdate(BaseModel):
     secteurs_activite: Optional[List[str]] = None
     salaires: Optional[dict] = None
     perspectives: Optional[dict] = None
+    types_contrats: Optional[dict] = None
+    mobilite: Optional[dict] = None
     statut: Optional[str] = None
 
 
@@ -298,10 +329,8 @@ async def update_fiche(code_rome: str, update_data: FicheMetierUpdate):
         for key, value in update_dict.items():
             if key == "statut":
                 fiche_dict["metadata"]["statut"] = value
-            elif key == "salaires" and value:
-                fiche_dict["salaires"] = value
-            elif key == "perspectives" and value:
-                fiche_dict["perspectives"] = value
+            elif key in ("salaires", "perspectives", "types_contrats", "mobilite") and value:
+                fiche_dict[key] = value
             else:
                 fiche_dict[key] = value
 

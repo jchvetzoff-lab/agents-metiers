@@ -124,6 +124,26 @@ class PerspectivesMetier(BaseModel):
     )
 
 
+class MobiliteMetier(BaseModel):
+    """Mobilité professionnelle d'un métier."""
+    metiers_proches: List[Dict[str, str]] = Field(
+        default_factory=list,
+        description="Métiers proches [{nom, contexte}]"
+    )
+    evolutions: List[Dict[str, str]] = Field(
+        default_factory=list,
+        description="Évolutions possibles [{nom, contexte}]"
+    )
+
+
+class TypesContrats(BaseModel):
+    """Répartition des types de contrats."""
+    cdi: float = Field(0, ge=0, le=100, description="% CDI")
+    cdd: float = Field(0, ge=0, le=100, description="% CDD")
+    interim: float = Field(0, ge=0, le=100, description="% Intérim")
+    autre: float = Field(0, ge=0, le=100, description="% Autres")
+
+
 class MetadataFiche(BaseModel):
     """Métadonnées d'une fiche métier."""
     date_creation: datetime = Field(default_factory=datetime.now)
@@ -157,6 +177,12 @@ class FicheMetier(BaseModel):
     formations: List[str] = Field(default_factory=list)
     certifications: List[str] = Field(default_factory=list)
 
+    # Savoirs (connaissances théoriques)
+    savoirs: List[str] = Field(default_factory=list)
+
+    # Accès au métier
+    acces_metier: Optional[str] = Field(None, description="Conditions d'accès au métier")
+
     # Contexte de travail
     conditions_travail: List[str] = Field(default_factory=list)
     environnements: List[str] = Field(default_factory=list)
@@ -164,6 +190,10 @@ class FicheMetier(BaseModel):
     # Données économiques
     salaires: SalairesMetier = Field(default_factory=SalairesMetier)
     perspectives: PerspectivesMetier = Field(default_factory=PerspectivesMetier)
+    types_contrats: TypesContrats = Field(default_factory=TypesContrats)
+
+    # Mobilité professionnelle
+    mobilite: MobiliteMetier = Field(default_factory=MobiliteMetier)
 
     # Liens
     metiers_proches: List[str] = Field(
@@ -302,11 +332,21 @@ class FicheMetierDB(Base):
     metiers_proches = Column(JSON, default=list)
     secteurs_activite = Column(JSON, default=list)
 
+    # Savoirs et accès
+    savoirs = Column(JSON, default=list)
+    acces_metier = Column(Text, nullable=True)
+
     # Données salariales (JSON)
     salaires = Column(JSON, default=dict)
 
     # Perspectives (JSON)
     perspectives = Column(JSON, default=dict)
+
+    # Types de contrats (JSON)
+    types_contrats = Column(JSON, default=dict)
+
+    # Mobilité professionnelle (JSON)
+    mobilite = Column(JSON, default=dict)
 
     # Métadonnées
     statut = Column(String(20), default="brouillon")
@@ -337,6 +377,8 @@ class FicheMetierDB(Base):
             description_courte=self.description_courte,
             competences=self.competences or [],
             competences_transversales=self.competences_transversales or [],
+            savoirs=self.savoirs or [],
+            acces_metier=self.acces_metier,
             formations=self.formations or [],
             certifications=self.certifications or [],
             conditions_travail=self.conditions_travail or [],
@@ -345,6 +387,8 @@ class FicheMetierDB(Base):
             secteurs_activite=self.secteurs_activite or [],
             salaires=SalairesMetier(**self.salaires) if self.salaires else SalairesMetier(),
             perspectives=PerspectivesMetier(**self.perspectives) if self.perspectives else PerspectivesMetier(),
+            types_contrats=TypesContrats(**self.types_contrats) if self.types_contrats else TypesContrats(),
+            mobilite=MobiliteMetier(**self.mobilite) if self.mobilite else MobiliteMetier(),
             metadata=MetadataFiche(
                 date_creation=self.date_creation,
                 date_maj=self.date_maj,
@@ -369,6 +413,8 @@ class FicheMetierDB(Base):
             description_courte=fiche.description_courte,
             competences=fiche.competences,
             competences_transversales=fiche.competences_transversales,
+            savoirs=fiche.savoirs,
+            acces_metier=fiche.acces_metier,
             formations=fiche.formations,
             certifications=fiche.certifications,
             conditions_travail=fiche.conditions_travail,
@@ -377,6 +423,8 @@ class FicheMetierDB(Base):
             secteurs_activite=fiche.secteurs_activite,
             salaires=fiche.salaires.model_dump(mode="json"),
             perspectives=fiche.perspectives.model_dump(mode="json"),
+            types_contrats=fiche.types_contrats.model_dump(mode="json"),
+            mobilite=fiche.mobilite.model_dump(mode="json"),
             statut=fiche.metadata.statut.value,
             version=fiche.metadata.version,
             source=fiche.metadata.source,

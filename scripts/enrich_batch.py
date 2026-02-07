@@ -36,7 +36,7 @@ def get_enrichment_prompt(fiche: dict) -> str:
     secteurs = fiche.get("secteurs_activite", [])
     domaine = secteurs[0] if secteurs else ""
 
-    return f"""Tu es un expert en ressources humaines et en rédaction de fiches métiers en France.
+    return f"""Tu es un expert en ressources humaines et en rédaction de fiches métiers en France (style ROME / France Travail).
 Génère le contenu complet pour la fiche métier suivante.
 
 Métier : {nom}
@@ -48,12 +48,14 @@ Réponds UNIQUEMENT avec un objet JSON valide (sans texte avant ou après) conte
 {{
     "description": "Description complète du métier en 3-5 phrases. Décris les missions principales, le contexte d'exercice et les responsabilités.",
     "description_courte": "Description en 1 phrase (max 200 caractères).",
-    "competences": ["6 à 10 compétences techniques clés du métier"],
-    "competences_transversales": ["3 à 5 compétences transversales (soft skills)"],
+    "acces_metier": "Texte structuré décrivant les conditions d'accès : diplômes requis, formations recommandées, expérience nécessaire, conditions particulières (permis, habilitations, âge minimum, etc.).",
+    "competences": ["6 à 10 savoir-faire techniques clés du métier (verbe d'action + objet)"],
+    "competences_transversales": ["4 à 6 savoir-être professionnels"],
+    "savoirs": ["5 à 8 savoirs/connaissances théoriques nécessaires (ex: Droit du travail, Normes qualité, etc.)"],
     "formations": ["3 à 5 formations ou diplômes typiques pour accéder au métier en France"],
     "certifications": ["1 à 3 certifications professionnelles pertinentes, ou liste vide si aucune"],
-    "conditions_travail": ["3 à 5 conditions de travail caractéristiques"],
-    "environnements": ["2 à 4 types de structures où s'exerce le métier"],
+    "conditions_travail": ["4 à 6 conditions de travail caractéristiques (horaires, déplacements, port EPI, etc.)"],
+    "environnements": ["3 à 5 types de structures/secteurs où s'exerce le métier"],
     "salaires": {{
         "junior": {{"min": 25000, "max": 35000, "median": 30000}},
         "confirme": {{"min": 35000, "max": 50000, "median": 42000}},
@@ -62,7 +64,26 @@ Réponds UNIQUEMENT avec un objet JSON valide (sans texte avant ou après) conte
     "perspectives": {{
         "tension": 0.6,
         "tendance": "stable",
-        "evolution_5ans": "Analyse courte de l'évolution du métier sur 5 ans"
+        "evolution_5ans": "Analyse de l'évolution du métier sur 5 ans (2-3 phrases).",
+        "nombre_offres": 1200,
+        "taux_insertion": 0.75
+    }},
+    "types_contrats": {{
+        "cdi": 55,
+        "cdd": 25,
+        "interim": 15,
+        "autre": 5
+    }},
+    "mobilite": {{
+        "metiers_proches": [
+            {{"nom": "Métier proche 1", "contexte": "Courte explication du lien"}},
+            {{"nom": "Métier proche 2", "contexte": "Courte explication du lien"}},
+            {{"nom": "Métier proche 3", "contexte": "Courte explication du lien"}}
+        ],
+        "evolutions": [
+            {{"nom": "Évolution possible 1", "contexte": "Avec quelle formation/expérience"}},
+            {{"nom": "Évolution possible 2", "contexte": "Avec quelle formation/expérience"}}
+        ]
     }}
 }}
 
@@ -70,6 +91,10 @@ Notes :
 - Les salaires sont en euros brut annuel pour la France.
 - "tension" est un float entre 0 (peu de demande) et 1 (très forte demande).
 - "tendance" est "emergence", "stable" ou "disparition".
+- "types_contrats" : les pourcentages doivent totaliser 100.
+- "nombre_offres" : estimation réaliste du nombre d'offres d'emploi publiées par an en France.
+- "taux_insertion" : float entre 0 et 1 estimant le taux d'insertion à 6 mois après formation.
+- "mobilite" : 3 à 5 métiers proches et 2 à 3 évolutions possibles.
 - Sois factuel et précis. Pas de formulations vagues."""
 
 
@@ -106,7 +131,7 @@ async def enrich_with_claude(client: anthropic.AsyncAnthropic, fiche: dict) -> d
 
     response = await client.messages.create(
         model=CLAUDE_MODEL,
-        max_tokens=2048,
+        max_tokens=4096,
         messages=[{"role": "user", "content": prompt}]
     )
 
@@ -128,14 +153,18 @@ async def update_fiche(code_rome: str, enrichment: dict) -> bool:
             json={
                 "description": enrichment.get("description"),
                 "description_courte": enrichment.get("description_courte"),
+                "acces_metier": enrichment.get("acces_metier"),
                 "competences": enrichment.get("competences"),
                 "competences_transversales": enrichment.get("competences_transversales"),
+                "savoirs": enrichment.get("savoirs"),
                 "formations": enrichment.get("formations"),
                 "certifications": enrichment.get("certifications"),
                 "conditions_travail": enrichment.get("conditions_travail"),
                 "environnements": enrichment.get("environnements"),
                 "salaires": enrichment.get("salaires"),
                 "perspectives": enrichment.get("perspectives"),
+                "types_contrats": enrichment.get("types_contrats"),
+                "mobilite": enrichment.get("mobilite"),
                 "statut": "en_validation"
             }
         )
