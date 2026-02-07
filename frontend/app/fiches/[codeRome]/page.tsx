@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { api, FicheDetail, Variante } from "@/lib/api";
@@ -136,6 +136,9 @@ export default function FicheDetailPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"sf" | "se" | "sa">("sf");
   const [activeSection, setActiveSection] = useState("infos");
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     (async () => {
@@ -163,6 +166,87 @@ export default function FicheDetailPage() {
     );
     document.querySelectorAll("section[id]").forEach((el) => observer.observe(el));
     return () => observer.disconnect();
+  }, [fiche]);
+
+  // ── PDF generation ──
+  const handleDownloadPdf = useCallback(async () => {
+    if (!contentRef.current || !fiche) return;
+    setPdfLoading(true);
+    setIsPrinting(true);
+
+    // Wait for DOM to update (all tabs expanded, sidebar hidden)
+    await new Promise((r) => setTimeout(r, 500));
+
+    try {
+      const html2canvas = (await import("html2canvas-pro")).default;
+      const { jsPDF } = await import("jspdf");
+
+      const element = contentRef.current;
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#FFFFFF",
+        windowWidth: 900,
+      });
+
+      const imgData = canvas.toDataURL("image/png");
+      const pdfWidth = 210; // A4 mm
+      const pdfHeight = 297;
+      const margin = 10;
+      const contentWidth = pdfWidth - margin * 2;
+      const imgRatio = canvas.height / canvas.width;
+      const contentHeight = contentWidth * imgRatio;
+
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pageContentHeight = pdfHeight - margin * 2;
+      let yOffset = 0;
+      let pageNum = 0;
+
+      while (yOffset < contentHeight) {
+        if (pageNum > 0) pdf.addPage();
+
+        // Calculate source crop for this page
+        const srcY = (yOffset / contentHeight) * canvas.height;
+        const srcH = Math.min(
+          (pageContentHeight / contentHeight) * canvas.height,
+          canvas.height - srcY
+        );
+
+        // Create a temp canvas for this page slice
+        const pageCanvas = document.createElement("canvas");
+        pageCanvas.width = canvas.width;
+        pageCanvas.height = srcH;
+        const ctx = pageCanvas.getContext("2d")!;
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+        ctx.drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH);
+
+        const pageImgData = pageCanvas.toDataURL("image/png");
+        const drawHeight = (srcH / canvas.width) * contentWidth;
+        pdf.addImage(pageImgData, "PNG", margin, margin, contentWidth, drawHeight);
+
+        // Footer
+        pdf.setFontSize(8);
+        pdf.setTextColor(180);
+        pdf.text(
+          `${fiche.nom_epicene} (${fiche.code_rome}) — Page ${pageNum + 1}`,
+          pdfWidth / 2,
+          pdfHeight - 5,
+          { align: "center" }
+        );
+
+        yOffset += pageContentHeight;
+        pageNum++;
+      }
+
+      pdf.save(`${fiche.code_rome}_${fiche.nom_masculin.replace(/\s+/g, "_")}.pdf`);
+    } catch (err) {
+      console.error("Erreur génération PDF:", err);
+    } finally {
+      setIsPrinting(false);
+      setPdfLoading(false);
+    }
   }, [fiche]);
 
   if (loading) {
@@ -244,9 +328,32 @@ export default function FicheDetailPage() {
               <h1 className="text-2xl md:text-3xl font-bold text-[#1A1A2E] mb-1">{fiche.nom_epicene}</h1>
               {fiche.description_courte && <p className="text-gray-500 max-w-2xl">{fiche.description_courte}</p>}
             </div>
-            <div className="text-xs text-gray-400 shrink-0 text-right space-y-0.5">
-              <div>Version {fiche.version}</div>
-              <div>Mis à jour le {new Date(fiche.date_maj).toLocaleDateString("fr-FR")}</div>
+            <div className="flex flex-col items-end gap-3 shrink-0">
+              <button
+                onClick={handleDownloadPdf}
+                disabled={pdfLoading}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#4A39C0] text-white rounded-full text-sm font-semibold hover:bg-[#3a2da0] transition-all disabled:opacity-50 disabled:cursor-wait shadow-sm"
+              >
+                {pdfLoading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Génération...
+                  </>
+                ) : (
+                  <>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    Télécharger PDF
+                  </>
+                )}
+              </button>
+              <div className="text-xs text-gray-400 text-right space-y-0.5">
+                <div>Version {fiche.version}</div>
+                <div>Mis à jour le {new Date(fiche.date_maj).toLocaleDateString("fr-FR")}</div>
+              </div>
             </div>
           </div>
         </div>
@@ -255,22 +362,24 @@ export default function FicheDetailPage() {
       {/* ── CONTENT + SIDEBAR ── */}
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-8">
         <div className="flex gap-8">
-          {/* Sidebar */}
-          <aside className="hidden lg:block w-60 shrink-0">
-            <nav className="sticky top-24 space-y-1">
-              {sections.map(s => (
-                <a key={s.id} href={`#${s.id}`}
-                  className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-all ${
-                    activeSection === s.id ? "bg-[#4A39C0] text-white font-medium shadow-sm" : "text-gray-600 hover:bg-gray-100"
-                  }`}>
-                  <span className="text-base">{s.icon}</span>{s.label}
-                </a>
-              ))}
-            </nav>
-          </aside>
+          {/* Sidebar - hidden during PDF */}
+          {!isPrinting && (
+            <aside className="hidden lg:block w-60 shrink-0">
+              <nav className="sticky top-24 space-y-1">
+                {sections.map(s => (
+                  <a key={s.id} href={`#${s.id}`}
+                    className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-all ${
+                      activeSection === s.id ? "bg-[#4A39C0] text-white font-medium shadow-sm" : "text-gray-600 hover:bg-gray-100"
+                    }`}>
+                    <span className="text-base">{s.icon}</span>{s.label}
+                  </a>
+                ))}
+              </nav>
+            </aside>
+          )}
 
           {/* Main */}
-          <div className="flex-1 min-w-0 space-y-6">
+          <div ref={contentRef} className="flex-1 min-w-0 space-y-6">
 
             {/* ═══ INFORMATIONS CLÉS ═══ */}
             <SectionAnchor id="infos" title="Informations clés" icon="📋">
@@ -390,49 +499,92 @@ export default function FicheDetailPage() {
             {/* ═══ COMPÉTENCES ═══ */}
             {(hasCompetences || hasSavoirEtre || hasSavoirs) && (
               <SectionAnchor id="competences" title="Compétences" icon="⚡">
-                <div className="border-b border-gray-200 mb-6">
-                  <div className="flex gap-0 -mb-px">
-                    {[
-                      { id: "sf" as const, label: "Savoir-faire", count: fiche.competences?.length ?? 0, show: hasCompetences },
-                      { id: "se" as const, label: "Savoir-être", count: fiche.competences_transversales?.length ?? 0, show: hasSavoirEtre },
-                      { id: "sa" as const, label: "Savoirs", count: fiche.savoirs?.length ?? 0, show: hasSavoirs },
-                    ].filter(t => t.show).map(tab => (
-                      <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                        className={`px-4 py-3 text-sm font-medium border-b-2 transition-all ${
-                          activeTab === tab.id ? "border-[#4A39C0] text-[#4A39C0]" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                        }`}>
-                        {tab.label}
-                        <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${activeTab === tab.id ? "bg-[#E4E1FF] text-[#4A39C0]" : "bg-gray-100 text-gray-500"}`}>
-                          {tab.count}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <p className="text-sm text-gray-500 mb-4 italic">
-                  {activeTab === "sf" && "Compétences pratiques et techniques pouvant être appliquées en situation professionnelle."}
-                  {activeTab === "se" && "Qualités humaines et comportementales pour interagir avec son environnement de travail."}
-                  {activeTab === "sa" && "Connaissances théoriques acquises par la formation et l'expérience."}
-                </p>
-                {activeTab === "sf" && fiche.competences && <NumberedList items={fiche.competences} color={PURPLE} />}
-                {activeTab === "se" && fiche.competences_transversales && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {fiche.competences_transversales.map((c, i) => (
-                      <div key={i} className="flex items-center gap-3 p-3.5 rounded-xl bg-[#FFF5F7] border border-[#FFE0E6]/60">
-                        <span className="w-8 h-8 rounded-full bg-[#FF3254] text-white flex items-center justify-center text-xs font-bold shrink-0">✓</span>
-                        <span className="text-[15px] text-gray-700">{c}</span>
+                {/* Tabs - hidden during PDF */}
+                {!isPrinting && (
+                  <>
+                    <div className="border-b border-gray-200 mb-6">
+                      <div className="flex gap-0 -mb-px">
+                        {[
+                          { id: "sf" as const, label: "Savoir-faire", count: fiche.competences?.length ?? 0, show: hasCompetences },
+                          { id: "se" as const, label: "Savoir-être", count: fiche.competences_transversales?.length ?? 0, show: hasSavoirEtre },
+                          { id: "sa" as const, label: "Savoirs", count: fiche.savoirs?.length ?? 0, show: hasSavoirs },
+                        ].filter(t => t.show).map(tab => (
+                          <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                            className={`px-4 py-3 text-sm font-medium border-b-2 transition-all ${
+                              activeTab === tab.id ? "border-[#4A39C0] text-[#4A39C0]" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                            }`}>
+                            {tab.label}
+                            <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${activeTab === tab.id ? "bg-[#E4E1FF] text-[#4A39C0]" : "bg-gray-100 text-gray-500"}`}>
+                              {tab.count}
+                            </span>
+                          </button>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                    <p className="text-sm text-gray-500 mb-4 italic">
+                      {activeTab === "sf" && "Compétences pratiques et techniques pouvant être appliquées en situation professionnelle."}
+                      {activeTab === "se" && "Qualités humaines et comportementales pour interagir avec son environnement de travail."}
+                      {activeTab === "sa" && "Connaissances théoriques acquises par la formation et l'expérience."}
+                    </p>
+                    {activeTab === "sf" && fiche.competences && <NumberedList items={fiche.competences} color={PURPLE} />}
+                    {activeTab === "se" && fiche.competences_transversales && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {fiche.competences_transversales.map((c, i) => (
+                          <div key={i} className="flex items-center gap-3 p-3.5 rounded-xl bg-[#FFF5F7] border border-[#FFE0E6]/60">
+                            <span className="w-8 h-8 rounded-full bg-[#FF3254] text-white flex items-center justify-center text-xs font-bold shrink-0">✓</span>
+                            <span className="text-[15px] text-gray-700">{c}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {activeTab === "sa" && fiche.savoirs && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {fiche.savoirs.map((s, i) => (
+                          <div key={i} className="flex items-center gap-3 p-3.5 rounded-xl bg-[#F0FDFA] border border-[#CCFBF1]/60">
+                            <span className="w-8 h-8 rounded-full bg-[#00C8C8] text-white flex items-center justify-center text-xs font-bold shrink-0">◆</span>
+                            <span className="text-[15px] text-gray-700">{s}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
                 )}
-                {activeTab === "sa" && fiche.savoirs && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {fiche.savoirs.map((s, i) => (
-                      <div key={i} className="flex items-center gap-3 p-3.5 rounded-xl bg-[#F0FDFA] border border-[#CCFBF1]/60">
-                        <span className="w-8 h-8 rounded-full bg-[#00C8C8] text-white flex items-center justify-center text-xs font-bold shrink-0">◆</span>
-                        <span className="text-[15px] text-gray-700">{s}</span>
+
+                {/* PDF mode: show ALL categories expanded */}
+                {isPrinting && (
+                  <div className="space-y-6">
+                    {hasCompetences && (
+                      <div>
+                        <h3 className="text-sm font-bold text-[#4A39C0] uppercase tracking-wider mb-3">Savoir-faire ({fiche.competences?.length})</h3>
+                        <NumberedList items={fiche.competences!} color={PURPLE} />
                       </div>
-                    ))}
+                    )}
+                    {hasSavoirEtre && (
+                      <div>
+                        <h3 className="text-sm font-bold text-[#FF3254] uppercase tracking-wider mb-3">Savoir-être ({fiche.competences_transversales?.length})</h3>
+                        <div className="grid grid-cols-2 gap-3">
+                          {fiche.competences_transversales!.map((c, i) => (
+                            <div key={i} className="flex items-center gap-3 p-3.5 rounded-xl bg-[#FFF5F7] border border-[#FFE0E6]/60">
+                              <span className="w-8 h-8 rounded-full bg-[#FF3254] text-white flex items-center justify-center text-xs font-bold shrink-0">✓</span>
+                              <span className="text-[15px] text-gray-700">{c}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {hasSavoirs && (
+                      <div>
+                        <h3 className="text-sm font-bold text-[#00C8C8] uppercase tracking-wider mb-3">Savoirs ({fiche.savoirs?.length})</h3>
+                        <div className="grid grid-cols-2 gap-3">
+                          {fiche.savoirs!.map((s, i) => (
+                            <div key={i} className="flex items-center gap-3 p-3.5 rounded-xl bg-[#F0FDFA] border border-[#CCFBF1]/60">
+                              <span className="w-8 h-8 rounded-full bg-[#00C8C8] text-white flex items-center justify-center text-xs font-bold shrink-0">◆</span>
+                              <span className="text-[15px] text-gray-700">{s}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </SectionAnchor>
