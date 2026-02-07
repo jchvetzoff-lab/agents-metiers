@@ -42,6 +42,7 @@ export interface MobiliteItem {
 }
 
 export interface FicheDetail extends FicheMetier {
+  missions_principales: string[];
   acces_metier?: string;
   competences: string[];
   competences_transversales: string[];
