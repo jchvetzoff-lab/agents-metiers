@@ -566,107 +566,88 @@ Chaque fiche possède 2 dates :
 
 ---
 
-## 🚀 État du Projet (3 fév. 2026)
+## 🚀 État du Projet (7 fév. 2026)
 
 **Système complet et opérationnel** :
-- ✅ 1 584 fiches ROME importées
+- ✅ 1 584 fiches ROME importées (146 enrichies, 1 438 brouillons)
 - ✅ Interface Streamlit complète (Dashboard, Fiches, Actions, Guide)
 - ✅ **Design System SOJAI** appliqué sur toutes les pages (2 fév. 2026)
-- ✅ **Backend API FastAPI déployé sur Render.com** (3 fév. 2026) 🆕
+- ✅ **Backend API FastAPI déployé sur Render.com** (3 fév. 2026)
   - URL Production : https://agents-metiers.onrender.com
   - Documentation : https://agents-metiers.onrender.com/docs
-  - Région : Frankfurt (EU Central)
+  - PostgreSQL (données persistantes)
+- ✅ **Frontend Next.js déployé sur Netlify** (7 fév. 2026) 🆕
+  - Auto-deploy depuis branche `main`
+  - Variable : `NEXT_PUBLIC_API_URL=https://agents-metiers.onrender.com`
+- ✅ **Page fiche détail style MetierScope** (7 fév. 2026) 🆕
+  - Sidebar sticky avec scroll spy
+  - 6 sections : Infos clés, Statistiques, Compétences (3 tabs), Contextes, Services, Métiers proches
+  - Charts Recharts (BarChart salaires, PieChart contrats), jauge tension
+- ✅ **Backend enrichi** avec champs MetierScope (7 fév. 2026) 🆕
+  - Nouveaux champs : `missions_principales`, `savoirs`, `acces_metier`, `types_contrats`, `mobilite`
+  - Auto-migration PostgreSQL (ALTER TABLE au démarrage)
+  - Prompt enrichissement réécrit (style MetierScope)
+- ✅ **Bouton PDF sur chaque fiche** (jsPDF natif) 🆕 — à améliorer
 - ✅ Enrichissement automatique via Claude API
 - ✅ Système de variantes multilingues (90 variantes/fiche)
-- ✅ Export PDF professionnel
-- ✅ Déploiement Streamlit Cloud configuré
+- ✅ Export PDF professionnel (Streamlit)
 - ✅ Tests unitaires et E2E passants
-- ✅ Documentation complète (4 guides)
-
-**Interface professionnelle avec design SOJAI** :
-- Pages refactorisées : Accueil, Dashboard, Fiches, Actions, Guide
-- Design system complet : 1 121 lignes CSS + 9 helpers UI
-- Palette violet/rose, animations fluides, composants élégants
 
 **Architecture déployée** :
-- Backend API : Render.com (https://agents-metiers.onrender.com)
-- Frontend : À déployer sur Vercel/Netlify (prochaine étape)
-- Base de données : SQLite (embarquée dans le backend)
+- Backend API : Render.com (https://agents-metiers.onrender.com) — plan gratuit, cold start ~30-60s
+- Frontend : Netlify (auto-deploy depuis `main`)
+- Base de données : PostgreSQL sur Render
 
 **Repository GitHub** : https://github.com/jchvetzoff-lab/agents-metiers
 
-**Derniers commits** :
-- `368a7af` — Remove railway config files to use Dockerfile ENTRYPOINT
-- `c03a4f6` — Design SOJAI complet: Actions + Page d'accueil + finalisations
-- `b39dcb4` — Design SOJAI: Dashboard + Fiches refactorisés
-
 ---
 
-## 🎯 Prochaines Étapes (Février 2026)
+## 🎯 Prochaines Étapes
 
-### 1. ✅ Backend API (TERMINÉ - 3 fév. 2026)
-- ✅ Déploiement sur Render.com
-- ✅ Documentation Swagger accessible
-- ✅ Endpoints fonctionnels testés
+### 1. 🔴 Corriger le PDF des fiches (PRIORITÉ IMMÉDIATE)
 
-### 2. 🔄 Frontend Next.js (EN COURS)
+Le PDF généré via jsPDF natif n'est pas encore satisfaisant. C'est la première chose à faire à la prochaine session.
 
-**Tâches à réaliser** :
-1. **Créer le client API** (30 min)
-   - Configurer axios/fetch avec l'URL backend
-   - Créer les fonctions d'appel API (getFiches, createFiche, etc.)
-   - Gérer l'authentification si nécessaire
+**Problèmes actuels :**
+- Rendu pas assez professionnel / pas assez "joli"
+- Proportions et mise en page à affiner
+- Doit ressembler fidèlement à la fiche web
 
-2. **Connecter les pages** (1-2h)
-   - Dashboard : Récupérer stats depuis `/api/stats`
-   - Fiches : Liste depuis `/api/fiches`, détail depuis `/api/fiches/{code_rome}`
-   - Actions : Appels vers `/api/actions/*`
-   - Variantes : Sélection et affichage depuis `/api/variantes`
+**Contexte technique :**
+- Fichier : `frontend/app/fiches/[codeRome]/page.tsx` (fonction `handleDownloadPdf`)
+- Librairie : `jspdf` (texte natif, ~100KB de sortie)
+- Approche html2canvas abandonnée (20MB+, texte non sélectionnable, coupures entre pages)
+- Le PDF actuel a : bandeau violet titre, tableau salaires, barre contrats, listes numérotées/bullets, stat cards, page breaks
+- Il faut améliorer : hiérarchie visuelle, espacement, tailles de police, esthétique générale
 
-3. **Déployer sur Vercel** (15 min)
-   - Push code frontend sur GitHub
-   - Créer projet Vercel depuis le repo
-   - Configurer variable d'environnement : `NEXT_PUBLIC_API_URL=https://agents-metiers.onrender.com`
-   - Deploy automatique
+### 2. ⏳ Enrichir les 1 438 fiches restantes
 
-### 3. 📊 Initialiser la base de données (10 min)
-- Importer les 1 584 fiches ROME via l'API
-- Endpoint : `POST /api/actions/import-rome`
-- Vérifier avec `GET /api/stats`
+- Script : `scripts/enrich_batch.py --yes` (branche `backend-api`)
+- Coût estimé : ~$21 pour toutes les fiches
+- Le prompt génère tous les champs MetierScope
 
-### 4. 🧪 Tests End-to-End (30 min)
-- Créer une fiche depuis le frontend
-- Enrichir avec Claude API
-- Générer des variantes (FR/EN)
-- Exporter en PDF
-- Vérifier la persistance des données
+### 3. ⏳ Améliorations futures
 
-### 5. 🚀 Mise en Production (optionnel)
-- Configurer un domaine custom (si besoin)
-- Activer HTTPS (déjà activé sur Render/Vercel)
-- Monitoring et logs (Render Dashboard)
-- Backup de la base SQLite (si données importantes)
+- Générer variantes multilingues
+- Données temps réel (offres France Travail)
+- Améliorer le design global du frontend
+- Domaine custom
 
 ---
 
 ## 📝 Notes de Déploiement
 
 **Render.com (Backend)** :
-- Plan gratuit : 750h/mois (suffisant pour 24/7)
-- Cold start après 15 min d'inactivité (~10-15s)
-- Pour éviter le cold start : Passer au plan Starter ($7/mois)
+- Plan gratuit : 750h/mois
+- Cold start après 15 min d'inactivité (~30-60s)
+- Pour éviter : plan Starter ($7/mois)
 
-**Vercel (Frontend recommandé)** :
-- Plan gratuit : Largement suffisant
-- Deploy automatique depuis GitHub
+**Netlify (Frontend)** :
+- Plan gratuit, auto-deploy depuis GitHub branche `main`
 - Pas de cold start
-
-**Alternative : Netlify (Frontend)** :
-- Similaire à Vercel
-- Aussi gratuit et performant
 
 **Coûts estimés** :
 - Backend Render (gratuit) : $0/mois
-- Frontend Vercel (gratuit) : $0/mois
+- Frontend Netlify (gratuit) : $0/mois
 - API Claude (usage) : ~$5-20/mois selon utilisation
 - **Total : ~$5-20/mois**
