@@ -36,66 +36,85 @@ def get_enrichment_prompt(fiche: dict) -> str:
     secteurs = fiche.get("secteurs_activite", [])
     domaine = secteurs[0] if secteurs else ""
 
-    return f"""Tu es un expert en ressources humaines et en rédaction de fiches métiers en France (style ROME / France Travail).
-Génère le contenu complet pour la fiche métier suivante.
+    return f"""Tu es un expert RH et rédacteur de fiches métiers pour France Travail (ROME 4.0).
+Génère une fiche COMPLÈTE et PROFESSIONNELLE, style MetierScope.
 
 Métier : {nom}
 Code ROME : {code_rome}
 Domaine : {domaine}
 
-Réponds UNIQUEMENT avec un objet JSON valide (sans texte avant ou après) contenant :
+Réponds UNIQUEMENT avec un objet JSON valide (sans texte avant/après) :
 
 {{
-    "description": "Description complète du métier en 3-5 phrases. Décris les missions principales, le contexte d'exercice et les responsabilités.",
-    "description_courte": "Description en 1 phrase (max 200 caractères).",
-    "acces_metier": "Texte structuré décrivant les conditions d'accès : diplômes requis, formations recommandées, expérience nécessaire, conditions particulières (permis, habilitations, âge minimum, etc.).",
-    "competences": ["6 à 10 savoir-faire techniques clés du métier (verbe d'action + objet)"],
-    "competences_transversales": ["4 à 6 savoir-être professionnels"],
-    "savoirs": ["5 à 8 savoirs/connaissances théoriques nécessaires (ex: Droit du travail, Normes qualité, etc.)"],
-    "formations": ["3 à 5 formations ou diplômes typiques pour accéder au métier en France"],
-    "certifications": ["1 à 3 certifications professionnelles pertinentes, ou liste vide si aucune"],
-    "conditions_travail": ["4 à 6 conditions de travail caractéristiques (horaires, déplacements, port EPI, etc.)"],
-    "environnements": ["3 à 5 types de structures/secteurs où s'exerce le métier"],
+    "description": "Phrase d'accroche élégante (1 phrase, style MetierScope : Le/La [métier], un(e) professionnel(le) de..., garantit/assure...). Suivie de 2-3 phrases de contexte général.",
+    "description_courte": "Résumé en 1 phrase (max 180 caractères).",
+    "missions_principales": [
+        "6 à 8 missions principales du métier, chaque mission commence par un verbe d'action et est une phrase complète décrivant une tâche concrète"
+    ],
+    "acces_metier": "Paragraphe complet décrivant : niveau de diplôme requis ou si accessible sans diplôme, formations recommandées, expérience demandée, conditions particulières (permis, CACES, habilitations, aptitude médicale, casier judiciaire, etc.). Style France Travail.",
+    "competences": [
+        "8 à 12 savoir-faire techniques (verbe + complément, ex: Réaliser un diagnostic technique)"
+    ],
+    "competences_transversales": [
+        "5 à 7 savoir-être professionnels (ex: Faire preuve d'autonomie, Faire preuve de rigueur et de précision, Avoir l'esprit d'équipe)"
+    ],
+    "savoirs": [
+        "6 à 10 savoirs/connaissances théoriques (ex: Réglementation sécurité incendie, Techniques de soudage, Droit du travail, Normes qualité ISO)"
+    ],
+    "formations": [
+        "4 à 6 formations/diplômes avec leur niveau (ex: CAP/BEP Électricien, Bac pro MELEC, BTS Électrotechnique, Licence pro Énergie)"
+    ],
+    "certifications": [
+        "1 à 4 certifications professionnelles pertinentes (ex: Habilitation électrique, CACES R489, CQP spécifique, etc.)"
+    ],
+    "conditions_travail": [
+        "5 à 8 conditions incluant : risques professionnels, déplacements, travail en extérieur/intérieur, port EPI, travail en hauteur, horaires atypiques, etc."
+    ],
+    "environnements": [
+        "4 à 6 types de structures/employeurs (ex: Entreprise artisanale, PME/PMI industrielle, Collectivité territoriale, Bureau d'études)"
+    ],
     "salaires": {{
-        "junior": {{"min": 25000, "max": 35000, "median": 30000}},
-        "confirme": {{"min": 35000, "max": 50000, "median": 42000}},
-        "senior": {{"min": 50000, "max": 70000, "median": 58000}}
+        "junior": {{"min": 22000, "max": 28000, "median": 25000}},
+        "confirme": {{"min": 28000, "max": 38000, "median": 33000}},
+        "senior": {{"min": 38000, "max": 50000, "median": 43000}}
     }},
     "perspectives": {{
-        "tension": 0.6,
+        "tension": 0.65,
         "tendance": "stable",
-        "evolution_5ans": "Analyse de l'évolution du métier sur 5 ans (2-3 phrases).",
-        "nombre_offres": 1200,
-        "taux_insertion": 0.75
+        "evolution_5ans": "Analyse factuelle de l'évolution du métier sur 5 ans : impact du numérique, de la transition écologique, de la réglementation, des évolutions technologiques. 3-4 phrases.",
+        "nombre_offres": 2500,
+        "taux_insertion": 0.72
     }},
     "types_contrats": {{
-        "cdi": 55,
-        "cdd": 25,
-        "interim": 15,
+        "cdi": 45,
+        "cdd": 30,
+        "interim": 20,
         "autre": 5
     }},
     "mobilite": {{
         "metiers_proches": [
-            {{"nom": "Métier proche 1", "contexte": "Courte explication du lien"}},
-            {{"nom": "Métier proche 2", "contexte": "Courte explication du lien"}},
-            {{"nom": "Métier proche 3", "contexte": "Courte explication du lien"}}
+            {{"nom": "Métier proche 1", "contexte": "Compétences communes : [lesquelles]"}},
+            {{"nom": "Métier proche 2", "contexte": "Compétences communes : [lesquelles]"}},
+            {{"nom": "Métier proche 3", "contexte": "Compétences communes : [lesquelles]"}},
+            {{"nom": "Métier proche 4", "contexte": "Même secteur d'activité"}}
         ],
         "evolutions": [
-            {{"nom": "Évolution possible 1", "contexte": "Avec quelle formation/expérience"}},
-            {{"nom": "Évolution possible 2", "contexte": "Avec quelle formation/expérience"}}
+            {{"nom": "Évolution 1", "contexte": "Après X ans d'expérience et/ou formation complémentaire en [domaine]"}},
+            {{"nom": "Évolution 2", "contexte": "Avec obtention du diplôme/certification [lequel]"}},
+            {{"nom": "Évolution 3", "contexte": "Par spécialisation en [domaine]"}}
         ]
     }}
 }}
 
-Notes :
-- Les salaires sont en euros brut annuel pour la France.
-- "tension" est un float entre 0 (peu de demande) et 1 (très forte demande).
-- "tendance" est "emergence", "stable" ou "disparition".
-- "types_contrats" : les pourcentages doivent totaliser 100.
-- "nombre_offres" : estimation réaliste du nombre d'offres d'emploi publiées par an en France.
-- "taux_insertion" : float entre 0 et 1 estimant le taux d'insertion à 6 mois après formation.
-- "mobilite" : 3 à 5 métiers proches et 2 à 3 évolutions possibles.
-- Sois factuel et précis. Pas de formulations vagues."""
+RÈGLES STRICTES :
+- Salaires en euros brut ANNUEL France, réalistes pour 2025.
+- tension : float 0-1 (0=peu de demande, 1=très forte demande).
+- tendance : "emergence", "stable" ou "disparition".
+- types_contrats : pourcentages totalisant 100, réalistes pour le secteur.
+- nombre_offres : estimation réaliste du nombre d'offres/an en France.
+- taux_insertion : float 0-1, taux d'insertion à 6 mois.
+- missions_principales : phrases complètes, concrètes, variées.
+- Sois FACTUEL, PRÉCIS et PROFESSIONNEL. Pas de formulations vagues ou génériques."""
 
 
 async def fetch_fiches(limit: int = 100) -> list:
@@ -153,6 +172,7 @@ async def update_fiche(code_rome: str, enrichment: dict) -> bool:
             json={
                 "description": enrichment.get("description"),
                 "description_courte": enrichment.get("description_courte"),
+                "missions_principales": enrichment.get("missions_principales"),
                 "acces_metier": enrichment.get("acces_metier"),
                 "competences": enrichment.get("competences"),
                 "competences_transversales": enrichment.get("competences_transversales"),

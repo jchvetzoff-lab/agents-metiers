@@ -52,6 +52,7 @@ def run_migrations():
     new_columns = {
         "savoirs": "JSON DEFAULT '[]'",
         "acces_metier": "TEXT",
+        "missions_principales": "JSON DEFAULT '[]'",
         "types_contrats": "JSON DEFAULT '{}'",
         "mobilite": "JSON DEFAULT '{}'",
     }
@@ -270,6 +271,7 @@ async def get_fiche_detail(code_rome: str):
             "statut": fiche.metadata.statut.value,
             "description": fiche.description,
             "description_courte": fiche.description_courte,
+            "missions_principales": fiche.missions_principales,
             "acces_metier": fiche.acces_metier,
             "competences": fiche.competences,
             "competences_transversales": fiche.competences_transversales,
@@ -298,6 +300,7 @@ class FicheMetierUpdate(BaseModel):
     """Modèle pour mettre à jour une fiche métier."""
     description: Optional[str] = None
     description_courte: Optional[str] = None
+    missions_principales: Optional[List[str]] = None
     acces_metier: Optional[str] = None
     competences: Optional[List[str]] = None
     competences_transversales: Optional[List[str]] = None

@@ -170,6 +170,7 @@ class FicheMetier(BaseModel):
     # Description et contenu
     description: str = Field("", description="Description complète du métier")
     description_courte: Optional[str] = Field(None, description="Description courte (< 200 car.)")
+    missions_principales: List[str] = Field(default_factory=list, description="Missions principales du métier")
 
     # Compétences et formations
     competences: List[str] = Field(default_factory=list)
@@ -332,7 +333,8 @@ class FicheMetierDB(Base):
     metiers_proches = Column(JSON, default=list)
     secteurs_activite = Column(JSON, default=list)
 
-    # Savoirs et accès
+    # Missions, savoirs et accès
+    missions_principales = Column(JSON, default=list)
     savoirs = Column(JSON, default=list)
     acces_metier = Column(Text, nullable=True)
 
@@ -375,6 +377,7 @@ class FicheMetierDB(Base):
             nom_epicene=self.nom_epicene,
             description=self.description or "",
             description_courte=self.description_courte,
+            missions_principales=self.missions_principales or [],
             competences=self.competences or [],
             competences_transversales=self.competences_transversales or [],
             savoirs=self.savoirs or [],
@@ -411,6 +414,7 @@ class FicheMetierDB(Base):
             nom_epicene=fiche.nom_epicene,
             description=fiche.description,
             description_courte=fiche.description_courte,
+            missions_principales=fiche.missions_principales,
             competences=fiche.competences,
             competences_transversales=fiche.competences_transversales,
             savoirs=fiche.savoirs,
