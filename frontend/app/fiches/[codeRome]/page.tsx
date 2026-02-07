@@ -204,14 +204,14 @@ export default function FicheDetailPage() {
         useCORS: true,
         logging: false,
         backgroundColor: "#FFFFFF",
-        windowWidth: 900,
+        windowWidth: 1200,
       });
 
       // ── 3. Setup PDF dimensions ──
       const pdfW = 210; // A4 mm
       const pdfH = 297;
-      const margin = 10;
-      const headerH = 14; // mm reserved for title header
+      const margin = 15;
+      const headerH = 12; // mm reserved for title header
       const footerH = 8;  // mm reserved for footer
       const contentW = pdfW - margin * 2;
       const pageBodyH = pdfH - margin - headerH - footerH; // usable body per page
@@ -252,12 +252,12 @@ export default function FicheDetailPage() {
         // Draw header on every page
         pdf.setFillColor(74, 57, 192); // PURPLE
         pdf.rect(margin, margin, contentW, headerH - 2, "F");
-        pdf.setFontSize(11);
+        pdf.setFontSize(10);
         pdf.setTextColor(255, 255, 255);
-        pdf.text(fiche.nom_epicene, margin + 4, margin + 5.5);
-        pdf.setFontSize(9);
+        pdf.text(fiche.nom_epicene, margin + 4, margin + 5);
+        pdf.setFontSize(8);
         pdf.setTextColor(220, 220, 255);
-        pdf.text(fiche.code_rome, pdfW - margin - 4, margin + 5.5, { align: "right" });
+        pdf.text(fiche.code_rome, pdfW - margin - 4, margin + 5, { align: "right" });
 
         // Determine end of this page
         const maxEndMm = Math.min(cursorMm + pageBodyH, totalHMm);
