@@ -182,61 +182,128 @@ export default function FicheDetailPage() {
       const { jsPDF } = await import("jspdf");
 
       const element = contentRef.current;
+      const canvasScale = 2;
+
+      // ── 1. Collect break points from DOM ──
+      // Query all block-level elements that represent safe break points
+      const breakSelectors = "section[id], section[id] > div > div, section[id] > div > h3, .space-y-6 > div, .grid > div, .space-y-3 > div";
+      const breakElements = element.querySelectorAll(breakSelectors);
+      const elementRect = element.getBoundingClientRect();
+      const breakPointsPx = new Set<number>();
+      breakPointsPx.add(0);
+      breakElements.forEach((el) => {
+        const rect = el.getBoundingClientRect();
+        const top = Math.round(rect.top - elementRect.top);
+        if (top > 10) breakPointsPx.add(top);
+      });
+      const sortedBreaksPx = Array.from(breakPointsPx).sort((a, b) => a - b);
+
+      // ── 2. Capture full canvas ──
       const canvas = await html2canvas(element, {
-        scale: 2,
+        scale: canvasScale,
         useCORS: true,
         logging: false,
         backgroundColor: "#FFFFFF",
         windowWidth: 900,
       });
 
-      const imgData = canvas.toDataURL("image/png");
-      const pdfWidth = 210; // A4 mm
-      const pdfHeight = 297;
+      // ── 3. Setup PDF dimensions ──
+      const pdfW = 210; // A4 mm
+      const pdfH = 297;
       const margin = 10;
-      const contentWidth = pdfWidth - margin * 2;
-      const imgRatio = canvas.height / canvas.width;
-      const contentHeight = contentWidth * imgRatio;
+      const headerH = 14; // mm reserved for title header
+      const footerH = 8;  // mm reserved for footer
+      const contentW = pdfW - margin * 2;
+      const pageBodyH = pdfH - margin - headerH - footerH; // usable body per page
 
+      const cssPxToMm = contentW / element.offsetWidth;
+      const totalHMm = element.offsetHeight * cssPxToMm;
+      const breaksMm = sortedBreaksPx.map((px) => px * cssPxToMm);
+
+      // ── 4. Helper: find whitespace row in canvas (fallback) ──
+      function findWhitespaceBreak(targetPx: number, tolerancePx: number): number {
+        const ctx = canvas.getContext("2d")!;
+        const scanStart = Math.max(0, Math.floor((targetPx - tolerancePx) * canvasScale));
+        const scanEnd = Math.min(canvas.height - 1, Math.floor(targetPx * canvasScale));
+        let bestY = scanEnd;
+        let bestScore = -1;
+        // Sample every 2 rows for speed
+        for (let y = scanEnd; y >= scanStart; y -= 2) {
+          const row = ctx.getImageData(0, y, canvas.width, 1).data;
+          let light = 0;
+          for (let x = 0; x < canvas.width * 4; x += 16) { // sample every 4th pixel
+            if (row[x] > 240 && row[x + 1] > 240 && row[x + 2] > 240) light++;
+          }
+          const score = light / (canvas.width / 4);
+          if (score > bestScore) { bestScore = score; bestY = y; }
+          if (score > 0.95) break; // good enough
+        }
+        return bestY / canvasScale; // return in CSS px
+      }
+
+      // ── 5. Build pages ──
       const pdf = new jsPDF("p", "mm", "a4");
-      const pageContentHeight = pdfHeight - margin * 2;
-      let yOffset = 0;
+      let cursorMm = 0;
       let pageNum = 0;
 
-      while (yOffset < contentHeight) {
+      while (cursorMm < totalHMm - 1) {
         if (pageNum > 0) pdf.addPage();
 
-        // Calculate source crop for this page
-        const srcY = (yOffset / contentHeight) * canvas.height;
-        const srcH = Math.min(
-          (pageContentHeight / contentHeight) * canvas.height,
-          canvas.height - srcY
-        );
+        // Draw header on every page
+        pdf.setFillColor(74, 57, 192); // PURPLE
+        pdf.rect(margin, margin, contentW, headerH - 2, "F");
+        pdf.setFontSize(11);
+        pdf.setTextColor(255, 255, 255);
+        pdf.text(fiche.nom_epicene, margin + 4, margin + 5.5);
+        pdf.setFontSize(9);
+        pdf.setTextColor(220, 220, 255);
+        pdf.text(fiche.code_rome, pdfW - margin - 4, margin + 5.5, { align: "right" });
 
-        // Create a temp canvas for this page slice
-        const pageCanvas = document.createElement("canvas");
-        pageCanvas.width = canvas.width;
-        pageCanvas.height = srcH;
-        const ctx = pageCanvas.getContext("2d")!;
+        // Determine end of this page
+        const maxEndMm = Math.min(cursorMm + pageBodyH, totalHMm);
+
+        let endMm = maxEndMm;
+        if (maxEndMm < totalHMm) {
+          // Find the best section break that fits
+          const candidates = breaksMm.filter((b) => b > cursorMm + 20 && b <= maxEndMm);
+          if (candidates.length > 0) {
+            endMm = candidates[candidates.length - 1];
+          } else {
+            // Fallback: pixel scan for whitespace
+            const targetPx = maxEndMm / cssPxToMm;
+            const foundPx = findWhitespaceBreak(targetPx, 80);
+            endMm = foundPx * cssPxToMm;
+          }
+        }
+
+        const sliceMm = endMm - cursorMm;
+        const srcY = (cursorMm / cssPxToMm) * canvasScale;
+        const srcH = Math.max(1, (sliceMm / cssPxToMm) * canvasScale);
+
+        // Create page slice canvas
+        const sliceCanvas = document.createElement("canvas");
+        sliceCanvas.width = canvas.width;
+        sliceCanvas.height = Math.ceil(srcH);
+        const ctx = sliceCanvas.getContext("2d")!;
         ctx.fillStyle = "#FFFFFF";
-        ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-        ctx.drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH);
+        ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+        ctx.drawImage(canvas, 0, Math.floor(srcY), canvas.width, Math.ceil(srcH), 0, 0, canvas.width, Math.ceil(srcH));
 
-        const pageImgData = pageCanvas.toDataURL("image/png");
-        const drawHeight = (srcH / canvas.width) * contentWidth;
-        pdf.addImage(pageImgData, "PNG", margin, margin, contentWidth, drawHeight);
+        // Place content below header
+        const bodyTop = margin + headerH;
+        pdf.addImage(sliceCanvas.toDataURL("image/png"), "PNG", margin, bodyTop, contentW, sliceMm);
 
         // Footer
-        pdf.setFontSize(8);
+        pdf.setFontSize(7);
         pdf.setTextColor(180);
         pdf.text(
-          `${fiche.nom_epicene} (${fiche.code_rome}) — Page ${pageNum + 1}`,
-          pdfWidth / 2,
-          pdfHeight - 5,
+          `Page ${pageNum + 1} — Agents Métiers — Mis à jour le ${new Date(fiche.date_maj).toLocaleDateString("fr-FR")}`,
+          pdfW / 2,
+          pdfH - 5,
           { align: "center" }
         );
 
-        yOffset += pageContentHeight;
+        cursorMm = endMm;
         pageNum++;
       }
 
