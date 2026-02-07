@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { api, FicheDetail, Variante } from "@/lib/api";
@@ -136,9 +136,7 @@ export default function FicheDetailPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"sf" | "se" | "sa">("sf");
   const [activeSection, setActiveSection] = useState("infos");
-  const [isPrinting, setIsPrinting] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
-  const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     (async () => {
@@ -168,150 +166,530 @@ export default function FicheDetailPage() {
     return () => observer.disconnect();
   }, [fiche]);
 
-  // ── PDF generation ──
+  // ── PDF generation (native jsPDF — real text, no screenshots) ──
   const handleDownloadPdf = useCallback(async () => {
-    if (!contentRef.current || !fiche) return;
+    if (!fiche) return;
+    const d = fiche; // local const so TS knows it's non-null in closures
     setPdfLoading(true);
-    setIsPrinting(true);
-
-    // Wait for DOM to update (all tabs expanded, sidebar hidden)
-    await new Promise((r) => setTimeout(r, 500));
 
     try {
-      const html2canvas = (await import("html2canvas-pro")).default;
       const { jsPDF } = await import("jspdf");
+      const pdf = new jsPDF("p", "mm", "a4");
 
-      const element = contentRef.current;
-      const canvasScale = 2;
+      const W = 210, H = 297, M = 15;
+      const CW = W - M * 2; // content width
+      let y = M;
+      let pageNum = 1;
 
-      // ── 1. Collect break points from DOM ──
-      // Query all block-level elements that represent safe break points
-      const breakSelectors = "section[id], section[id] > div > div, section[id] > div > h3, .space-y-6 > div, .grid > div, .space-y-3 > div";
-      const breakElements = element.querySelectorAll(breakSelectors);
-      const elementRect = element.getBoundingClientRect();
-      const breakPointsPx = new Set<number>();
-      breakPointsPx.add(0);
-      breakElements.forEach((el) => {
-        const rect = el.getBoundingClientRect();
-        const top = Math.round(rect.top - elementRect.top);
-        if (top > 10) breakPointsPx.add(top);
-      });
-      const sortedBreaksPx = Array.from(breakPointsPx).sort((a, b) => a - b);
+      // ── Colors ──
+      const purple = { r: 74, g: 57, b: 192 };
+      const pink = { r: 255, g: 50, b: 84 };
+      const cyan = { r: 0, g: 200, b: 200 };
+      const dark = { r: 26, g: 26, b: 46 };
+      const gray = { r: 107, g: 114, b: 128 };
+      const lightGray = { r: 156, g: 163, b: 175 };
 
-      // ── 2. Capture full canvas ──
-      const canvas = await html2canvas(element, {
-        scale: canvasScale,
-        useCORS: true,
-        logging: false,
-        backgroundColor: "#FFFFFF",
-        windowWidth: 1200,
-      });
-
-      // ── 3. Setup PDF dimensions ──
-      const pdfW = 210; // A4 mm
-      const pdfH = 297;
-      const margin = 15;
-      const headerH = 12; // mm reserved for title header
-      const footerH = 8;  // mm reserved for footer
-      const contentW = pdfW - margin * 2;
-      const pageBodyH = pdfH - margin - headerH - footerH; // usable body per page
-
-      const cssPxToMm = contentW / element.offsetWidth;
-      const totalHMm = element.offsetHeight * cssPxToMm;
-      const breaksMm = sortedBreaksPx.map((px) => px * cssPxToMm);
-
-      // ── 4. Helper: find whitespace row in canvas (fallback) ──
-      function findWhitespaceBreak(targetPx: number, tolerancePx: number): number {
-        const ctx = canvas.getContext("2d")!;
-        const scanStart = Math.max(0, Math.floor((targetPx - tolerancePx) * canvasScale));
-        const scanEnd = Math.min(canvas.height - 1, Math.floor(targetPx * canvasScale));
-        let bestY = scanEnd;
-        let bestScore = -1;
-        // Sample every 2 rows for speed
-        for (let y = scanEnd; y >= scanStart; y -= 2) {
-          const row = ctx.getImageData(0, y, canvas.width, 1).data;
-          let light = 0;
-          for (let x = 0; x < canvas.width * 4; x += 16) { // sample every 4th pixel
-            if (row[x] > 240 && row[x + 1] > 240 && row[x + 2] > 240) light++;
-          }
-          const score = light / (canvas.width / 4);
-          if (score > bestScore) { bestScore = score; bestY = y; }
-          if (score > 0.95) break; // good enough
-        }
-        return bestY / canvasScale; // return in CSS px
+      // ── Helpers ──
+      function setColor(c: { r: number; g: number; b: number }) {
+        pdf.setTextColor(c.r, c.g, c.b);
       }
 
-      // ── 5. Build pages ──
-      const pdf = new jsPDF("p", "mm", "a4");
-      let cursorMm = 0;
-      let pageNum = 0;
+      function needSpace(h: number) {
+        if (y + h > H - 20) {
+          drawFooter();
+          pdf.addPage();
+          pageNum++;
+          y = M;
+          drawPageHeader();
+        }
+      }
 
-      while (cursorMm < totalHMm - 1) {
-        if (pageNum > 0) pdf.addPage();
+      function drawFooter() {
+        pdf.setFontSize(7);
+        setColor(lightGray);
+        pdf.text(
+          `Page ${pageNum} — Agents M\u00e9tiers — ${d.code_rome} — ${new Date(d.date_maj).toLocaleDateString("fr-FR")}`,
+          W / 2, H - 8, { align: "center" }
+        );
+      }
 
-        // Draw header on every page
-        pdf.setFillColor(74, 57, 192); // PURPLE
-        pdf.rect(margin, margin, contentW, headerH - 2, "F");
+      function drawPageHeader() {
+        // Purple banner
+        pdf.setFillColor(purple.r, purple.g, purple.b);
+        pdf.roundedRect(M, y, CW, 10, 1.5, 1.5, "F");
         pdf.setFontSize(10);
         pdf.setTextColor(255, 255, 255);
-        pdf.text(fiche.nom_epicene, margin + 4, margin + 5);
+        pdf.setFont("helvetica", "bold");
+        pdf.text(d.nom_epicene, M + 4, y + 6.5);
         pdf.setFontSize(8);
-        pdf.setTextColor(220, 220, 255);
-        pdf.text(fiche.code_rome, pdfW - margin - 4, margin + 5, { align: "right" });
+        pdf.setTextColor(210, 210, 255);
+        pdf.text(d.code_rome, W - M - 4, y + 6.5, { align: "right" });
+        y += 14;
+      }
 
-        // Determine end of this page
-        const maxEndMm = Math.min(cursorMm + pageBodyH, totalHMm);
+      function sectionTitle(icon: string, title: string) {
+        needSpace(14);
+        // Light purple background bar
+        pdf.setFillColor(248, 247, 255);
+        pdf.setDrawColor(228, 225, 255);
+        pdf.roundedRect(M, y, CW, 10, 1.5, 1.5, "FD");
+        pdf.setFontSize(11);
+        pdf.setFont("helvetica", "bold");
+        setColor(dark);
+        pdf.text(`${icon}  ${title}`, M + 4, y + 6.5);
+        y += 14;
+      }
 
-        let endMm = maxEndMm;
-        if (maxEndMm < totalHMm) {
-          // Find the best section break that fits
-          const candidates = breaksMm.filter((b) => b > cursorMm + 20 && b <= maxEndMm);
-          if (candidates.length > 0) {
-            endMm = candidates[candidates.length - 1];
-          } else {
-            // Fallback: pixel scan for whitespace
-            const targetPx = maxEndMm / cssPxToMm;
-            const foundPx = findWhitespaceBreak(targetPx, 80);
-            endMm = foundPx * cssPxToMm;
+      function subTitle(text: string, color = dark) {
+        needSpace(8);
+        pdf.setFontSize(8.5);
+        pdf.setFont("helvetica", "bold");
+        setColor(color);
+        pdf.text(text.toUpperCase(), M, y);
+        y += 5;
+      }
+
+      function paragraph(text: string, fontSize = 9) {
+        needSpace(8);
+        pdf.setFontSize(fontSize);
+        pdf.setFont("helvetica", "normal");
+        setColor(gray);
+        const lines = pdf.splitTextToSize(text, CW);
+        for (const line of lines) {
+          needSpace(5);
+          pdf.text(line, M, y);
+          y += 4.2;
+        }
+        y += 2;
+      }
+
+      function bulletList(items: string[], color = purple) {
+        for (const item of items) {
+          needSpace(8);
+          // Colored bullet
+          pdf.setFillColor(color.r, color.g, color.b);
+          pdf.circle(M + 2, y - 1, 1, "F");
+          // Text
+          pdf.setFontSize(8.5);
+          pdf.setFont("helvetica", "normal");
+          setColor(dark);
+          const lines = pdf.splitTextToSize(item, CW - 8);
+          for (let j = 0; j < lines.length; j++) {
+            if (j > 0) needSpace(4.5);
+            pdf.text(lines[j], M + 6, y);
+            y += 4.2;
+          }
+          y += 1;
+        }
+        y += 2;
+      }
+
+      function numberedList(items: string[], color = purple) {
+        for (let i = 0; i < items.length; i++) {
+          needSpace(8);
+          // Colored circle with number
+          pdf.setFillColor(color.r, color.g, color.b);
+          pdf.circle(M + 3, y - 1.2, 2.8, "F");
+          pdf.setFontSize(7);
+          pdf.setTextColor(255, 255, 255);
+          pdf.setFont("helvetica", "bold");
+          pdf.text(`${i + 1}`, M + 3, y - 0.3, { align: "center" });
+          // Text
+          pdf.setFontSize(8.5);
+          pdf.setFont("helvetica", "normal");
+          setColor(dark);
+          const lines = pdf.splitTextToSize(items[i], CW - 10);
+          for (let j = 0; j < lines.length; j++) {
+            if (j > 0) needSpace(4.5);
+            pdf.text(lines[j], M + 8, y);
+            y += 4.2;
+          }
+          y += 1.5;
+        }
+        y += 2;
+      }
+
+      function tagList(items: string[]) {
+        needSpace(8);
+        let x = M;
+        pdf.setFontSize(7.5);
+        pdf.setFont("helvetica", "normal");
+        for (const tag of items) {
+          const tw = pdf.getTextWidth(tag) + 6;
+          if (x + tw > W - M) { x = M; y += 7; needSpace(7); }
+          pdf.setFillColor(243, 244, 246);
+          pdf.roundedRect(x, y - 3.5, tw, 5.5, 2.5, 2.5, "F");
+          setColor(gray);
+          pdf.text(tag, x + 3, y);
+          x += tw + 2;
+        }
+        y += 6;
+      }
+
+      function statBox(label: string, value: string, color = purple) {
+        const boxW = (CW - 4) / 3;
+        return { draw: (x: number) => {
+          pdf.setDrawColor(230, 230, 230);
+          pdf.roundedRect(x, y, boxW, 18, 1.5, 1.5, "D");
+          pdf.setFontSize(14);
+          pdf.setFont("helvetica", "bold");
+          pdf.setTextColor(color.r, color.g, color.b);
+          pdf.text(value, x + boxW / 2, y + 8, { align: "center" });
+          pdf.setFontSize(7);
+          setColor(gray);
+          pdf.setFont("helvetica", "normal");
+          const lines = pdf.splitTextToSize(label, boxW - 4);
+          for (let i = 0; i < lines.length; i++) {
+            pdf.text(lines[i], x + boxW / 2, y + 13 + i * 3, { align: "center" });
+          }
+        }};
+      }
+
+      // ══════════════════════════════════════
+      // ── PAGE 1: Title block ──
+      // ══════════════════════════════════════
+
+      // Big purple header
+      pdf.setFillColor(purple.r, purple.g, purple.b);
+      pdf.roundedRect(M, y, CW, 28, 2, 2, "F");
+      pdf.setFontSize(20);
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFont("helvetica", "bold");
+      const titleLines = pdf.splitTextToSize(d.nom_epicene, CW - 16);
+      for (let i = 0; i < titleLines.length; i++) {
+        pdf.text(titleLines[i], M + 8, y + 12 + i * 8);
+      }
+      pdf.setFontSize(10);
+      pdf.setTextColor(210, 210, 255);
+      pdf.setFont("helvetica", "normal");
+      pdf.text(d.code_rome, W - M - 8, y + 10);
+
+      // Status badge
+      const statusLabel = d.statut === "en_validation" ? "En validation" : d.statut === "publiee" ? "Publi\u00e9e" : d.statut;
+      pdf.setFillColor(255, 255, 255);
+      const slw = pdf.getTextWidth(statusLabel) + 8;
+      pdf.roundedRect(W - M - slw - 4, y + 16, slw, 6, 3, 3, "F");
+      pdf.setFontSize(7);
+      pdf.setTextColor(purple.r, purple.g, purple.b);
+      pdf.setFont("helvetica", "bold");
+      pdf.text(statusLabel, W - M - slw / 2 - 4, y + 20, { align: "center" });
+
+      y += 34;
+
+      // Short description
+      if (d.description_courte) {
+        pdf.setFontSize(10);
+        pdf.setFont("helvetica", "italic");
+        setColor(gray);
+        const descLines = pdf.splitTextToSize(d.description_courte, CW);
+        for (const line of descLines) {
+          pdf.text(line, M, y);
+          y += 4.5;
+        }
+        y += 4;
+      }
+
+      // Metadata line
+      pdf.setFontSize(7);
+      setColor(lightGray);
+      pdf.setFont("helvetica", "normal");
+      pdf.text(`Version ${d.version} \u2022 Mis \u00e0 jour le ${new Date(d.date_maj).toLocaleDateString("fr-FR")}`, M, y);
+      y += 8;
+
+      // ══════════════════════════════════════
+      // ── INFORMATIONS CLÉS ──
+      // ══════════════════════════════════════
+      sectionTitle("\ud83d\udccb", "Informations cl\u00e9s");
+
+      if (d.description) {
+        paragraph(d.description, 9);
+      }
+
+      if (d.missions_principales?.length) {
+        subTitle("Missions principales");
+        numberedList(d.missions_principales, purple);
+      }
+
+      if (d.acces_metier) {
+        needSpace(12);
+        pdf.setFillColor(249, 248, 255);
+        pdf.setDrawColor(228, 225, 255);
+        const accesLines = pdf.splitTextToSize(d.acces_metier, CW - 10);
+        const accesH = accesLines.length * 4.2 + 12;
+        needSpace(accesH);
+        pdf.roundedRect(M, y - 2, CW, accesH, 1.5, 1.5, "FD");
+        subTitle("Comment y acc\u00e9der ?", purple);
+        for (const line of accesLines) {
+          pdf.setFontSize(8.5);
+          pdf.setFont("helvetica", "normal");
+          setColor(gray);
+          pdf.text(line, M + 5, y);
+          y += 4.2;
+        }
+        y += 4;
+      }
+
+      if (d.formations?.length) {
+        subTitle("Formations & Dipl\u00f4mes");
+        bulletList(d.formations, purple);
+      }
+
+      if (d.certifications?.length) {
+        subTitle("Certifications");
+        bulletList(d.certifications, pink);
+      }
+
+      if (d.secteurs_activite?.length) {
+        subTitle("Secteurs d'activit\u00e9");
+        tagList(d.secteurs_activite);
+      }
+
+      // ══════════════════════════════════════
+      // ── STATISTIQUES ──
+      // ══════════════════════════════════════
+      const hasStatSection = d.salaires || d.perspectives || d.types_contrats;
+      if (hasStatSection) {
+        sectionTitle("\ud83d\udcca", "Statistiques sur ce m\u00e9tier");
+
+        // Stat cards row
+        if (d.perspectives) {
+          needSpace(24);
+          const boxes: { draw: (x: number) => void }[] = [];
+          if (d.perspectives.nombre_offres != null) {
+            boxes.push(statBox("offres d'emploi par an", d.perspectives.nombre_offres.toLocaleString("fr-FR"), purple));
+          }
+          if (d.perspectives.taux_insertion != null) {
+            boxes.push(statBox("taux d'insertion \u00e0 6 mois", `${(d.perspectives.taux_insertion * 100).toFixed(0)}%`, cyan));
+          }
+          if (d.perspectives.tension != null) {
+            const pct = Math.round(d.perspectives.tension * 100);
+            const tensionLabel = pct >= 70 ? "Forte demande" : pct >= 40 ? "Mod\u00e9r\u00e9e" : "Faible";
+            boxes.push(statBox("tension du march\u00e9", `${pct}% (${tensionLabel})`, pct >= 70 ? { r: 22, g: 163, b: 74 } : pct >= 40 ? { r: 234, g: 179, b: 8 } : { r: 239, g: 68, b: 68 }));
+          }
+          const boxW = (CW - 4) / Math.max(boxes.length, 1);
+          boxes.forEach((b, i) => b.draw(M + i * (boxW + 2)));
+          y += 22;
+        }
+
+        // Salary table
+        if (d.salaires && (d.salaires.junior?.median || d.salaires.confirme?.median || d.salaires.senior?.median)) {
+          subTitle("Salaires annuels bruts (\u20ac)");
+          needSpace(28);
+
+          const levels = [
+            { name: "Junior", data: d.salaires.junior },
+            { name: "Confirm\u00e9", data: d.salaires.confirme },
+            { name: "Senior", data: d.salaires.senior },
+          ];
+          const colW = CW / 4;
+
+          // Table header
+          pdf.setFillColor(purple.r, purple.g, purple.b);
+          pdf.roundedRect(M, y, CW, 7, 1, 1, "F");
+          pdf.setFontSize(7.5);
+          pdf.setTextColor(255, 255, 255);
+          pdf.setFont("helvetica", "bold");
+          pdf.text("Niveau", M + 4, y + 4.5);
+          pdf.text("Min", M + colW + 4, y + 4.5);
+          pdf.text("M\u00e9dian", M + colW * 2 + 4, y + 4.5);
+          pdf.text("Max", M + colW * 3 + 4, y + 4.5);
+          y += 8;
+
+          // Table rows
+          levels.forEach((level, i) => {
+            needSpace(8);
+            if (i % 2 === 0) {
+              pdf.setFillColor(249, 248, 255);
+              pdf.rect(M, y - 3, CW, 7, "F");
+            }
+            pdf.setFontSize(8);
+            pdf.setFont("helvetica", "bold");
+            setColor(dark);
+            pdf.text(level.name, M + 4, y + 1);
+            pdf.setFont("helvetica", "normal");
+            setColor(gray);
+            pdf.text(level.data?.min ? `${level.data.min.toLocaleString("fr-FR")} \u20ac` : "-", M + colW + 4, y + 1);
+            pdf.text(level.data?.median ? `${level.data.median.toLocaleString("fr-FR")} \u20ac` : "-", M + colW * 2 + 4, y + 1);
+            pdf.text(level.data?.max ? `${level.data.max.toLocaleString("fr-FR")} \u20ac` : "-", M + colW * 3 + 4, y + 1);
+            y += 7;
+          });
+          y += 4;
+        }
+
+        // Contract types
+        if (d.types_contrats && (d.types_contrats.cdi > 0 || d.types_contrats.cdd > 0)) {
+          subTitle("R\u00e9partition des embauches");
+          needSpace(14);
+          const contracts = [
+            { name: "CDI", value: d.types_contrats.cdi, color: purple },
+            { name: "CDD", value: d.types_contrats.cdd, color: pink },
+            { name: "Int\u00e9rim", value: d.types_contrats.interim, color: cyan },
+            { name: "Autre", value: d.types_contrats.autre, color: { r: 245, g: 158, b: 11 } },
+          ].filter(c => c.value > 0);
+
+          // Horizontal bar
+          let barX = M;
+          const barH = 8;
+          contracts.forEach(c => {
+            const bw = (c.value / 100) * CW;
+            pdf.setFillColor(c.color.r, c.color.g, c.color.b);
+            pdf.rect(barX, y, bw, barH, "F");
+            if (bw > 12) {
+              pdf.setFontSize(7);
+              pdf.setTextColor(255, 255, 255);
+              pdf.setFont("helvetica", "bold");
+              pdf.text(`${c.value}%`, barX + bw / 2, y + 5.2, { align: "center" });
+            }
+            barX += bw;
+          });
+          y += barH + 3;
+
+          // Legend
+          let lx = M;
+          contracts.forEach(c => {
+            pdf.setFillColor(c.color.r, c.color.g, c.color.b);
+            pdf.circle(lx + 2, y, 1.5, "F");
+            pdf.setFontSize(7.5);
+            setColor(dark);
+            pdf.setFont("helvetica", "normal");
+            pdf.text(`${c.name} (${c.value}%)`, lx + 5, y + 0.8);
+            lx += 30;
+          });
+          y += 6;
+        }
+
+        // Tendance & Evolution
+        if (d.perspectives) {
+          needSpace(16);
+          if (d.perspectives.tendance) {
+            const tendIcon = d.perspectives.tendance === "emergence" ? "\u2197" : d.perspectives.tendance === "disparition" ? "\u2198" : "\u2192";
+            pdf.setFontSize(9);
+            pdf.setFont("helvetica", "bold");
+            setColor(dark);
+            pdf.text(`${tendIcon} Tendance : ${d.perspectives.tendance}`, M, y);
+            y += 5;
+          }
+          if (d.perspectives.evolution_5ans) {
+            pdf.setFontSize(8);
+            pdf.setFont("helvetica", "normal");
+            setColor(gray);
+            const evoLines = pdf.splitTextToSize(`\u00c9volution \u00e0 5 ans : ${d.perspectives.evolution_5ans}`, CW);
+            for (const line of evoLines) {
+              needSpace(5);
+              pdf.text(line, M, y);
+              y += 4.2;
+            }
+          }
+          y += 4;
+        }
+      }
+
+      // ══════════════════════════════════════
+      // ── COMPÉTENCES ──
+      // ══════════════════════════════════════
+      const hasComp = (d.competences?.length ?? 0) > 0;
+      const hasSE = (d.competences_transversales?.length ?? 0) > 0;
+      const hasSav = (d.savoirs?.length ?? 0) > 0;
+
+      if (hasComp || hasSE || hasSav) {
+        sectionTitle("\u26a1", "Comp\u00e9tences");
+
+        if (hasComp) {
+          subTitle(`Savoir-faire (${d.competences!.length})`, purple);
+          numberedList(d.competences!, purple);
+        }
+
+        if (hasSE) {
+          subTitle(`Savoir-\u00eatre (${d.competences_transversales!.length})`, pink);
+          bulletList(d.competences_transversales!, pink);
+        }
+
+        if (hasSav) {
+          subTitle(`Savoirs (${d.savoirs!.length})`, cyan);
+          bulletList(d.savoirs!, cyan);
+        }
+      }
+
+      // ══════════════════════════════════════
+      // ── CONTEXTES DE TRAVAIL ──
+      // ══════════════════════════════════════
+      const hasCond = (d.conditions_travail?.length ?? 0) > 0;
+      const hasEnv = (d.environnements?.length ?? 0) > 0;
+
+      if (hasCond || hasEnv) {
+        sectionTitle("\ud83c\udfe2", "Contextes de travail");
+        if (hasCond) {
+          subTitle("Conditions de travail");
+          bulletList(d.conditions_travail!, purple);
+        }
+        if (hasEnv) {
+          subTitle("Structures & Environnements");
+          bulletList(d.environnements!, cyan);
+        }
+      }
+
+      // ══════════════════════════════════════
+      // ── MÉTIERS PROCHES ──
+      // ══════════════════════════════════════
+      if (d.mobilite && ((d.mobilite.metiers_proches?.length ?? 0) > 0 || (d.mobilite.evolutions?.length ?? 0) > 0)) {
+        sectionTitle("\ud83d\udd04", "M\u00e9tiers proches & \u00e9volutions");
+
+        if (d.mobilite.metiers_proches?.length) {
+          subTitle("M\u00e9tiers avec comp\u00e9tences communes");
+          for (const m of d.mobilite.metiers_proches) {
+            needSpace(10);
+            pdf.setFontSize(9);
+            pdf.setFont("helvetica", "bold");
+            setColor(dark);
+            pdf.text(`\u2022 ${m.nom}`, M + 2, y);
+            y += 4;
+            if (m.contexte) {
+              pdf.setFontSize(7.5);
+              pdf.setFont("helvetica", "normal");
+              setColor(lightGray);
+              const cLines = pdf.splitTextToSize(m.contexte, CW - 8);
+              for (const cl of cLines) {
+                needSpace(4.5);
+                pdf.text(cl, M + 6, y);
+                y += 3.8;
+              }
+            }
+            y += 2;
           }
         }
 
-        const sliceMm = endMm - cursorMm;
-        const srcY = (cursorMm / cssPxToMm) * canvasScale;
-        const srcH = Math.max(1, (sliceMm / cssPxToMm) * canvasScale);
-
-        // Create page slice canvas
-        const sliceCanvas = document.createElement("canvas");
-        sliceCanvas.width = canvas.width;
-        sliceCanvas.height = Math.ceil(srcH);
-        const ctx = sliceCanvas.getContext("2d")!;
-        ctx.fillStyle = "#FFFFFF";
-        ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
-        ctx.drawImage(canvas, 0, Math.floor(srcY), canvas.width, Math.ceil(srcH), 0, 0, canvas.width, Math.ceil(srcH));
-
-        // Place content below header
-        const bodyTop = margin + headerH;
-        pdf.addImage(sliceCanvas.toDataURL("image/png"), "PNG", margin, bodyTop, contentW, sliceMm);
-
-        // Footer
-        pdf.setFontSize(7);
-        pdf.setTextColor(180);
-        pdf.text(
-          `Page ${pageNum + 1} — Agents Métiers — Mis à jour le ${new Date(fiche.date_maj).toLocaleDateString("fr-FR")}`,
-          pdfW / 2,
-          pdfH - 5,
-          { align: "center" }
-        );
-
-        cursorMm = endMm;
-        pageNum++;
+        if (d.mobilite.evolutions?.length) {
+          subTitle("\u00c9volutions possibles");
+          for (const e of d.mobilite.evolutions) {
+            needSpace(10);
+            pdf.setFontSize(9);
+            pdf.setFont("helvetica", "bold");
+            setColor(cyan);
+            pdf.text(`\u2197 ${e.nom}`, M + 2, y);
+            y += 4;
+            if (e.contexte) {
+              pdf.setFontSize(7.5);
+              pdf.setFont("helvetica", "normal");
+              setColor(lightGray);
+              const cLines = pdf.splitTextToSize(e.contexte, CW - 8);
+              for (const cl of cLines) {
+                needSpace(4.5);
+                pdf.text(cl, M + 6, y);
+                y += 3.8;
+              }
+            }
+            y += 2;
+          }
+        }
       }
 
-      pdf.save(`${fiche.code_rome}_${fiche.nom_masculin.replace(/\s+/g, "_")}.pdf`);
+      // ── Final footer ──
+      drawFooter();
+
+      pdf.save(`${d.code_rome}_${d.nom_masculin.replace(/\s+/g, "_")}.pdf`);
     } catch (err) {
-      console.error("Erreur génération PDF:", err);
+      console.error("Erreur g\u00e9n\u00e9ration PDF:", err);
     } finally {
-      setIsPrinting(false);
       setPdfLoading(false);
     }
   }, [fiche]);
@@ -429,24 +807,22 @@ export default function FicheDetailPage() {
       {/* ── CONTENT + SIDEBAR ── */}
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-8">
         <div className="flex gap-8">
-          {/* Sidebar - hidden during PDF */}
-          {!isPrinting && (
-            <aside className="hidden lg:block w-60 shrink-0">
-              <nav className="sticky top-24 space-y-1">
-                {sections.map(s => (
-                  <a key={s.id} href={`#${s.id}`}
-                    className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-all ${
-                      activeSection === s.id ? "bg-[#4A39C0] text-white font-medium shadow-sm" : "text-gray-600 hover:bg-gray-100"
-                    }`}>
-                    <span className="text-base">{s.icon}</span>{s.label}
-                  </a>
-                ))}
-              </nav>
-            </aside>
-          )}
+          {/* Sidebar */}
+          <aside className="hidden lg:block w-60 shrink-0">
+            <nav className="sticky top-24 space-y-1">
+              {sections.map(s => (
+                <a key={s.id} href={`#${s.id}`}
+                  className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-all ${
+                    activeSection === s.id ? "bg-[#4A39C0] text-white font-medium shadow-sm" : "text-gray-600 hover:bg-gray-100"
+                  }`}>
+                  <span className="text-base">{s.icon}</span>{s.label}
+                </a>
+              ))}
+            </nav>
+          </aside>
 
           {/* Main */}
-          <div ref={contentRef} className="flex-1 min-w-0 space-y-6">
+          <div className="flex-1 min-w-0 space-y-6">
 
             {/* ═══ INFORMATIONS CLÉS ═══ */}
             <SectionAnchor id="infos" title="Informations clés" icon="📋">
@@ -566,92 +942,49 @@ export default function FicheDetailPage() {
             {/* ═══ COMPÉTENCES ═══ */}
             {(hasCompetences || hasSavoirEtre || hasSavoirs) && (
               <SectionAnchor id="competences" title="Compétences" icon="⚡">
-                {/* Tabs - hidden during PDF */}
-                {!isPrinting && (
-                  <>
-                    <div className="border-b border-gray-200 mb-6">
-                      <div className="flex gap-0 -mb-px">
-                        {[
-                          { id: "sf" as const, label: "Savoir-faire", count: fiche.competences?.length ?? 0, show: hasCompetences },
-                          { id: "se" as const, label: "Savoir-être", count: fiche.competences_transversales?.length ?? 0, show: hasSavoirEtre },
-                          { id: "sa" as const, label: "Savoirs", count: fiche.savoirs?.length ?? 0, show: hasSavoirs },
-                        ].filter(t => t.show).map(tab => (
-                          <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                            className={`px-4 py-3 text-sm font-medium border-b-2 transition-all ${
-                              activeTab === tab.id ? "border-[#4A39C0] text-[#4A39C0]" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                            }`}>
-                            {tab.label}
-                            <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${activeTab === tab.id ? "bg-[#E4E1FF] text-[#4A39C0]" : "bg-gray-100 text-gray-500"}`}>
-                              {tab.count}
-                            </span>
-                          </button>
-                        ))}
+                <div className="border-b border-gray-200 mb-6">
+                  <div className="flex gap-0 -mb-px">
+                    {[
+                      { id: "sf" as const, label: "Savoir-faire", count: fiche.competences?.length ?? 0, show: hasCompetences },
+                      { id: "se" as const, label: "Savoir-être", count: fiche.competences_transversales?.length ?? 0, show: hasSavoirEtre },
+                      { id: "sa" as const, label: "Savoirs", count: fiche.savoirs?.length ?? 0, show: hasSavoirs },
+                    ].filter(t => t.show).map(tab => (
+                      <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                        className={`px-4 py-3 text-sm font-medium border-b-2 transition-all ${
+                          activeTab === tab.id ? "border-[#4A39C0] text-[#4A39C0]" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                        }`}>
+                        {tab.label}
+                        <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${activeTab === tab.id ? "bg-[#E4E1FF] text-[#4A39C0]" : "bg-gray-100 text-gray-500"}`}>
+                          {tab.count}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <p className="text-sm text-gray-500 mb-4 italic">
+                  {activeTab === "sf" && "Compétences pratiques et techniques pouvant être appliquées en situation professionnelle."}
+                  {activeTab === "se" && "Qualités humaines et comportementales pour interagir avec son environnement de travail."}
+                  {activeTab === "sa" && "Connaissances théoriques acquises par la formation et l'expérience."}
+                </p>
+                {activeTab === "sf" && fiche.competences && <NumberedList items={fiche.competences} color={PURPLE} />}
+                {activeTab === "se" && fiche.competences_transversales && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {fiche.competences_transversales.map((c, i) => (
+                      <div key={i} className="flex items-center gap-3 p-3.5 rounded-xl bg-[#FFF5F7] border border-[#FFE0E6]/60">
+                        <span className="w-8 h-8 rounded-full bg-[#FF3254] text-white flex items-center justify-center text-xs font-bold shrink-0">✓</span>
+                        <span className="text-[15px] text-gray-700">{c}</span>
                       </div>
-                    </div>
-                    <p className="text-sm text-gray-500 mb-4 italic">
-                      {activeTab === "sf" && "Compétences pratiques et techniques pouvant être appliquées en situation professionnelle."}
-                      {activeTab === "se" && "Qualités humaines et comportementales pour interagir avec son environnement de travail."}
-                      {activeTab === "sa" && "Connaissances théoriques acquises par la formation et l'expérience."}
-                    </p>
-                    {activeTab === "sf" && fiche.competences && <NumberedList items={fiche.competences} color={PURPLE} />}
-                    {activeTab === "se" && fiche.competences_transversales && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {fiche.competences_transversales.map((c, i) => (
-                          <div key={i} className="flex items-center gap-3 p-3.5 rounded-xl bg-[#FFF5F7] border border-[#FFE0E6]/60">
-                            <span className="w-8 h-8 rounded-full bg-[#FF3254] text-white flex items-center justify-center text-xs font-bold shrink-0">✓</span>
-                            <span className="text-[15px] text-gray-700">{c}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {activeTab === "sa" && fiche.savoirs && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {fiche.savoirs.map((s, i) => (
-                          <div key={i} className="flex items-center gap-3 p-3.5 rounded-xl bg-[#F0FDFA] border border-[#CCFBF1]/60">
-                            <span className="w-8 h-8 rounded-full bg-[#00C8C8] text-white flex items-center justify-center text-xs font-bold shrink-0">◆</span>
-                            <span className="text-[15px] text-gray-700">{s}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </>
+                    ))}
+                  </div>
                 )}
-
-                {/* PDF mode: show ALL categories expanded */}
-                {isPrinting && (
-                  <div className="space-y-6">
-                    {hasCompetences && (
-                      <div>
-                        <h3 className="text-sm font-bold text-[#4A39C0] uppercase tracking-wider mb-3">Savoir-faire ({fiche.competences?.length})</h3>
-                        <NumberedList items={fiche.competences!} color={PURPLE} />
+                {activeTab === "sa" && fiche.savoirs && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {fiche.savoirs.map((s, i) => (
+                      <div key={i} className="flex items-center gap-3 p-3.5 rounded-xl bg-[#F0FDFA] border border-[#CCFBF1]/60">
+                        <span className="w-8 h-8 rounded-full bg-[#00C8C8] text-white flex items-center justify-center text-xs font-bold shrink-0">◆</span>
+                        <span className="text-[15px] text-gray-700">{s}</span>
                       </div>
-                    )}
-                    {hasSavoirEtre && (
-                      <div>
-                        <h3 className="text-sm font-bold text-[#FF3254] uppercase tracking-wider mb-3">Savoir-être ({fiche.competences_transversales?.length})</h3>
-                        <div className="grid grid-cols-2 gap-3">
-                          {fiche.competences_transversales!.map((c, i) => (
-                            <div key={i} className="flex items-center gap-3 p-3.5 rounded-xl bg-[#FFF5F7] border border-[#FFE0E6]/60">
-                              <span className="w-8 h-8 rounded-full bg-[#FF3254] text-white flex items-center justify-center text-xs font-bold shrink-0">✓</span>
-                              <span className="text-[15px] text-gray-700">{c}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {hasSavoirs && (
-                      <div>
-                        <h3 className="text-sm font-bold text-[#00C8C8] uppercase tracking-wider mb-3">Savoirs ({fiche.savoirs?.length})</h3>
-                        <div className="grid grid-cols-2 gap-3">
-                          {fiche.savoirs!.map((s, i) => (
-                            <div key={i} className="flex items-center gap-3 p-3.5 rounded-xl bg-[#F0FDFA] border border-[#CCFBF1]/60">
-                              <span className="w-8 h-8 rounded-full bg-[#00C8C8] text-white flex items-center justify-center text-xs font-bold shrink-0">◆</span>
-                              <span className="text-[15px] text-gray-700">{s}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    ))}
                   </div>
                 )}
               </SectionAnchor>
