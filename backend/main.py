@@ -658,6 +658,185 @@ async def publish_batch(request: PublishBatchRequest):
     }
 
 
+# ==================== VALIDATION ====================
+
+VALIDATE_PROMPT = """Tu es un expert qualité en fiches métiers ROME pour France Travail.
+Analyse la fiche métier suivante et fournis un rapport de validation détaillé.
+
+Fiche métier :
+- Code ROME : {code_rome}
+- Nom : {nom_masculin} / {nom_feminin}
+- Description : {description}
+- Description courte : {description_courte}
+- Missions principales : {missions_principales}
+- Accès métier : {acces_metier}
+- Compétences techniques : {competences}
+- Compétences transversales : {competences_transversales}
+- Savoirs : {savoirs}
+- Formations : {formations}
+- Certifications : {certifications}
+- Conditions de travail : {conditions_travail}
+- Environnements : {environnements}
+- Secteurs d'activité : {secteurs_activite}
+- Salaires : {salaires}
+- Perspectives : {perspectives}
+- Types de contrats : {types_contrats}
+- Mobilité : {mobilite}
+
+Évalue la fiche sur les critères suivants :
+1. **Complétude** : Toutes les sections sont-elles remplies ? Les listes ont-elles assez d'éléments ?
+2. **Exactitude** : Les informations sont-elles factuellement correctes pour la France ?
+3. **Cohérence** : Les compétences, formations et salaires sont-ils cohérents entre eux ?
+4. **Qualité rédactionnelle** : Orthographe, grammaire, clarté, ton professionnel ?
+5. **Pertinence** : Les données correspondent-elles bien au métier décrit ?
+
+Réponds UNIQUEMENT avec un objet JSON valide :
+{{
+    "score": 85,
+    "verdict": "approuvee",
+    "resume": "Résumé en 1-2 phrases de la qualité globale.",
+    "criteres": {{
+        "completude": {{"score": 90, "commentaire": "..."}},
+        "exactitude": {{"score": 85, "commentaire": "..."}},
+        "coherence": {{"score": 80, "commentaire": "..."}},
+        "qualite_redactionnelle": {{"score": 90, "commentaire": "..."}},
+        "pertinence": {{"score": 85, "commentaire": "..."}}
+    }},
+    "problemes": ["Problème 1 à corriger", "Problème 2 à corriger"],
+    "suggestions": ["Amélioration suggérée 1", "Amélioration suggérée 2"]
+}}
+
+Notes :
+- "score" est un entier de 0 à 100 (moyenne des 5 critères).
+- "verdict" : "approuvee" (score >= 70), "a_corriger" (score 40-69), "rejetee" (score < 40).
+- "problemes" : liste des erreurs factuelles ou lacunes importantes (peut être vide).
+- "suggestions" : liste d'améliorations optionnelles (peut être vide).
+- Sois exigeant mais juste. Une bonne fiche enrichie devrait obtenir 75-90."""
+
+
+@app.post("/api/fiches/{code_rome}/validate")
+def validate_fiche(code_rome: str):
+    """Validation IA : Claude analyse la qualité de la fiche et retourne un rapport."""
+    try:
+        fiche = repo.get_fiche(code_rome)
+        if not fiche:
+            raise HTTPException(status_code=404, detail=f"Fiche {code_rome} non trouvée")
+
+        if fiche.metadata.statut.value == "brouillon" and not fiche.description:
+            raise HTTPException(status_code=400, detail="Fiche non enrichie, impossible de valider un brouillon vide")
+
+        api_key = os.getenv("ANTHROPIC_API_KEY", "")
+        if not api_key:
+            raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY non configurée")
+
+        import anthropic
+        client = anthropic.Anthropic(api_key=api_key)
+
+        prompt = VALIDATE_PROMPT.format(
+            code_rome=fiche.code_rome,
+            nom_masculin=fiche.nom_masculin,
+            nom_feminin=fiche.nom_feminin,
+            description=fiche.description or "Non renseignée",
+            description_courte=fiche.description_courte or "Non renseignée",
+            missions_principales=json.dumps(fiche.missions_principales or [], ensure_ascii=False),
+            acces_metier=fiche.acces_metier or "Non renseigné",
+            competences=json.dumps(fiche.competences or [], ensure_ascii=False),
+            competences_transversales=json.dumps(fiche.competences_transversales or [], ensure_ascii=False),
+            savoirs=json.dumps(fiche.savoirs or [], ensure_ascii=False),
+            formations=json.dumps(fiche.formations or [], ensure_ascii=False),
+            certifications=json.dumps(fiche.certifications or [], ensure_ascii=False),
+            conditions_travail=json.dumps(fiche.conditions_travail or [], ensure_ascii=False),
+            environnements=json.dumps(fiche.environnements or [], ensure_ascii=False),
+            secteurs_activite=json.dumps(fiche.secteurs_activite or [], ensure_ascii=False),
+            salaires=json.dumps(fiche.salaires.model_dump() if fiche.salaires else {}, ensure_ascii=False),
+            perspectives=json.dumps(fiche.perspectives.model_dump() if fiche.perspectives else {}, ensure_ascii=False),
+            types_contrats=json.dumps(fiche.types_contrats.model_dump() if fiche.types_contrats else {}, ensure_ascii=False),
+            mobilite=json.dumps(fiche.mobilite.model_dump() if fiche.mobilite else {}, ensure_ascii=False),
+        )
+
+        response = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=2048,
+            messages=[{"role": "user", "content": prompt}],
+        )
+
+        content = response.content[0].text.strip()
+        json_match = re.search(r'\{[\s\S]*\}', content)
+        if not json_match:
+            raise HTTPException(status_code=500, detail="Réponse Claude invalide (pas de JSON)")
+
+        rapport = json.loads(json_match.group())
+
+        return {
+            "message": "Validation IA terminée",
+            "code_rome": code_rome,
+            "nom": fiche.nom_epicene,
+            "rapport": rapport,
+        }
+
+    except HTTPException:
+        raise
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=500, detail=f"Erreur parsing JSON Claude: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur validation IA: {str(e)}")
+
+
+class HumanReviewRequest(BaseModel):
+    decision: str  # "approuvee", "a_corriger", "rejetee"
+    commentaire: Optional[str] = None
+
+
+@app.post("/api/fiches/{code_rome}/review")
+async def review_fiche(code_rome: str, review: HumanReviewRequest):
+    """Validation humaine : approuver, demander des corrections, ou rejeter une fiche."""
+    try:
+        fiche = repo.get_fiche(code_rome)
+        if not fiche:
+            raise HTTPException(status_code=404, detail=f"Fiche {code_rome} non trouvée")
+
+        valid_decisions = ["approuvee", "a_corriger", "rejetee"]
+        if review.decision not in valid_decisions:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Décision invalide. Valeurs acceptées: {valid_decisions}"
+            )
+
+        fiche_dict = fiche.model_dump()
+
+        if review.decision == "approuvee":
+            fiche_dict["metadata"]["statut"] = "publiee"
+        elif review.decision == "a_corriger":
+            fiche_dict["metadata"]["statut"] = "brouillon"
+        elif review.decision == "rejetee":
+            fiche_dict["metadata"]["statut"] = "archivee"
+
+        fiche_dict["metadata"]["date_maj"] = datetime.now()
+        fiche_dict["metadata"]["version"] = fiche_dict["metadata"].get("version", 1) + 1
+
+        updated_fiche = FicheMetier(**fiche_dict)
+        repo.update_fiche(updated_fiche)
+
+        statut_labels = {
+            "approuvee": "publiee",
+            "a_corriger": "brouillon",
+            "rejetee": "archivee",
+        }
+
+        return {
+            "message": f"Fiche {review.decision}",
+            "code_rome": code_rome,
+            "decision": review.decision,
+            "commentaire": review.commentaire,
+            "nouveau_statut": statut_labels[review.decision],
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur review: {str(e)}")
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
