@@ -1,97 +1,514 @@
-import SectionHeader from "@/components/SectionHeader";
+"use client";
+
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { api, FicheMetier, Stats } from "@/lib/api";
+
+type Tab = "creer" | "enrichir" | "publier" | "exporter";
 
 export default function ActionsPage() {
+  const [activeTab, setActiveTab] = useState<Tab>("creer");
+
+  const tabs: { id: Tab; label: string; icon: string }[] = [
+    { id: "creer", label: "Creer une fiche", icon: "+" },
+    { id: "enrichir", label: "Enrichissement IA", icon: "A" },
+    { id: "publier", label: "Publication", icon: "P" },
+    { id: "exporter", label: "Export PDF", icon: "D" },
+  ];
+
   return (
-    <main className="min-h-screen py-12 px-4">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-16">
-          <div className="flex items-center justify-center gap-4 mb-4">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-purple-pink flex items-center justify-center shadow-lg">
-              <svg className="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <main className="min-h-screen bg-[#F8F9FA]">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-5xl mx-auto px-4 md:px-8 py-8">
+          <div className="flex items-center gap-4 mb-2">
+            <div className="w-12 h-12 rounded-xl bg-[#4A39C0] flex items-center justify-center">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
             </div>
-            <h1 className="text-5xl font-serif font-bold gradient-text">Actions</h1>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-[#1A1A2E]">Actions</h1>
+              <p className="text-gray-500 text-sm">Gerez vos fiches metiers avec les agents IA</p>
+            </div>
           </div>
-          <p className="text-xl text-text-muted">
-            Gérez vos fiches avec les agents IA
-          </p>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-5xl mx-auto px-4 md:px-8">
+          <div className="flex gap-0 -mb-px overflow-x-auto">
+            {tabs.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-5 py-3.5 text-sm font-medium border-b-2 transition-all whitespace-nowrap ${
+                  activeTab === tab.id
+                    ? "border-[#4A39C0] text-[#4A39C0]"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="max-w-5xl mx-auto px-4 md:px-8 py-8">
+        {activeTab === "creer" && <TabCreer />}
+        {activeTab === "enrichir" && <TabEnrichir />}
+        {activeTab === "publier" && <TabPublier />}
+        {activeTab === "exporter" && <TabExporter />}
+      </div>
+    </main>
+  );
+}
+
+// ══════════════════════════════════════
+// TAB: CREER UNE FICHE
+// ══════════════════════════════════════
+
+function TabCreer() {
+  const [form, setForm] = useState({
+    code_rome: "",
+    nom_masculin: "",
+    nom_feminin: "",
+    nom_epicene: "",
+    description: "",
+  });
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<{ type: "success" | "error"; message: string } | null>(null);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.code_rome || !form.nom_masculin || !form.nom_feminin || !form.nom_epicene) {
+      setResult({ type: "error", message: "Tous les champs obligatoires doivent etre remplis." });
+      return;
+    }
+    setLoading(true);
+    setResult(null);
+    try {
+      const res = await api.createFiche(form);
+      setResult({ type: "success", message: `Fiche ${res.code_rome} creee avec succes !` });
+      setForm({ code_rome: "", nom_masculin: "", nom_feminin: "", nom_epicene: "", description: "" });
+    } catch (err: any) {
+      setResult({ type: "error", message: err.message || "Erreur lors de la creation" });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+      <div className="px-6 md:px-8 py-5 border-b border-gray-100 bg-gray-50/50">
+        <h2 className="text-lg font-bold text-[#1A1A2E]">Creer une nouvelle fiche metier</h2>
+        <p className="text-sm text-gray-500 mt-1">La fiche sera creee en statut &quot;brouillon&quot;. Enrichissez-la ensuite avec l&apos;IA.</p>
+      </div>
+      <form onSubmit={handleSubmit} className="px-6 md:px-8 py-6 space-y-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Code ROME *</label>
+            <input
+              type="text"
+              placeholder="Ex: M1805"
+              value={form.code_rome}
+              onChange={e => setForm({ ...form, code_rome: e.target.value.toUpperCase() })}
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-[#4A39C0] focus:ring-1 focus:ring-[#4A39C0]"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Nom epicene *</label>
+            <input
+              type="text"
+              placeholder="Ex: Analyste de donnees"
+              value={form.nom_epicene}
+              onChange={e => setForm({ ...form, nom_epicene: e.target.value })}
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-[#4A39C0] focus:ring-1 focus:ring-[#4A39C0]"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Nom masculin *</label>
+            <input
+              type="text"
+              placeholder="Ex: Analyste de donnees"
+              value={form.nom_masculin}
+              onChange={e => setForm({ ...form, nom_masculin: e.target.value })}
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-[#4A39C0] focus:ring-1 focus:ring-[#4A39C0]"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Nom feminin *</label>
+            <input
+              type="text"
+              placeholder="Ex: Analyste de donnees"
+              value={form.nom_feminin}
+              onChange={e => setForm({ ...form, nom_feminin: e.target.value })}
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-[#4A39C0] focus:ring-1 focus:ring-[#4A39C0]"
+            />
+          </div>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Description (optionnel)</label>
+          <textarea
+            placeholder="Description du metier..."
+            value={form.description}
+            onChange={e => setForm({ ...form, description: e.target.value })}
+            rows={3}
+            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-[#4A39C0] focus:ring-1 focus:ring-[#4A39C0] resize-none"
+          />
         </div>
 
-        {/* Actions Grid */}
-        <div className="grid md:grid-cols-2 gap-8">
+        {result && (
+          <div className={`p-4 rounded-lg text-sm ${
+            result.type === "success" ? "bg-green-50 text-green-800 border border-green-200" : "bg-red-50 text-red-800 border border-red-200"
+          }`}>
+            {result.message}
+          </div>
+        )}
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="px-6 py-2.5 bg-[#4A39C0] text-white rounded-full font-medium text-sm hover:bg-[#3a2da0] transition disabled:opacity-50 disabled:cursor-wait"
+        >
+          {loading ? "Creation en cours..." : "Creer la fiche"}
+        </button>
+      </form>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════
+// TAB: ENRICHISSEMENT IA
+// ══════════════════════════════════════
+
+function TabEnrichir() {
+  const [fiches, setFiches] = useState<FicheMetier[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [enriching, setEnriching] = useState<string | null>(null);
+  const [results, setResults] = useState<{ code: string; type: "success" | "error"; message: string }[]>([]);
+  const [stats, setStats] = useState<Stats | null>(null);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  async function loadData() {
+    try {
+      const [fichesData, statsData] = await Promise.all([
+        api.getFiches({ statut: "brouillon", limit: 50 }),
+        api.getStats(),
+      ]);
+      setFiches(fichesData.results);
+      setStats(statsData);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleEnrich(codeRome: string) {
+    setEnriching(codeRome);
+    try {
+      const res = await api.enrichFiche(codeRome);
+      setResults(prev => [{ code: codeRome, type: "success", message: res.message }, ...prev]);
+      setFiches(prev => prev.filter(f => f.code_rome !== codeRome));
+      if (stats) setStats({ ...stats, brouillons: stats.brouillons - 1, en_validation: stats.en_validation + 1 });
+    } catch (err: any) {
+      setResults(prev => [{ code: codeRome, type: "error", message: err.message }, ...prev]);
+    } finally {
+      setEnriching(null);
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Stats */}
+      {stats && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            {
-              icon: "🆕",
-              title: "Créer une fiche",
-              description: "Créer une nouvelle fiche métier depuis un nom ou une description",
-              status: "À venir",
-            },
-            {
-              icon: "📝",
-              title: "Enrichissement",
-              description: "Enrichir les fiches avec descriptions, compétences et salaires via Claude API",
-              status: "À venir",
-            },
-            {
-              icon: "🔧",
-              title: "Correction",
-              description: "Corriger l'orthographe et générer les versions genrées automatiquement",
-              status: "À venir",
-            },
-            {
-              icon: "📢",
-              title: "Publication",
-              description: "Publier les fiches validées en masse",
-              status: "À venir",
-            },
-            {
-              icon: "🌐",
-              title: "Variantes",
-              description: "Générer les variantes multilingues et multi-formats",
-              status: "À venir",
-            },
-            {
-              icon: "📥",
-              title: "Export PDF",
-              description: "Exporter les fiches au format PDF professionnel",
-              status: "À venir",
-            },
-          ].map((action, index) => (
-            <div
-              key={index}
-              className="sojai-card animate-fade-in"
-              style={{ animationDelay: `${index * 0.1}s` }}
-            >
-              <div className="flex items-start gap-4">
-                <div className="text-4xl">{action.icon}</div>
-                <div className="flex-1">
-                  <h3 className="text-xl font-serif font-bold mb-2">
-                    {action.title}
-                  </h3>
-                  <p className="text-text-muted mb-4">{action.description}</p>
-                  <span className="badge badge-purple text-xs">
-                    {action.status}
-                  </span>
-                </div>
-              </div>
+            { label: "Total", value: stats.total, color: "#4A39C0" },
+            { label: "Brouillons", value: stats.brouillons, color: "#6B7280" },
+            { label: "En validation", value: stats.en_validation, color: "#EAB308" },
+            { label: "Publiees", value: stats.publiees, color: "#16A34A" },
+          ].map(s => (
+            <div key={s.label} className="bg-white rounded-xl border border-gray-200 p-4 text-center">
+              <div className="text-2xl font-bold" style={{ color: s.color }}>{s.value}</div>
+              <div className="text-xs text-gray-500 mt-1">{s.label}</div>
             </div>
           ))}
         </div>
+      )}
 
-        {/* Info */}
-        <div className="mt-16 sojai-card bg-background-light text-center">
-          <div className="text-4xl mb-4">⚙️</div>
-          <h3 className="text-2xl font-serif font-bold mb-2">
-            Actions IA en cours de développement
-          </h3>
-          <p className="text-text-muted">
-            Les actions d'enrichissement, correction et publication seront intégrées
-            prochainement via l'API backend.
-          </p>
+      {/* Info box */}
+      <div className="bg-[#F9F8FF] border border-[#E4E1FF] rounded-xl p-5">
+        <p className="text-sm text-gray-600">
+          L&apos;enrichissement utilise <strong>Claude API</strong> pour generer automatiquement : description, competences,
+          salaires, perspectives, conditions de travail, mobilite, etc. Chaque enrichissement coute environ <strong>$0.01-0.03</strong>.
+        </p>
+      </div>
+
+      {/* Results */}
+      {results.length > 0 && (
+        <div className="space-y-2">
+          {results.slice(0, 5).map((r, i) => (
+            <div key={i} className={`p-3 rounded-lg text-sm ${
+              r.type === "success" ? "bg-green-50 text-green-800 border border-green-200" : "bg-red-50 text-red-800 border border-red-200"
+            }`}>
+              <strong>{r.code}</strong> : {r.message}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Fiches list */}
+      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-[#1A1A2E]">Fiches brouillon ({fiches.length})</h2>
+          {enriching && (
+            <div className="flex items-center gap-2 text-sm text-[#4A39C0]">
+              <div className="w-4 h-4 border-2 border-[#4A39C0]/30 border-t-[#4A39C0] rounded-full animate-spin" />
+              Enrichissement en cours...
+            </div>
+          )}
+        </div>
+        <div className="divide-y divide-gray-100 max-h-[500px] overflow-y-auto">
+          {loading ? (
+            <div className="p-8 text-center text-gray-400">Chargement...</div>
+          ) : fiches.length === 0 ? (
+            <div className="p-8 text-center text-gray-400">Aucune fiche brouillon a enrichir</div>
+          ) : (
+            fiches.map(fiche => (
+              <div key={fiche.code_rome} className="flex items-center justify-between px-6 py-3 hover:bg-gray-50 transition">
+                <div className="min-w-0">
+                  <span className="text-xs font-bold text-[#4A39C0] mr-2">{fiche.code_rome}</span>
+                  <span className="text-sm text-gray-700">{fiche.nom_masculin}</span>
+                </div>
+                <button
+                  onClick={() => handleEnrich(fiche.code_rome)}
+                  disabled={enriching !== null}
+                  className="px-4 py-1.5 bg-[#4A39C0] text-white rounded-full text-xs font-medium hover:bg-[#3a2da0] transition disabled:opacity-40 disabled:cursor-wait shrink-0 ml-4"
+                >
+                  {enriching === fiche.code_rome ? "..." : "Enrichir"}
+                </button>
+              </div>
+            ))
+          )}
         </div>
       </div>
-    </main>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════
+// TAB: PUBLICATION
+// ══════════════════════════════════════
+
+function TabPublier() {
+  const [fiches, setFiches] = useState<FicheMetier[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [publishing, setPublishing] = useState(false);
+  const [result, setResult] = useState<{ type: "success" | "error"; message: string } | null>(null);
+
+  useEffect(() => {
+    loadFiches();
+  }, []);
+
+  async function loadFiches() {
+    try {
+      const data = await api.getFiches({ statut: "en_validation", limit: 200 });
+      setFiches(data.results);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function toggleSelect(code: string) {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(code)) next.delete(code); else next.add(code);
+      return next;
+    });
+  }
+
+  function selectAll() {
+    if (selected.size === fiches.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(fiches.map(f => f.code_rome)));
+    }
+  }
+
+  async function handlePublish() {
+    if (selected.size === 0) return;
+    setPublishing(true);
+    setResult(null);
+    try {
+      const res = await api.publishBatch(Array.from(selected));
+      setResult({ type: "success", message: res.message });
+      setFiches(prev => prev.filter(f => !selected.has(f.code_rome)));
+      setSelected(new Set());
+    } catch (err: any) {
+      setResult({ type: "error", message: err.message });
+    } finally {
+      setPublishing(false);
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-[#F9F8FF] border border-[#E4E1FF] rounded-xl p-5">
+        <p className="text-sm text-gray-600">
+          Selectionnez les fiches en statut <strong>&quot;en validation&quot;</strong> que vous souhaitez publier.
+          La publication rend les fiches accessibles et change leur statut en <strong>&quot;publiee&quot;</strong>.
+        </p>
+      </div>
+
+      {result && (
+        <div className={`p-4 rounded-lg text-sm ${
+          result.type === "success" ? "bg-green-50 text-green-800 border border-green-200" : "bg-red-50 text-red-800 border border-red-200"
+        }`}>
+          {result.message}
+        </div>
+      )}
+
+      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-[#1A1A2E]">
+            Fiches en validation ({fiches.length})
+          </h2>
+          <div className="flex items-center gap-3">
+            {fiches.length > 0 && (
+              <button onClick={selectAll} className="text-sm text-[#4A39C0] hover:underline">
+                {selected.size === fiches.length ? "Tout deselectionner" : "Tout selectionner"}
+              </button>
+            )}
+            <button
+              onClick={handlePublish}
+              disabled={selected.size === 0 || publishing}
+              className="px-5 py-2 bg-[#16A34A] text-white rounded-full text-sm font-medium hover:bg-[#15803D] transition disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {publishing ? "Publication..." : `Publier (${selected.size})`}
+            </button>
+          </div>
+        </div>
+        <div className="divide-y divide-gray-100 max-h-[500px] overflow-y-auto">
+          {loading ? (
+            <div className="p-8 text-center text-gray-400">Chargement...</div>
+          ) : fiches.length === 0 ? (
+            <div className="p-8 text-center text-gray-400">Aucune fiche en validation</div>
+          ) : (
+            fiches.map(fiche => (
+              <label
+                key={fiche.code_rome}
+                className="flex items-center gap-4 px-6 py-3 hover:bg-gray-50 transition cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  checked={selected.has(fiche.code_rome)}
+                  onChange={() => toggleSelect(fiche.code_rome)}
+                  className="w-4 h-4 rounded border-gray-300 text-[#4A39C0] focus:ring-[#4A39C0]"
+                />
+                <span className="text-xs font-bold text-[#4A39C0]">{fiche.code_rome}</span>
+                <span className="text-sm text-gray-700 flex-1 min-w-0 truncate">{fiche.nom_masculin}</span>
+                <span className="text-xs text-gray-400 shrink-0">v{fiche.version}</span>
+              </label>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════
+// TAB: EXPORT PDF
+// ══════════════════════════════════════
+
+function TabExporter() {
+  const [fiches, setFiches] = useState<FicheMetier[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    loadFiches();
+  }, []);
+
+  async function loadFiches() {
+    try {
+      const data = await api.getFiches({ statut: "en_validation", limit: 200 });
+      // Also load published
+      const pubData = await api.getFiches({ statut: "publiee", limit: 200 });
+      setFiches([...data.results, ...pubData.results]);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const filtered = fiches.filter(f => {
+    if (!search) return true;
+    const s = search.toLowerCase();
+    return f.code_rome.toLowerCase().includes(s) || f.nom_masculin.toLowerCase().includes(s);
+  });
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-[#F9F8FF] border border-[#E4E1FF] rounded-xl p-5">
+        <p className="text-sm text-gray-600">
+          Cliquez sur une fiche enrichie pour ouvrir sa page de detail et telecharger le PDF.
+          Seules les fiches <strong>enrichies</strong> (en validation ou publiees) sont affichees.
+        </p>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center gap-4">
+          <h2 className="text-lg font-bold text-[#1A1A2E] shrink-0">Fiches enrichies ({filtered.length})</h2>
+          <input
+            type="text"
+            placeholder="Rechercher..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#4A39C0]"
+          />
+        </div>
+        <div className="divide-y divide-gray-100 max-h-[500px] overflow-y-auto">
+          {loading ? (
+            <div className="p-8 text-center text-gray-400">Chargement...</div>
+          ) : filtered.length === 0 ? (
+            <div className="p-8 text-center text-gray-400">Aucune fiche enrichie trouvee</div>
+          ) : (
+            filtered.map(fiche => (
+              <Link
+                key={fiche.code_rome}
+                href={`/fiches/${fiche.code_rome}`}
+                className="flex items-center justify-between px-6 py-3 hover:bg-gray-50 transition group"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="text-xs font-bold text-[#4A39C0]">{fiche.code_rome}</span>
+                  <span className="text-sm text-gray-700 truncate">{fiche.nom_masculin}</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                    fiche.statut === "publiee" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"
+                  }`}>
+                    {fiche.statut === "publiee" ? "Publiee" : "En validation"}
+                  </span>
+                </div>
+                <span className="text-xs text-gray-400 group-hover:text-[#4A39C0] transition shrink-0 ml-4">
+                  Voir &amp; telecharger PDF &rarr;
+                </span>
+              </Link>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

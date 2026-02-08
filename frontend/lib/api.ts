@@ -157,6 +157,49 @@ class ApiClient {
     return this.request<any>(`/api/fiches/${codeRome}/variantes/${varianteId}`);
   }
 
+  // ==================== ACTIONS ====================
+
+  async createFiche(data: {
+    code_rome: string;
+    nom_masculin: string;
+    nom_feminin: string;
+    nom_epicene: string;
+    description?: string;
+  }): Promise<{ message: string; code_rome: string }> {
+    return this.request<{ message: string; code_rome: string }>("/api/fiches", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async enrichFiche(codeRome: string): Promise<{ message: string; code_rome: string; nom: string; version: number }> {
+    return this.request<{ message: string; code_rome: string; nom: string; version: number }>(
+      `/api/fiches/${codeRome}/enrich`,
+      { method: "POST" }
+    );
+  }
+
+  async publishFiche(codeRome: string): Promise<{ message: string; code_rome: string }> {
+    return this.request<{ message: string; code_rome: string }>(
+      `/api/fiches/${codeRome}/publish`,
+      { method: "POST" }
+    );
+  }
+
+  async publishBatch(codesRome: string[]): Promise<{ message: string; results: { code_rome: string; status: string; message: string }[] }> {
+    return this.request<{ message: string; results: { code_rome: string; status: string; message: string }[] }>(
+      "/api/fiches/publish-batch",
+      { method: "POST", body: JSON.stringify({ codes_rome: codesRome }) }
+    );
+  }
+
+  async updateFiche(codeRome: string, data: Record<string, unknown>): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/api/fiches/${codeRome}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  }
+
   // ==================== LOGS ====================
 
   async getAuditLogs(limit: number = 15): Promise<{ total: number; logs: AuditLog[] }> {
