@@ -166,7 +166,7 @@ export default function FicheDetailPage() {
     return () => observer.disconnect();
   }, [fiche]);
 
-  // ── PDF generation (native jsPDF v2 — professional layout) ──
+  // ── PDF generation (v3 — matches web layout exactly) ──
   const handleDownloadPdf = useCallback(async () => {
     if (!fiche) return;
     const d = fiche;
@@ -176,297 +176,315 @@ export default function FicheDetailPage() {
       const { jsPDF } = await import("jspdf");
       const pdf = new jsPDF("p", "mm", "a4");
 
-      const W = 210, H = 297, ML = 18, MR = 18;
+      const W = 210, H = 297, ML = 15, MR = 15;
       const CW = W - ML - MR;
       let y = 0;
       let pageNum = 1;
 
-      // ── Colors ──
+      // ── Colors (matching web CSS exactly) ──
+      type RGB = readonly [number, number, number];
       const C = {
         purple: [74, 57, 192] as const,
-        purpleLight: [124, 111, 219] as const,
-        purpleBg: [249, 248, 255] as const,
-        purpleBorder: [228, 225, 255] as const,
+        purpleBadgeBg: [228, 225, 255] as const,
+        purpleLightBg: [249, 248, 255] as const,
         pink: [255, 50, 84] as const,
         pinkBg: [255, 245, 247] as const,
         cyan: [0, 200, 200] as const,
         cyanBg: [240, 253, 250] as const,
+        cyanBorder: [204, 251, 241] as const,
         dark: [26, 26, 46] as const,
-        body: [55, 65, 81] as const,
-        muted: [107, 114, 128] as const,
-        light: [156, 163, 175] as const,
-        border: [229, 231, 235] as const,
+        gray900: [17, 24, 39] as const,
+        gray700: [55, 65, 81] as const,
+        gray500: [107, 114, 128] as const,
+        gray400: [156, 163, 175] as const,
+        gray200: [229, 231, 235] as const,
+        gray100: [243, 244, 246] as const,
+        gray50: [249, 250, 251] as const,
         white: [255, 255, 255] as const,
-        bgAlt: [248, 250, 252] as const,
+        green: [22, 163, 74] as const,
+        yellow: [234, 179, 8] as const,
+        red: [239, 68, 68] as const,
+        amber: [245, 158, 11] as const,
       };
 
-      type RGB = readonly [number, number, number];
       const fill = (c: RGB) => pdf.setFillColor(c[0], c[1], c[2]);
       const stroke = (c: RGB) => pdf.setDrawColor(c[0], c[1], c[2]);
       const txt = (c: RGB) => pdf.setTextColor(c[0], c[1], c[2]);
 
-      // ── Core helpers ──
+      // ── Helpers ──
       function newPageIfNeeded(h: number) {
-        if (y + h > H - 18) {
+        if (y + h > H - 16) {
           drawFooter();
           pdf.addPage();
           pageNum++;
-          y = 16;
-          drawContinuationHeader();
+          drawPageHeader();
         }
       }
 
       function drawFooter() {
-        // Thin line
-        stroke(C.border);
+        stroke(C.gray200);
         pdf.setLineWidth(0.3);
-        pdf.line(ML, H - 14, W - MR, H - 14);
-        // Text
+        pdf.line(ML, H - 12, W - MR, H - 12);
         pdf.setFontSize(7);
-        txt(C.light);
+        txt(C.gray400);
         pdf.setFont("helvetica", "normal");
-        pdf.text(d.code_rome + " - " + d.nom_epicene, ML, H - 10);
-        pdf.text(`Page ${pageNum}`, W - MR, H - 10, { align: "right" });
+        pdf.text(`${d.code_rome} - ${d.nom_epicene}`, ML, H - 8);
+        pdf.text(`Page ${pageNum}`, W - MR, H - 8, { align: "right" });
       }
 
-      function drawContinuationHeader() {
-        // Thin purple top bar
+      function drawPageHeader() {
         fill(C.purple);
-        pdf.rect(0, 0, W, 3, "F");
-        // Title line
+        pdf.rect(0, 0, W, 2, "F");
         pdf.setFontSize(9);
         pdf.setFont("helvetica", "bold");
         txt(C.purple);
-        pdf.text(d.nom_epicene, ML, 10);
-        pdf.setFontSize(8);
-        txt(C.light);
+        pdf.text(d.nom_epicene, ML, 9);
         pdf.setFont("helvetica", "normal");
-        pdf.text(d.code_rome, W - MR, 10, { align: "right" });
-        y = 18;
-      }
-
-      function hline() {
-        newPageIfNeeded(6);
-        stroke(C.border);
+        txt(C.gray400);
+        pdf.text(d.code_rome, W - MR, 9, { align: "right" });
+        stroke(C.gray200);
         pdf.setLineWidth(0.2);
-        pdf.line(ML, y, W - MR, y);
-        y += 6;
+        pdf.line(ML, 12, W - MR, 12);
+        y = 16;
       }
 
-      function section(title: string) {
-        newPageIfNeeded(18);
-        y += 4;
-        // Purple left accent + title
-        fill(C.purple);
-        pdf.rect(ML, y, 3, 8, "F");
-        pdf.setFontSize(13);
+      // Section card header (matches web SectionAnchor component)
+      function sectionCard(title: string) {
+        newPageIfNeeded(20);
+        y += 5;
+        // Card header bar (gray bg, like web)
+        fill(C.gray50);
+        stroke(C.gray200);
+        pdf.setLineWidth(0.3);
+        pdf.roundedRect(ML, y, CW, 10, 3, 3, "FD");
+        // Cover bottom corners to make it look like a card header
+        fill(C.gray50);
+        pdf.rect(ML, y + 7, CW, 3, "F");
+        // Bottom border of header
+        stroke(C.gray100);
+        pdf.line(ML, y + 10, ML + CW, y + 10);
+        // Title
+        pdf.setFontSize(11);
         pdf.setFont("helvetica", "bold");
         txt(C.dark);
-        pdf.text(title, ML + 7, y + 6);
-        y += 14;
+        pdf.text(title, ML + 6, y + 7);
+        y += 15;
       }
 
-      function sub(text: string, color: RGB = C.dark) {
+      // Subtitle (matches web h3: text-sm font-bold uppercase tracking-wider)
+      function subtitle(text: string) {
         newPageIfNeeded(10);
-        pdf.setFontSize(9.5);
+        pdf.setFontSize(8);
         pdf.setFont("helvetica", "bold");
-        txt(color);
-        pdf.text(text.toUpperCase(), ML + 1, y);
-        // Small underline
-        fill(color);
-        pdf.rect(ML + 1, y + 1.5, Math.min(pdf.getTextWidth(text.toUpperCase()), 40), 0.5, "F");
-        y += 7;
+        txt(C.gray900);
+        pdf.text(text.toUpperCase(), ML + 2, y);
+        y += 5;
       }
 
-      function para(text: string, indent = 0) {
-        newPageIfNeeded(6);
+      // Body text (matches web text-gray-700 leading-relaxed text-[16px])
+      function bodyText(text: string) {
         pdf.setFontSize(9.5);
         pdf.setFont("helvetica", "normal");
-        txt(C.body);
-        const lines = pdf.splitTextToSize(text, CW - indent);
+        txt(C.gray700);
+        const lines = pdf.splitTextToSize(text, CW - 4);
         for (const line of lines) {
-          newPageIfNeeded(5);
-          pdf.text(line, ML + indent, y);
-          y += 4.5;
+          newPageIfNeeded(4.8);
+          pdf.text(line, ML + 2, y);
+          y += 4.8;
         }
-        y += 2;
+        y += 3;
       }
 
-      function bullets(items: string[], color: RGB = C.purple) {
+      // Bullet list (matches web BulletList component)
+      function bulletList(items: string[], color: RGB = C.purple) {
         for (const item of items) {
-          newPageIfNeeded(7);
+          newPageIfNeeded(6);
           fill(color);
-          pdf.circle(ML + 3, y - 1.2, 1.2, "F");
-          pdf.setFontSize(9.5);
+          pdf.circle(ML + 4, y - 1, 1, "F");
+          pdf.setFontSize(9);
           pdf.setFont("helvetica", "normal");
-          txt(C.body);
-          const lines = pdf.splitTextToSize(item, CW - 10);
+          txt(C.gray700);
+          const lines = pdf.splitTextToSize(item, CW - 12);
           for (let j = 0; j < lines.length; j++) {
-            if (j > 0) newPageIfNeeded(5);
+            if (j > 0) newPageIfNeeded(4.5);
             pdf.text(lines[j], ML + 8, y);
             y += 4.5;
           }
           y += 1.5;
         }
-        y += 3;
+        y += 2;
       }
 
-      function numbered(items: string[], color: RGB = C.purple) {
+      // Numbered list (matches web NumberedList component)
+      function numberedList(items: string[], color: RGB = C.purple) {
         for (let i = 0; i < items.length; i++) {
           newPageIfNeeded(7);
           fill(color);
-          pdf.roundedRect(ML, y - 4, 6.5, 6.5, 1.5, 1.5, "F");
-          pdf.setFontSize(7.5);
+          pdf.roundedRect(ML + 2, y - 4.5, 6, 6, 1.5, 1.5, "F");
+          pdf.setFontSize(7);
           txt(C.white);
           pdf.setFont("helvetica", "bold");
-          pdf.text(`${i + 1}`, ML + 3.25, y - 0.5, { align: "center" });
-          pdf.setFontSize(9.5);
+          pdf.text(`${i + 1}`, ML + 5, y - 1, { align: "center" });
+          pdf.setFontSize(9);
           pdf.setFont("helvetica", "normal");
-          txt(C.body);
-          const lines = pdf.splitTextToSize(items[i], CW - 12);
+          txt(C.gray700);
+          const lines = pdf.splitTextToSize(items[i], CW - 14);
           for (let j = 0; j < lines.length; j++) {
-            if (j > 0) newPageIfNeeded(5);
-            pdf.text(lines[j], ML + 10, y);
+            if (j > 0) newPageIfNeeded(4.5);
+            pdf.text(lines[j], ML + 11, y);
             y += 4.5;
           }
           y += 2;
         }
-        y += 3;
+        y += 2;
       }
 
+      // Info box (matches web purple bg box with border)
+      function infoBox(title: string, text: string) {
+        const lines = pdf.splitTextToSize(text, CW - 16);
+        const boxH = lines.length * 4.5 + 14;
+        newPageIfNeeded(boxH);
+        fill(C.purpleLightBg);
+        stroke(C.purpleBadgeBg);
+        pdf.setLineWidth(0.3);
+        pdf.roundedRect(ML + 2, y, CW - 4, boxH, 3, 3, "FD");
+        pdf.setFontSize(8);
+        pdf.setFont("helvetica", "bold");
+        txt(C.gray900);
+        pdf.text(title.toUpperCase(), ML + 8, y + 6);
+        pdf.setFontSize(9);
+        pdf.setFont("helvetica", "normal");
+        txt(C.gray500);
+        let ty = y + 12;
+        for (const line of lines) { pdf.text(line, ML + 8, ty); ty += 4.5; }
+        y += boxH + 4;
+      }
+
+      // Tags (matches web rounded-full bg-gray-100 tags)
       function tags(items: string[]) {
         newPageIfNeeded(8);
-        let x = ML;
+        let x = ML + 2;
         pdf.setFontSize(8);
         pdf.setFont("helvetica", "normal");
         for (const tag of items) {
           const tw = pdf.getTextWidth(tag) + 8;
-          if (x + tw > W - MR) { x = ML; y += 8; newPageIfNeeded(8); }
-          fill(C.purpleBg);
-          stroke(C.purpleBorder);
-          pdf.roundedRect(x, y - 4, tw, 6.5, 3, 3, "FD");
-          txt(C.purple);
+          if (x + tw > W - MR) { x = ML + 2; y += 8; newPageIfNeeded(8); }
+          fill(C.gray100);
+          pdf.roundedRect(x, y - 3.5, tw, 6, 3, 3, "F");
+          txt(C.gray700);
           pdf.text(tag, x + 4, y);
           x += tw + 3;
         }
         y += 8;
       }
 
-      function accentBox(title: string, text: string, color: RGB = C.purple, bgColor: RGB = C.purpleBg) {
-        const lines = pdf.splitTextToSize(text, CW - 14);
-        const boxH = lines.length * 4.5 + 14;
-        newPageIfNeeded(boxH);
-        fill(bgColor);
-        pdf.roundedRect(ML, y, CW, boxH, 2, 2, "F");
-        // Left accent bar
-        fill(color);
-        pdf.rect(ML, y, 3, boxH, "F");
-        // Title
-        pdf.setFontSize(9.5);
-        pdf.setFont("helvetica", "bold");
-        txt(color);
-        pdf.text(title, ML + 8, y + 6);
-        // Body
-        pdf.setFontSize(9);
-        pdf.setFont("helvetica", "normal");
-        txt(C.body);
-        let ty = y + 12;
-        for (const line of lines) {
-          pdf.text(line, ML + 8, ty);
-          ty += 4.5;
-        }
-        y += boxH + 5;
-      }
-
       // ══════════════════════════════════════════════
-      // PAGE 1 — COVER HEADER
+      // PAGE 1 — HEADER (white bg, matches web)
       // ══════════════════════════════════════════════
 
-      // Full-width purple header block
+      // Thin purple accent at top
       fill(C.purple);
-      pdf.rect(0, 0, W, 52, "F");
-      // Lighter accent strip
-      fill(C.purpleLight);
-      pdf.rect(0, 48, W, 4, "F");
+      pdf.rect(0, 0, W, 2.5, "F");
 
-      // Code ROME badge
+      y = 12;
+
+      // Code ROME badge (matches web: px-3 py-1 rounded-md bg-[#E4E1FF] text-[#4A39C0])
       pdf.setFontSize(9);
       pdf.setFont("helvetica", "bold");
-      fill(C.white);
-      pdf.roundedRect(ML, 14, 22, 7, 3.5, 3.5, "F");
+      const romeBadgeW = pdf.getTextWidth(d.code_rome) + 8;
+      fill(C.purpleBadgeBg);
+      pdf.roundedRect(ML, y - 3.5, romeBadgeW, 7.5, 2, 2, "F");
       txt(C.purple);
-      pdf.text(d.code_rome, ML + 11, 19, { align: "center" });
+      pdf.text(d.code_rome, ML + 4, y + 1);
 
       // Status badge
-      const statusLabel = d.statut === "en_validation" ? "En validation" : d.statut === "publiee" ? "Publiee" : d.statut;
+      const statusLabel = d.statut === "en_validation" ? "En validation" : d.statut === "publiee" ? "Publiee" : d.statut.charAt(0).toUpperCase() + d.statut.slice(1);
+      const statusBg: RGB = d.statut === "publiee" ? C.green : d.statut === "en_validation" ? C.yellow : C.gray500;
       pdf.setFontSize(7.5);
       const stW = pdf.getTextWidth(statusLabel) + 8;
-      fill(C.white);
-      pdf.roundedRect(ML + 25, 14, stW, 7, 3.5, 3.5, "F");
-      txt(C.purple);
-      pdf.text(statusLabel, ML + 25 + stW / 2, 19, { align: "center" });
-
-      // Title
-      pdf.setFontSize(22);
-      pdf.setFont("helvetica", "bold");
+      fill(statusBg);
+      pdf.roundedRect(ML + romeBadgeW + 4, y - 3.5, stW, 7.5, 2, 2, "F");
       txt(C.white);
-      const tLines = pdf.splitTextToSize(d.nom_epicene, CW - 4);
-      for (let i = 0; i < tLines.length; i++) {
-        pdf.text(tLines[i], ML, 32 + i * 9);
-      }
+      pdf.text(statusLabel, ML + romeBadgeW + 8, y + 1);
 
-      y = 60;
-
-      // Short description
-      if (d.description_courte) {
-        pdf.setFontSize(10.5);
-        pdf.setFont("helvetica", "italic");
-        txt(C.muted);
-        const sLines = pdf.splitTextToSize(d.description_courte, CW);
-        for (const line of sLines) {
-          pdf.text(line, ML, y);
-          y += 5;
-        }
-        y += 2;
-      }
-
-      // Metadata
-      pdf.setFontSize(7.5);
-      txt(C.light);
-      pdf.setFont("helvetica", "normal");
-      pdf.text(`Version ${d.version}  |  Mis a jour le ${new Date(d.date_maj).toLocaleDateString("fr-FR")}`, ML, y);
       y += 8;
 
-      hline();
+      // Title (matches web: text-2xl md:text-3xl font-bold text-[#1A1A2E])
+      pdf.setFontSize(20);
+      pdf.setFont("helvetica", "bold");
+      txt(C.dark);
+      const titleLines = pdf.splitTextToSize(d.nom_epicene, CW);
+      for (const line of titleLines) {
+        pdf.text(line, ML, y + 5);
+        y += 8;
+      }
+
+      // Description courte (matches web: text-gray-500)
+      if (d.description_courte) {
+        y += 1;
+        pdf.setFontSize(10);
+        pdf.setFont("helvetica", "normal");
+        txt(C.gray500);
+        const descLines = pdf.splitTextToSize(d.description_courte, CW);
+        for (const line of descLines) {
+          pdf.text(line, ML, y);
+          y += 4.8;
+        }
+      }
+
+      // Version + date (matches web: text-xs text-gray-400)
+      y += 2;
+      pdf.setFontSize(7);
+      txt(C.gray400);
+      pdf.text(`Version ${d.version}`, W - MR, y, { align: "right" });
+      y += 3.5;
+      pdf.text(`Mis a jour le ${new Date(d.date_maj).toLocaleDateString("fr-FR")}`, W - MR, y, { align: "right" });
+      y += 4;
+
+      // Separator (matches web: border-b border-gray-200)
+      stroke(C.gray200);
+      pdf.setLineWidth(0.3);
+      pdf.line(ML, y, W - MR, y);
+      y += 4;
 
       // ══════════════════════════════════════════════
       // INFORMATIONS CLES
       // ══════════════════════════════════════════════
-      section("Informations cles");
+      sectionCard("Informations cles");
 
-      if (d.description) para(d.description);
+      if (d.description) bodyText(d.description);
 
       if (d.missions_principales?.length) {
-        sub("Missions principales", C.purple);
-        numbered(d.missions_principales, C.purple);
+        subtitle("Missions principales");
+        numberedList(d.missions_principales, C.purple);
       }
 
       if (d.acces_metier) {
-        accentBox("Comment y acceder ?", d.acces_metier, C.purple, C.purpleBg);
+        infoBox("Comment y acceder ?", d.acces_metier);
       }
 
+      // Formations & Certifications (side by side approach - just stacked in PDF)
       if (d.formations?.length) {
-        sub("Formations & Diplomes", C.purple);
-        bullets(d.formations, C.purple);
+        subtitle("Formations & Diplomes");
+        bulletList(d.formations, C.purple);
       }
 
       if (d.certifications?.length) {
-        sub("Certifications", C.pink);
-        bullets(d.certifications, C.pink);
+        subtitle("Certifications");
+        bulletList(d.certifications, C.pink);
       }
 
       if (d.secteurs_activite?.length) {
-        sub("Secteurs d'activite");
+        newPageIfNeeded(6);
+        stroke(C.gray100);
+        pdf.setLineWidth(0.2);
+        pdf.line(ML + 2, y, W - MR - 2, y);
+        y += 4;
+        pdf.setFontSize(7);
+        pdf.setFont("helvetica", "bold");
+        txt(C.gray400);
+        pdf.text("SECTEUR D'ACTIVITE", ML + 2, y);
+        y += 4;
         tags(d.secteurs_activite);
       }
 
@@ -475,74 +493,77 @@ export default function FicheDetailPage() {
       // ══════════════════════════════════════════════
       const showStats = d.salaires || d.perspectives || (d.types_contrats && (d.types_contrats.cdi > 0 || d.types_contrats.cdd > 0));
       if (showStats) {
-        hline();
-        section("Statistiques");
+        sectionCard("Statistiques sur ce metier");
 
-        // KPI cards
+        // Stat cards row (matches web StatCard + TensionGauge)
         if (d.perspectives) {
-          newPageIfNeeded(28);
-          const kpis: { label: string; value: string; color: RGB }[] = [];
+          const cards: { label: string; value: string; sub?: string; color: RGB }[] = [];
           if (d.perspectives.nombre_offres != null)
-            kpis.push({ label: "Offres / an", value: d.perspectives.nombre_offres.toLocaleString("fr-FR"), color: C.purple });
+            cards.push({ label: "offres d'emploi par an", value: d.perspectives.nombre_offres.toLocaleString("fr-FR"), sub: "Estimation nationale", color: C.purple });
           if (d.perspectives.taux_insertion != null)
-            kpis.push({ label: "Taux d'insertion", value: `${(d.perspectives.taux_insertion * 100).toFixed(0)}%`, color: C.cyan });
-          if (d.perspectives.tension != null) {
-            const pct = Math.round(d.perspectives.tension * 100);
-            const tensionColor: RGB = pct >= 70 ? [22, 163, 74] : pct >= 40 ? [234, 179, 8] : [239, 68, 68];
-            kpis.push({ label: "Tension marche", value: `${pct}%`, color: tensionColor });
-          }
+            cards.push({ label: "taux d'insertion a 6 mois", value: `${(d.perspectives.taux_insertion * 100).toFixed(0)}%`, sub: "Apres formation", color: C.cyan });
 
-          if (kpis.length > 0) {
-            const bw = (CW - (kpis.length - 1) * 4) / kpis.length;
-            kpis.forEach((kpi, i) => {
-              const bx = ML + i * (bw + 4);
-              // Card bg
-              fill(C.bgAlt);
-              stroke(C.border);
-              pdf.roundedRect(bx, y, bw, 22, 2, 2, "FD");
-              // Top color bar
-              fill(kpi.color);
-              pdf.rect(bx, y, bw, 2.5, "F");
+          if (cards.length > 0) {
+            newPageIfNeeded(28);
+            const cardW = (CW - (cards.length) * 4) / (cards.length + 1);
+            cards.forEach((card, i) => {
+              const cx = ML + 2 + i * (cardW + 4);
+              stroke(C.gray200);
+              pdf.setLineWidth(0.3);
+              pdf.roundedRect(cx, y, cardW, 24, 3, 3, "D");
               // Value
-              pdf.setFontSize(18);
+              pdf.setFontSize(20);
               pdf.setFont("helvetica", "bold");
-              txt(kpi.color);
-              pdf.text(kpi.value, bx + bw / 2, y + 12, { align: "center" });
+              txt(card.color);
+              pdf.text(card.value, cx + cardW / 2, y + 10, { align: "center" });
               // Label
               pdf.setFontSize(7.5);
               pdf.setFont("helvetica", "normal");
-              txt(C.muted);
-              pdf.text(kpi.label, bx + bw / 2, y + 18, { align: "center" });
+              txt(C.gray700);
+              pdf.text(card.label, cx + cardW / 2, y + 16, { align: "center" });
+              // Sub
+              if (card.sub) {
+                pdf.setFontSize(6.5);
+                txt(C.gray400);
+                pdf.text(card.sub, cx + cardW / 2, y + 20, { align: "center" });
+              }
             });
-            y += 28;
+
+            // Tension gauge card (last card in the row)
+            if (d.perspectives.tension != null) {
+              const tx = ML + 2 + cards.length * (cardW + 4);
+              const pct = Math.round(d.perspectives.tension * 100);
+              const gColor: RGB = pct >= 70 ? C.green : pct >= 40 ? C.yellow : C.red;
+              const gLabel = pct >= 70 ? "Forte demande" : pct >= 40 ? "Demande moderee" : "Faible demande";
+
+              stroke(C.gray200);
+              pdf.roundedRect(tx, y, cardW, 24, 3, 3, "D");
+              // Label
+              pdf.setFontSize(6.5);
+              pdf.setFont("helvetica", "bold");
+              txt(C.gray400);
+              pdf.text("TENSION DU MARCHE", tx + 4, y + 6);
+              // Value + label
+              pdf.setFontSize(8);
+              pdf.setFont("helvetica", "bold");
+              txt(gColor);
+              pdf.text(gLabel, tx + 4, y + 11);
+              pdf.setFontSize(11);
+              pdf.text(`${pct}%`, tx + cardW - 4, y + 11, { align: "right" });
+              // Gauge bar
+              fill(C.gray100);
+              pdf.roundedRect(tx + 4, y + 15, cardW - 8, 3.5, 1.5, 1.5, "F");
+              fill(gColor);
+              pdf.roundedRect(tx + 4, y + 15, (cardW - 8) * (pct / 100), 3.5, 1.5, 1.5, "F");
+            }
+
+            y += 30;
           }
         }
 
-        // Tension gauge bar
-        if (d.perspectives?.tension != null) {
-          newPageIfNeeded(14);
-          const pct = Math.round(d.perspectives.tension * 100);
-          const gColor: RGB = pct >= 70 ? [22, 163, 74] : pct >= 40 ? [234, 179, 8] : [239, 68, 68];
-          const gLabel = pct >= 70 ? "Forte demande" : pct >= 40 ? "Demande moderee" : "Faible demande";
-          pdf.setFontSize(8);
-          pdf.setFont("helvetica", "bold");
-          txt(C.dark);
-          pdf.text("Tension du marche", ML, y);
-          txt(gColor);
-          pdf.text(`${gLabel} (${pct}%)`, W - MR, y, { align: "right" });
-          y += 4;
-          // Background bar
-          fill(C.border);
-          pdf.roundedRect(ML, y, CW, 4, 2, 2, "F");
-          // Filled bar
-          fill(gColor);
-          pdf.roundedRect(ML, y, CW * (pct / 100), 4, 2, 2, "F");
-          y += 10;
-        }
-
-        // Salary table
+        // Salary table (matches web BarChart data)
         if (d.salaires && (d.salaires.junior?.median || d.salaires.confirme?.median || d.salaires.senior?.median)) {
-          sub("Salaires annuels bruts", C.purple);
+          subtitle("Salaires annuels bruts");
           newPageIfNeeded(36);
 
           const levels = [
@@ -550,99 +571,125 @@ export default function FicheDetailPage() {
             { name: "Confirme", data: d.salaires.confirme },
             { name: "Senior", data: d.salaires.senior },
           ];
-          const c1 = CW * 0.22, c2 = CW * 0.26, c3 = CW * 0.26, c4 = CW * 0.26;
+          const c1 = CW * 0.22, c2 = CW * 0.26, c3 = CW * 0.26;
 
           // Header row
           fill(C.purple);
-          pdf.roundedRect(ML, y, CW, 8, 1.5, 1.5, "F");
-          pdf.setFontSize(8.5);
+          pdf.roundedRect(ML + 2, y, CW - 4, 8, 2, 2, "F");
+          pdf.setFontSize(8);
           txt(C.white);
           pdf.setFont("helvetica", "bold");
-          pdf.text("Niveau", ML + 4, y + 5.5);
-          pdf.text("Minimum", ML + c1 + 4, y + 5.5);
-          pdf.text("Median", ML + c1 + c2 + 4, y + 5.5);
-          pdf.text("Maximum", ML + c1 + c2 + c3 + 4, y + 5.5);
+          pdf.text("Niveau", ML + 6, y + 5.5);
+          pdf.text("Minimum", ML + c1 + 6, y + 5.5);
+          pdf.text("Median", ML + c1 + c2 + 6, y + 5.5);
+          pdf.text("Maximum", ML + c1 + c2 + c3 + 6, y + 5.5);
           y += 9;
 
           levels.forEach((level, i) => {
             newPageIfNeeded(9);
             if (i % 2 === 0) {
-              fill(C.purpleBg);
-              pdf.rect(ML, y - 1, CW, 8, "F");
+              fill(C.purpleLightBg);
+              pdf.rect(ML + 2, y - 1, CW - 4, 8, "F");
             }
             pdf.setFontSize(9);
             pdf.setFont("helvetica", "bold");
             txt(C.dark);
-            pdf.text(level.name, ML + 4, y + 4);
+            pdf.text(level.name, ML + 6, y + 4);
             pdf.setFont("helvetica", "normal");
-            txt(C.body);
+            txt(C.gray700);
             const fmt = (v: number | null | undefined) => v ? `${v.toLocaleString("fr-FR")} EUR` : "-";
-            pdf.text(fmt(level.data?.min), ML + c1 + 4, y + 4);
+            pdf.text(fmt(level.data?.min), ML + c1 + 6, y + 4);
             pdf.setFont("helvetica", "bold");
             txt(C.purple);
-            pdf.text(fmt(level.data?.median), ML + c1 + c2 + 4, y + 4);
+            pdf.text(fmt(level.data?.median), ML + c1 + c2 + 6, y + 4);
             pdf.setFont("helvetica", "normal");
-            txt(C.body);
-            pdf.text(fmt(level.data?.max), ML + c1 + c2 + c3 + 4, y + 4);
+            txt(C.gray700);
+            pdf.text(fmt(level.data?.max), ML + c1 + c2 + c3 + 6, y + 4);
             y += 8;
           });
-          // Bottom border
-          stroke(C.border);
-          pdf.setLineWidth(0.3);
-          pdf.line(ML, y, W - MR, y);
-          y += 6;
+          y += 4;
         }
 
-        // Contract types
+        // Contract types (matches web PieChart data - rendered as stacked bar in PDF)
         if (d.types_contrats && (d.types_contrats.cdi > 0 || d.types_contrats.cdd > 0)) {
-          sub("Repartition des embauches", C.purple);
-          newPageIfNeeded(20);
+          subtitle("Repartition des embauches");
+          newPageIfNeeded(22);
           const contracts = [
             { name: "CDI", value: d.types_contrats.cdi, color: C.purple },
             { name: "CDD", value: d.types_contrats.cdd, color: C.pink },
             { name: "Interim", value: d.types_contrats.interim, color: C.cyan },
-            { name: "Autre", value: d.types_contrats.autre, color: [245, 158, 11] as RGB },
+            { name: "Autre", value: d.types_contrats.autre, color: C.amber },
           ].filter(c => c.value > 0);
 
           // Stacked bar
-          let bx = ML;
+          let bx = ML + 2;
+          const barW = CW - 4;
           contracts.forEach(c => {
-            const bw = (c.value / 100) * CW;
+            const w = (c.value / 100) * barW;
             fill(c.color);
-            pdf.rect(bx, y, bw, 10, "F");
-            if (bw > 15) {
+            pdf.rect(bx, y, w, 10, "F");
+            if (w > 18) {
               pdf.setFontSize(8);
               txt(C.white);
               pdf.setFont("helvetica", "bold");
-              pdf.text(`${c.value}%`, bx + bw / 2, y + 6.5, { align: "center" });
+              pdf.text(`${c.value}%`, bx + w / 2, y + 6.5, { align: "center" });
             }
-            bx += bw;
+            bx += w;
           });
           y += 14;
+
           // Legend
-          let lx = ML;
+          let lx = ML + 2;
           contracts.forEach(c => {
             fill(c.color);
-            pdf.roundedRect(lx, y - 2.5, 4, 4, 1, 1, "F");
+            pdf.circle(lx + 2, y, 2, "F");
             pdf.setFontSize(8);
-            txt(C.body);
+            txt(C.gray700);
             pdf.setFont("helvetica", "normal");
-            pdf.text(`${c.name} (${c.value}%)`, lx + 6, y + 0.5);
-            lx += 35;
+            pdf.text(`${c.name} (${c.value}%)`, lx + 6, y + 1);
+            lx += 38;
           });
           y += 8;
         }
 
-        // Tendance
+        // Tendance & Evolution (matches web gray-50 boxes)
         if (d.perspectives?.tendance) {
-          newPageIfNeeded(12);
-          const arrow = d.perspectives.tendance === "emergence" ? "+" : d.perspectives.tendance === "disparition" ? "-" : "=";
-          accentBox(
-            `Tendance : ${d.perspectives.tendance.charAt(0).toUpperCase() + d.perspectives.tendance.slice(1)} [${arrow}]`,
-            d.perspectives.evolution_5ans || "Pas de donnees disponibles sur l'evolution a 5 ans.",
-            d.perspectives.tendance === "emergence" ? [22, 163, 74] : d.perspectives.tendance === "disparition" ? C.pink : C.purple,
-            d.perspectives.tendance === "emergence" ? C.cyanBg : d.perspectives.tendance === "disparition" ? C.pinkBg : C.purpleBg,
-          );
+          newPageIfNeeded(22);
+          const halfW = (CW - 8) / 2;
+
+          // Tendance box
+          fill(C.gray50);
+          pdf.roundedRect(ML + 2, y, halfW, 20, 3, 3, "F");
+          pdf.setFontSize(6.5);
+          pdf.setFont("helvetica", "bold");
+          txt(C.gray400);
+          pdf.text("TENDANCE DU METIER", ML + 7, y + 5);
+          pdf.setFontSize(12);
+          pdf.setFont("helvetica", "bold");
+          txt(C.dark);
+          const tendLabel = d.perspectives.tendance.charAt(0).toUpperCase() + d.perspectives.tendance.slice(1);
+          pdf.text(tendLabel, ML + 7, y + 13);
+          pdf.setFontSize(7);
+          pdf.setFont("helvetica", "normal");
+          txt(C.gray500);
+          pdf.text("Sur les 5 prochaines annees", ML + 7, y + 17.5);
+
+          // Evolution box
+          if (d.perspectives.evolution_5ans) {
+            fill(C.gray50);
+            pdf.roundedRect(ML + 2 + halfW + 4, y, halfW, 20, 3, 3, "F");
+            pdf.setFontSize(6.5);
+            pdf.setFont("helvetica", "bold");
+            txt(C.gray400);
+            pdf.text("EVOLUTION A 5 ANS", ML + halfW + 11, y + 5);
+            pdf.setFontSize(8);
+            pdf.setFont("helvetica", "normal");
+            txt(C.gray500);
+            const evoLines = pdf.splitTextToSize(d.perspectives.evolution_5ans, halfW - 10);
+            let ey = y + 10;
+            for (const el of evoLines.slice(0, 3)) { pdf.text(el, ML + halfW + 11, ey); ey += 3.8; }
+          }
+          y += 25;
         }
       }
 
@@ -654,57 +701,134 @@ export default function FicheDetailPage() {
       const hasSav = (d.savoirs?.length ?? 0) > 0;
 
       if (hasComp || hasSE || hasSav) {
-        hline();
-        section("Competences");
+        sectionCard("Competences");
 
+        // Savoir-faire (matches web NumberedList)
         if (hasComp) {
-          sub(`Savoir-faire (${d.competences!.length})`, C.purple);
-          numbered(d.competences!, C.purple);
+          subtitle(`Savoir-faire (${d.competences!.length})`);
+          pdf.setFontSize(8);
+          pdf.setFont("helvetica", "italic");
+          txt(C.gray500);
+          pdf.text("Competences pratiques et techniques pouvant etre appliquees en situation professionnelle.", ML + 2, y);
+          y += 5;
+          numberedList(d.competences!, C.purple);
         }
+
+        // Savoir-etre (matches web pink cards with checkmark)
         if (hasSE) {
-          sub(`Savoir-etre (${d.competences_transversales!.length})`, C.pink);
-          // Colored card-style items
-          for (const item of d.competences_transversales!) {
-            newPageIfNeeded(9);
+          subtitle(`Savoir-etre (${d.competences_transversales!.length})`);
+          pdf.setFontSize(8);
+          pdf.setFont("helvetica", "italic");
+          txt(C.gray500);
+          pdf.text("Qualites humaines et comportementales pour interagir avec son environnement de travail.", ML + 2, y);
+          y += 5;
+
+          // Two-column card layout
+          const colW = (CW - 8) / 2;
+          const items = d.competences_transversales!;
+          for (let i = 0; i < items.length; i += 2) {
+            newPageIfNeeded(12);
+            // Left card
             fill(C.pinkBg);
-            const lines = pdf.splitTextToSize(item, CW - 14);
-            const ch = Math.max(8, lines.length * 4.5 + 4);
-            pdf.roundedRect(ML, y - 2, CW, ch, 2, 2, "F");
+            stroke(C.pinkBg);
+            pdf.setLineWidth(0.3);
+            const leftLines = pdf.splitTextToSize(items[i], colW - 16);
+            const lh = Math.max(9, leftLines.length * 4 + 5);
+            pdf.roundedRect(ML + 2, y, colW, lh, 3, 3, "FD");
+            // Checkmark circle
             fill(C.pink);
-            pdf.circle(ML + 5, y + ch / 2 - 3, 2.5, "F");
+            pdf.circle(ML + 8, y + lh / 2, 3, "F");
             pdf.setFontSize(7);
             txt(C.white);
             pdf.setFont("helvetica", "bold");
-            pdf.text("V", ML + 5, y + ch / 2 - 2.2, { align: "center" });
-            pdf.setFontSize(9);
+            pdf.text("V", ML + 8, y + lh / 2 + 1, { align: "center" });
+            // Text
+            pdf.setFontSize(8.5);
             pdf.setFont("helvetica", "normal");
-            txt(C.body);
-            let ly = y + 1.5;
-            for (const line of lines) { pdf.text(line, ML + 12, ly); ly += 4.5; }
-            y += ch + 2.5;
+            txt(C.gray700);
+            let ly = y + 4;
+            for (const l of leftLines) { pdf.text(l, ML + 14, ly); ly += 4; }
+
+            // Right card (if exists)
+            if (i + 1 < items.length) {
+              fill(C.pinkBg);
+              stroke(C.pinkBg);
+              const rightLines = pdf.splitTextToSize(items[i + 1], colW - 16);
+              const rh = Math.max(9, rightLines.length * 4 + 5);
+              const maxH = Math.max(lh, rh);
+              pdf.roundedRect(ML + 2 + colW + 4, y, colW, maxH, 3, 3, "FD");
+              fill(C.pink);
+              pdf.circle(ML + colW + 12, y + maxH / 2, 3, "F");
+              pdf.setFontSize(7);
+              txt(C.white);
+              pdf.setFont("helvetica", "bold");
+              pdf.text("V", ML + colW + 12, y + maxH / 2 + 1, { align: "center" });
+              pdf.setFontSize(8.5);
+              pdf.setFont("helvetica", "normal");
+              txt(C.gray700);
+              let ry = y + 4;
+              for (const l of rightLines) { pdf.text(l, ML + colW + 18, ry); ry += 4; }
+              y += maxH + 3;
+            } else {
+              y += lh + 3;
+            }
           }
           y += 3;
         }
+
+        // Savoirs (matches web cyan cards with diamond)
         if (hasSav) {
-          sub(`Savoirs (${d.savoirs!.length})`, C.cyan);
-          for (const item of d.savoirs!) {
-            newPageIfNeeded(9);
+          subtitle(`Savoirs (${d.savoirs!.length})`);
+          pdf.setFontSize(8);
+          pdf.setFont("helvetica", "italic");
+          txt(C.gray500);
+          pdf.text("Connaissances theoriques acquises par la formation et l'experience.", ML + 2, y);
+          y += 5;
+
+          const colW = (CW - 8) / 2;
+          const items = d.savoirs!;
+          for (let i = 0; i < items.length; i += 2) {
+            newPageIfNeeded(12);
             fill(C.cyanBg);
-            const lines = pdf.splitTextToSize(item, CW - 14);
-            const ch = Math.max(8, lines.length * 4.5 + 4);
-            pdf.roundedRect(ML, y - 2, CW, ch, 2, 2, "F");
+            stroke(C.cyanBg);
+            pdf.setLineWidth(0.3);
+            const leftLines = pdf.splitTextToSize(items[i], colW - 16);
+            const lh = Math.max(9, leftLines.length * 4 + 5);
+            pdf.roundedRect(ML + 2, y, colW, lh, 3, 3, "FD");
             fill(C.cyan);
-            pdf.roundedRect(ML + 3, y + ch / 2 - 4.5, 5, 5, 1.2, 1.2, "F");
+            pdf.roundedRect(ML + 5.5, y + lh / 2 - 3, 5, 5, 1.2, 1.2, "F");
             pdf.setFontSize(7);
             txt(C.white);
             pdf.setFont("helvetica", "bold");
-            pdf.text("S", ML + 5.5, y + ch / 2 - 1.5, { align: "center" });
-            pdf.setFontSize(9);
+            pdf.text("S", ML + 8, y + lh / 2 + 0.5, { align: "center" });
+            pdf.setFontSize(8.5);
             pdf.setFont("helvetica", "normal");
-            txt(C.body);
-            let ly = y + 1.5;
-            for (const line of lines) { pdf.text(line, ML + 12, ly); ly += 4.5; }
-            y += ch + 2.5;
+            txt(C.gray700);
+            let ly = y + 4;
+            for (const l of leftLines) { pdf.text(l, ML + 14, ly); ly += 4; }
+
+            if (i + 1 < items.length) {
+              fill(C.cyanBg);
+              stroke(C.cyanBg);
+              const rightLines = pdf.splitTextToSize(items[i + 1], colW - 16);
+              const rh = Math.max(9, rightLines.length * 4 + 5);
+              const maxH = Math.max(lh, rh);
+              pdf.roundedRect(ML + 2 + colW + 4, y, colW, maxH, 3, 3, "FD");
+              fill(C.cyan);
+              pdf.roundedRect(ML + colW + 9.5, y + maxH / 2 - 3, 5, 5, 1.2, 1.2, "F");
+              pdf.setFontSize(7);
+              txt(C.white);
+              pdf.setFont("helvetica", "bold");
+              pdf.text("S", ML + colW + 12, y + maxH / 2 + 0.5, { align: "center" });
+              pdf.setFontSize(8.5);
+              pdf.setFont("helvetica", "normal");
+              txt(C.gray700);
+              let ry = y + 4;
+              for (const l of rightLines) { pdf.text(l, ML + colW + 18, ry); ry += 4; }
+              y += maxH + 3;
+            } else {
+              y += lh + 3;
+            }
           }
           y += 3;
         }
@@ -716,15 +840,15 @@ export default function FicheDetailPage() {
       const hasCond = (d.conditions_travail?.length ?? 0) > 0;
       const hasEnv = (d.environnements?.length ?? 0) > 0;
       if (hasCond || hasEnv) {
-        hline();
-        section("Contextes de travail");
+        sectionCard("Contextes de travail");
+
         if (hasCond) {
-          sub("Conditions de travail", C.purple);
-          bullets(d.conditions_travail!, C.purple);
+          subtitle("Conditions de travail et risques professionnels");
+          bulletList(d.conditions_travail!, C.purple);
         }
         if (hasEnv) {
-          sub("Structures & Environnements", C.cyan);
-          bullets(d.environnements!, C.cyan);
+          subtitle("Structures & Environnements");
+          bulletList(d.environnements!, C.cyan);
         }
       }
 
@@ -732,54 +856,66 @@ export default function FicheDetailPage() {
       // METIERS PROCHES
       // ══════════════════════════════════════════════
       if (d.mobilite && ((d.mobilite.metiers_proches?.length ?? 0) > 0 || (d.mobilite.evolutions?.length ?? 0) > 0)) {
-        hline();
-        section("Metiers proches & evolutions");
+        sectionCard("Metiers proches");
 
+        pdf.setFontSize(8);
+        pdf.setFont("helvetica", "normal");
+        txt(C.gray500);
+        pdf.text("Decouvrez les metiers ayant des competences communes ou des evolutions possibles.", ML + 2, y);
+        y += 6;
+
+        // Metiers proches (matches web white cards with border)
         if (d.mobilite.metiers_proches?.length) {
-          sub("Competences communes", C.purple);
+          subtitle("Metiers avec competences communes");
           for (const m of d.mobilite.metiers_proches) {
-            newPageIfNeeded(12);
-            fill(C.purpleBg);
-            stroke(C.purpleBorder);
-            const cLines = m.contexte ? pdf.splitTextToSize(m.contexte, CW - 14) : [];
-            const ch = cLines.length * 4 + 10;
-            pdf.roundedRect(ML, y - 2, CW, ch, 2, 2, "FD");
-            pdf.setFontSize(10);
+            newPageIfNeeded(14);
+            stroke(C.gray200);
+            pdf.setLineWidth(0.3);
+            const cLines = m.contexte ? pdf.splitTextToSize(m.contexte, CW - 16) : [];
+            const ch = cLines.length * 3.5 + 10;
+            pdf.roundedRect(ML + 2, y, CW - 4, ch, 3, 3, "D");
+            pdf.setFontSize(9);
             pdf.setFont("helvetica", "bold");
             txt(C.dark);
-            pdf.text(m.nom, ML + 5, y + 3);
+            pdf.text(m.nom, ML + 7, y + 5);
             if (cLines.length) {
-              pdf.setFontSize(8);
+              pdf.setFontSize(7.5);
               pdf.setFont("helvetica", "normal");
-              txt(C.muted);
-              let cy = y + 8;
-              for (const cl of cLines) { pdf.text(cl, ML + 5, cy); cy += 4; }
+              txt(C.gray500);
+              let cy = y + 9;
+              for (const cl of cLines) { pdf.text(cl, ML + 7, cy); cy += 3.5; }
             }
             y += ch + 3;
           }
+          y += 2;
         }
 
+        // Evolutions (matches web cyan cards)
         if (d.mobilite.evolutions?.length) {
-          sub("Evolutions possibles", C.cyan);
+          subtitle("Evolutions possibles");
           for (const e of d.mobilite.evolutions) {
-            newPageIfNeeded(12);
+            newPageIfNeeded(14);
             fill(C.cyanBg);
-            const cLines = e.contexte ? pdf.splitTextToSize(e.contexte, CW - 14) : [];
-            const ch = cLines.length * 4 + 10;
-            pdf.roundedRect(ML, y - 2, CW, ch, 2, 2, "F");
-            // Cyan left bar
-            fill(C.cyan);
-            pdf.rect(ML, y - 2, 3, ch, "F");
+            stroke(C.cyanBorder);
+            pdf.setLineWidth(0.3);
+            const cLines = e.contexte ? pdf.splitTextToSize(e.contexte, CW - 20) : [];
+            const ch = cLines.length * 3.5 + 10;
+            pdf.roundedRect(ML + 2, y, CW - 4, ch, 3, 3, "FD");
+            // Arrow
             pdf.setFontSize(10);
             pdf.setFont("helvetica", "bold");
             txt(C.cyan);
-            pdf.text(e.nom, ML + 7, y + 3);
+            pdf.text("+", ML + 7, y + 5.5);
+            // Name
+            pdf.setFontSize(9);
+            txt(C.dark);
+            pdf.text(e.nom, ML + 13, y + 5);
             if (cLines.length) {
-              pdf.setFontSize(8);
+              pdf.setFontSize(7.5);
               pdf.setFont("helvetica", "normal");
-              txt(C.muted);
-              let cy = y + 8;
-              for (const cl of cLines) { pdf.text(cl, ML + 7, cy); cy += 4; }
+              txt(C.gray500);
+              let cy = y + 9;
+              for (const cl of cLines) { pdf.text(cl, ML + 13, cy); cy += 3.5; }
             }
             y += ch + 3;
           }
