@@ -8,6 +8,9 @@ from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
 import sys
+import os
+import json
+import re
 from pathlib import Path
 
 # Ajouter le chemin vers le projet agents-metiers existant
@@ -452,11 +455,207 @@ async def get_audit_logs(limit: int = Query(15, ge=1, le=100)):
 
 # ==================== ACTIONS IA ====================
 
-# TODO: Ajouter les endpoints pour les actions IA
-# POST /api/fiches/{code_rome}/enrich
-# POST /api/fiches/{code_rome}/correct
-# POST /api/fiches/{code_rome}/publish
-# POST /api/fiches/{code_rome}/variantes/generate
+ENRICH_PROMPT = """Tu es un expert en ressources humaines et en rédaction de fiches métiers en France.
+Génère le contenu complet pour la fiche métier suivante.
+
+Métier : {nom_masculin} / {nom_feminin}
+Code ROME : {code_rome}
+{contexte}
+
+Réponds UNIQUEMENT avec un objet JSON valide (sans texte avant ou après) contenant :
+{{
+    "description": "Description complète du métier en 3-5 phrases, factuelle et professionnelle.",
+    "description_courte": "Description en 1 phrase (max 200 caractères).",
+    "missions_principales": ["5 à 8 missions principales du métier"],
+    "acces_metier": "Texte décrivant comment accéder à ce métier (formations, parcours, prérequis). 2-3 phrases.",
+    "competences": ["6 à 10 compétences techniques clés (savoir-faire)"],
+    "competences_transversales": ["4 à 6 soft skills / savoir-être"],
+    "savoirs": ["5 à 8 connaissances théoriques nécessaires"],
+    "formations": ["3 à 5 formations ou diplômes typiques"],
+    "certifications": ["1 à 3 certifications professionnelles (ou liste vide si aucune)"],
+    "conditions_travail": ["3 à 5 conditions de travail caractéristiques"],
+    "environnements": ["2 à 4 types de structures/environnements de travail"],
+    "secteurs_activite": ["2 à 4 secteurs d'activité"],
+    "salaires": {{
+        "junior": {{"min": 25000, "max": 35000, "median": 30000}},
+        "confirme": {{"min": 35000, "max": 50000, "median": 42000}},
+        "senior": {{"min": 50000, "max": 70000, "median": 58000}}
+    }},
+    "perspectives": {{
+        "tension": 0.6,
+        "tendance": "stable",
+        "evolution_5ans": "Analyse courte de l'évolution du métier dans les 5 prochaines années.",
+        "nombre_offres": 5000,
+        "taux_insertion": 0.75
+    }},
+    "types_contrats": {{
+        "cdi": 60,
+        "cdd": 20,
+        "interim": 15,
+        "autre": 5
+    }},
+    "mobilite": {{
+        "metiers_proches": [
+            {{"nom": "Métier proche 1", "contexte": "Compétences communes en..."}},
+            {{"nom": "Métier proche 2", "contexte": "Compétences communes en..."}}
+        ],
+        "evolutions": [
+            {{"nom": "Évolution possible 1", "contexte": "Après expérience en..."}},
+            {{"nom": "Évolution possible 2", "contexte": "Avec formation complémentaire en..."}}
+        ]
+    }}
+}}
+
+Notes :
+- Les salaires sont en euros brut annuel pour la France en 2025.
+- "tension" est un float entre 0 (peu de demande) et 1 (très forte demande).
+- "tendance" est "emergence", "stable" ou "disparition".
+- "nombre_offres" est une estimation du nombre d'offres d'emploi par an en France.
+- "taux_insertion" est un float entre 0 et 1.
+- "types_contrats" : les pourcentages doivent totaliser 100.
+- Sois factuel et précis. Pas de formulations vagues."""
+
+
+@app.post("/api/fiches/{code_rome}/enrich")
+def enrich_fiche(code_rome: str):
+    """Enrichit une fiche métier avec Claude API."""
+    try:
+        fiche = repo.get_fiche(code_rome)
+        if not fiche:
+            raise HTTPException(status_code=404, detail=f"Fiche {code_rome} non trouvée")
+
+        api_key = os.getenv("ANTHROPIC_API_KEY", "")
+        if not api_key:
+            raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY non configurée")
+
+        import anthropic
+        client = anthropic.Anthropic(api_key=api_key)
+
+        contexte = ""
+        if fiche.description:
+            contexte = f"\nDescription existante : {fiche.description}"
+
+        prompt = ENRICH_PROMPT.format(
+            nom_masculin=fiche.nom_masculin,
+            nom_feminin=fiche.nom_feminin,
+            code_rome=fiche.code_rome,
+            contexte=contexte,
+        )
+
+        response = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=4096,
+            messages=[{"role": "user", "content": prompt}],
+        )
+
+        content = response.content[0].text.strip()
+        json_match = re.search(r'\{[\s\S]*\}', content)
+        if not json_match:
+            raise HTTPException(status_code=500, detail="Réponse Claude invalide (pas de JSON)")
+
+        data = json.loads(json_match.group())
+
+        # Build update dict
+        fiche_dict = fiche.model_dump()
+        for key in [
+            "description", "description_courte", "missions_principales",
+            "acces_metier", "competences", "competences_transversales",
+            "savoirs", "formations", "certifications", "conditions_travail",
+            "environnements", "secteurs_activite",
+        ]:
+            if key in data:
+                fiche_dict[key] = data[key]
+
+        if "salaires" in data:
+            fiche_dict["salaires"] = data["salaires"]
+        if "perspectives" in data:
+            fiche_dict["perspectives"] = data["perspectives"]
+        if "types_contrats" in data:
+            fiche_dict["types_contrats"] = data["types_contrats"]
+        if "mobilite" in data:
+            fiche_dict["mobilite"] = data["mobilite"]
+
+        fiche_dict["metadata"]["statut"] = "en_validation"
+        fiche_dict["metadata"]["date_maj"] = datetime.now()
+        fiche_dict["metadata"]["version"] = fiche_dict["metadata"].get("version", 1) + 1
+
+        updated_fiche = FicheMetier(**fiche_dict)
+        repo.update_fiche(updated_fiche)
+
+        return {
+            "message": "Fiche enrichie avec succès",
+            "code_rome": code_rome,
+            "nom": fiche.nom_epicene,
+            "version": updated_fiche.metadata.version,
+        }
+
+    except HTTPException:
+        raise
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=500, detail=f"Erreur parsing JSON Claude: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur enrichissement: {str(e)}")
+
+
+@app.post("/api/fiches/{code_rome}/publish")
+async def publish_fiche(code_rome: str):
+    """Publie une fiche métier (change le statut en publiee)."""
+    try:
+        fiche = repo.get_fiche(code_rome)
+        if not fiche:
+            raise HTTPException(status_code=404, detail=f"Fiche {code_rome} non trouvée")
+
+        fiche_dict = fiche.model_dump()
+        fiche_dict["metadata"]["statut"] = "publiee"
+        fiche_dict["metadata"]["date_maj"] = datetime.now()
+        fiche_dict["metadata"]["version"] = fiche_dict["metadata"].get("version", 1) + 1
+
+        updated_fiche = FicheMetier(**fiche_dict)
+        repo.update_fiche(updated_fiche)
+
+        return {
+            "message": "Fiche publiée",
+            "code_rome": code_rome,
+            "statut": "publiee",
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur publication: {str(e)}")
+
+
+class PublishBatchRequest(BaseModel):
+    codes_rome: List[str]
+
+
+@app.post("/api/fiches/publish-batch")
+async def publish_batch(request: PublishBatchRequest):
+    """Publie plusieurs fiches en masse."""
+    results = []
+    for code_rome in request.codes_rome:
+        try:
+            fiche = repo.get_fiche(code_rome)
+            if not fiche:
+                results.append({"code_rome": code_rome, "status": "error", "message": "Non trouvée"})
+                continue
+
+            fiche_dict = fiche.model_dump()
+            fiche_dict["metadata"]["statut"] = "publiee"
+            fiche_dict["metadata"]["date_maj"] = datetime.now()
+            fiche_dict["metadata"]["version"] = fiche_dict["metadata"].get("version", 1) + 1
+
+            updated_fiche = FicheMetier(**fiche_dict)
+            repo.update_fiche(updated_fiche)
+            results.append({"code_rome": code_rome, "status": "ok", "message": "Publiée"})
+        except Exception as e:
+            results.append({"code_rome": code_rome, "status": "error", "message": str(e)})
+
+    ok_count = sum(1 for r in results if r["status"] == "ok")
+    return {
+        "message": f"{ok_count}/{len(request.codes_rome)} fiches publiées",
+        "results": results,
+    }
 
 
 if __name__ == "__main__":
