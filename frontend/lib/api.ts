@@ -200,6 +200,37 @@ class ApiClient {
     });
   }
 
+  // ==================== VALIDATION ====================
+
+  async validateFiche(codeRome: string): Promise<{
+    message: string;
+    code_rome: string;
+    nom: string;
+    rapport: {
+      score: number;
+      verdict: string;
+      resume: string;
+      criteres: Record<string, { score: number; commentaire: string }>;
+      problemes: string[];
+      suggestions: string[];
+    };
+  }> {
+    return this.request(`/api/fiches/${codeRome}/validate`, { method: "POST" });
+  }
+
+  async reviewFiche(codeRome: string, decision: string, commentaire?: string): Promise<{
+    message: string;
+    code_rome: string;
+    decision: string;
+    commentaire: string | null;
+    nouveau_statut: string;
+  }> {
+    return this.request(`/api/fiches/${codeRome}/review`, {
+      method: "POST",
+      body: JSON.stringify({ decision, commentaire }),
+    });
+  }
+
   // ==================== LOGS ====================
 
   async getAuditLogs(limit: number = 15): Promise<{ total: number; logs: AuditLog[] }> {

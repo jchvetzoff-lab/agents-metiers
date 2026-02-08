@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { api, FicheMetier, Stats } from "@/lib/api";
 
-type Tab = "creer" | "enrichir" | "publier" | "exporter";
+type Tab = "creer" | "enrichir" | "valider" | "publier" | "exporter";
 
 export default function ActionsPage() {
   const [activeTab, setActiveTab] = useState<Tab>("creer");
@@ -12,6 +12,7 @@ export default function ActionsPage() {
   const tabs: { id: Tab; label: string; icon: string }[] = [
     { id: "creer", label: "Creer une fiche", icon: "+" },
     { id: "enrichir", label: "Enrichissement IA", icon: "A" },
+    { id: "valider", label: "Validation", icon: "V" },
     { id: "publier", label: "Publication", icon: "P" },
     { id: "exporter", label: "Export PDF", icon: "D" },
   ];
@@ -60,6 +61,7 @@ export default function ActionsPage() {
       <div className="max-w-5xl mx-auto px-4 md:px-8 py-8">
         {activeTab === "creer" && <TabCreer />}
         {activeTab === "enrichir" && <TabEnrichir />}
+        {activeTab === "valider" && <TabValider />}
         {activeTab === "publier" && <TabPublier />}
         {activeTab === "exporter" && <TabExporter />}
       </div>
@@ -299,6 +301,279 @@ function TabEnrichir() {
             ))
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════
+// TAB: VALIDATION (IA + HUMAINE)
+// ══════════════════════════════════════
+
+interface ValidationRapport {
+  score: number;
+  verdict: string;
+  resume: string;
+  criteres: Record<string, { score: number; commentaire: string }>;
+  problemes: string[];
+  suggestions: string[];
+}
+
+function TabValider() {
+  const [fiches, setFiches] = useState<FicheMetier[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [validating, setValidating] = useState<string | null>(null);
+  const [rapports, setRapports] = useState<Record<string, ValidationRapport>>({});
+  const [reviewing, setReviewing] = useState<string | null>(null);
+  const [commentaire, setCommentaire] = useState("");
+  const [results, setResults] = useState<{ code: string; type: "success" | "error"; message: string }[]>([]);
+
+  useEffect(() => {
+    loadFiches();
+  }, []);
+
+  async function loadFiches() {
+    try {
+      const data = await api.getFiches({ statut: "en_validation", limit: 200 });
+      setFiches(data.results);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleValidateIA(codeRome: string) {
+    setValidating(codeRome);
+    try {
+      const res = await api.validateFiche(codeRome);
+      setRapports(prev => ({ ...prev, [codeRome]: res.rapport }));
+    } catch (err: any) {
+      setResults(prev => [{ code: codeRome, type: "error", message: `Validation IA echouee: ${err.message}` }, ...prev]);
+    } finally {
+      setValidating(null);
+    }
+  }
+
+  async function handleReview(codeRome: string, decision: string) {
+    setReviewing(codeRome);
+    try {
+      const res = await api.reviewFiche(codeRome, decision, commentaire || undefined);
+      setResults(prev => [{ code: codeRome, type: "success", message: `${res.message} → statut: ${res.nouveau_statut}` }, ...prev]);
+      setFiches(prev => prev.filter(f => f.code_rome !== codeRome));
+      setRapports(prev => {
+        const next = { ...prev };
+        delete next[codeRome];
+        return next;
+      });
+      setCommentaire("");
+    } catch (err: any) {
+      setResults(prev => [{ code: codeRome, type: "error", message: err.message }, ...prev]);
+    } finally {
+      setReviewing(null);
+    }
+  }
+
+  function scoreColor(score: number) {
+    if (score >= 80) return "#16A34A";
+    if (score >= 60) return "#EAB308";
+    return "#DC2626";
+  }
+
+  function verdictLabel(verdict: string) {
+    if (verdict === "approuvee") return { text: "Approuvee", bg: "bg-green-100 text-green-700" };
+    if (verdict === "a_corriger") return { text: "A corriger", bg: "bg-yellow-100 text-yellow-700" };
+    return { text: "Rejetee", bg: "bg-red-100 text-red-700" };
+  }
+
+  const critereLabels: Record<string, string> = {
+    completude: "Completude",
+    exactitude: "Exactitude",
+    coherence: "Coherence",
+    qualite_redactionnelle: "Qualite redactionnelle",
+    pertinence: "Pertinence",
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Info */}
+      <div className="bg-[#F9F8FF] border border-[#E4E1FF] rounded-xl p-5">
+        <p className="text-sm text-gray-600">
+          <strong>Etape 1 :</strong> L&apos;IA analyse la qualite de la fiche (completude, exactitude, coherence, redaction, pertinence) et donne un score sur 100.
+          <br />
+          <strong>Etape 2 :</strong> Vous validez la decision finale : approuver (publier), demander des corrections (retour brouillon), ou rejeter (archiver).
+        </p>
+      </div>
+
+      {/* Results */}
+      {results.length > 0 && (
+        <div className="space-y-2">
+          {results.slice(0, 5).map((r, i) => (
+            <div key={i} className={`p-3 rounded-lg text-sm ${
+              r.type === "success" ? "bg-green-50 text-green-800 border border-green-200" : "bg-red-50 text-red-800 border border-red-200"
+            }`}>
+              <strong>{r.code}</strong> : {r.message}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Fiches list */}
+      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+          <h2 className="text-lg font-bold text-[#1A1A2E]">Fiches en validation ({fiches.length})</h2>
+        </div>
+
+        {loading ? (
+          <div className="p-8 text-center text-gray-400">Chargement...</div>
+        ) : fiches.length === 0 ? (
+          <div className="p-8 text-center text-gray-400">Aucune fiche en validation</div>
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {fiches.map(fiche => {
+              const rapport = rapports[fiche.code_rome];
+              const isValidating = validating === fiche.code_rome;
+              const isReviewing = reviewing === fiche.code_rome;
+
+              return (
+                <div key={fiche.code_rome} className="px-6 py-4">
+                  {/* Fiche header */}
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-bold text-[#4A39C0]">{fiche.code_rome}</span>
+                      <span className="text-sm font-medium text-gray-800">{fiche.nom_masculin}</span>
+                      <span className="text-xs text-gray-400">v{fiche.version}</span>
+                    </div>
+                    {!rapport && (
+                      <button
+                        onClick={() => handleValidateIA(fiche.code_rome)}
+                        disabled={validating !== null}
+                        className="px-4 py-1.5 bg-[#4A39C0] text-white rounded-full text-xs font-medium hover:bg-[#3a2da0] transition disabled:opacity-40 disabled:cursor-wait"
+                      >
+                        {isValidating ? (
+                          <span className="flex items-center gap-2">
+                            <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            Analyse IA...
+                          </span>
+                        ) : "Validation IA"}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Rapport IA */}
+                  {rapport && (
+                    <div className="mt-3 space-y-4">
+                      {/* Score global */}
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-12 h-12 rounded-full flex items-center justify-center text-white text-sm font-bold"
+                            style={{ backgroundColor: scoreColor(rapport.score) }}
+                          >
+                            {rapport.score}
+                          </div>
+                          <div>
+                            <div className="text-sm font-semibold text-gray-800">Score global</div>
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${verdictLabel(rapport.verdict).bg}`}>
+                              {verdictLabel(rapport.verdict).text}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-sm text-gray-600 flex-1">{rapport.resume}</p>
+                      </div>
+
+                      {/* Criteres */}
+                      <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                        {Object.entries(rapport.criteres).map(([key, val]) => (
+                          <div key={key} className="bg-gray-50 rounded-lg p-3">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-xs font-medium text-gray-600">{critereLabels[key] || key}</span>
+                              <span className="text-sm font-bold" style={{ color: scoreColor(val.score) }}>{val.score}</span>
+                            </div>
+                            <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                              <div
+                                className="h-full rounded-full transition-all"
+                                style={{ width: `${val.score}%`, backgroundColor: scoreColor(val.score) }}
+                              />
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">{val.commentaire}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Problemes & Suggestions */}
+                      {(rapport.problemes.length > 0 || rapport.suggestions.length > 0) && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {rapport.problemes.length > 0 && (
+                            <div className="bg-red-50 border border-red-100 rounded-lg p-4">
+                              <h4 className="text-sm font-semibold text-red-700 mb-2">Problemes</h4>
+                              <ul className="space-y-1">
+                                {rapport.problemes.map((p, i) => (
+                                  <li key={i} className="text-xs text-red-600 flex gap-2">
+                                    <span className="shrink-0">&#x2717;</span>
+                                    <span>{p}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          {rapport.suggestions.length > 0 && (
+                            <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
+                              <h4 className="text-sm font-semibold text-blue-700 mb-2">Suggestions</h4>
+                              <ul className="space-y-1">
+                                {rapport.suggestions.map((s, i) => (
+                                  <li key={i} className="text-xs text-blue-600 flex gap-2">
+                                    <span className="shrink-0">&#x2794;</span>
+                                    <span>{s}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Human Review */}
+                      <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                        <h4 className="text-sm font-semibold text-gray-800 mb-3">Decision humaine</h4>
+                        <textarea
+                          placeholder="Commentaire optionnel..."
+                          value={commentaire}
+                          onChange={e => setCommentaire(e.target.value)}
+                          rows={2}
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm mb-3 focus:outline-none focus:border-[#4A39C0] resize-none"
+                        />
+                        <div className="flex gap-3">
+                          <button
+                            onClick={() => handleReview(fiche.code_rome, "approuvee")}
+                            disabled={isReviewing}
+                            className="px-5 py-2 bg-[#16A34A] text-white rounded-full text-sm font-medium hover:bg-[#15803D] transition disabled:opacity-40"
+                          >
+                            {isReviewing ? "..." : "Approuver (publier)"}
+                          </button>
+                          <button
+                            onClick={() => handleReview(fiche.code_rome, "a_corriger")}
+                            disabled={isReviewing}
+                            className="px-5 py-2 bg-[#EAB308] text-white rounded-full text-sm font-medium hover:bg-[#CA8A04] transition disabled:opacity-40"
+                          >
+                            A corriger
+                          </button>
+                          <button
+                            onClick={() => handleReview(fiche.code_rome, "rejetee")}
+                            disabled={isReviewing}
+                            className="px-5 py-2 bg-[#DC2626] text-white rounded-full text-sm font-medium hover:bg-[#B91C1C] transition disabled:opacity-40"
+                          >
+                            Rejeter
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
