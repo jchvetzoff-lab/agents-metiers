@@ -148,6 +148,9 @@ async def get_fiches(
 ):
     """Liste les fiches métiers avec filtres et pagination."""
     try:
+        from sqlalchemy import select, func, or_
+        from database.models import FicheMetierDB
+
         # Convertir le statut si fourni
         statut_enum = None
         if statut:
@@ -156,45 +159,57 @@ async def get_fiches(
             except ValueError:
                 raise HTTPException(status_code=400, detail=f"Statut invalide: {statut}")
 
-        # Récupérer les fiches
-        fiches = repo.get_all_fiches(statut=statut_enum)
+        # Construire la requête SQL directement
+        with repo.session() as session:
+            query = select(FicheMetierDB)
+            count_query = select(func.count(FicheMetierDB.id))
 
-        # Filtrer par recherche si fourni
-        if search:
-            search_lower = search.lower()
-            fiches = [
-                f for f in fiches
-                if search_lower in f.code_rome.lower()
-                or search_lower in f.nom_masculin.lower()
-                or search_lower in f.nom_feminin.lower()
-                or search_lower in f.nom_epicene.lower()
-            ]
+            # Filtre statut
+            if statut_enum:
+                query = query.where(FicheMetierDB.statut == statut_enum.value)
+                count_query = count_query.where(FicheMetierDB.statut == statut_enum.value)
 
-        # Pagination
-        total = len(fiches)
-        fiches_page = fiches[offset:offset + limit]
+            # Filtre recherche en SQL (ILIKE sur code_rome, nom_masculin, nom_feminin, nom_epicene)
+            if search:
+                search_pattern = f"%{search}%"
+                search_filter = or_(
+                    FicheMetierDB.code_rome.ilike(search_pattern),
+                    FicheMetierDB.nom_masculin.ilike(search_pattern),
+                    FicheMetierDB.nom_feminin.ilike(search_pattern),
+                    FicheMetierDB.nom_epicene.ilike(search_pattern),
+                )
+                query = query.where(search_filter)
+                count_query = count_query.where(search_filter)
 
-        # Convertir en réponse
-        results = []
-        for fiche in fiches_page:
-            nb_variantes = repo.count_variantes(fiche.code_rome)
-            results.append(FicheMetierResponse(
-                code_rome=fiche.code_rome,
-                nom_masculin=fiche.nom_masculin,
-                nom_feminin=fiche.nom_feminin,
-                nom_epicene=fiche.nom_epicene,
-                statut=fiche.metadata.statut.value,
-                description=fiche.description,
-                description_courte=fiche.description_courte,
-                date_creation=fiche.metadata.date_creation,
-                date_maj=fiche.metadata.date_maj,
-                version=fiche.metadata.version,
-                has_competences=bool(fiche.competences or fiche.competences_transversales),
-                has_formations=bool(fiche.formations),
-                has_salaires=bool(fiche.salaires),
-                has_perspectives=bool(fiche.perspectives),
-                nb_variantes=nb_variantes
-            ))
+            # Compter le total AVANT pagination
+            total = session.execute(count_query).scalar()
+
+            # Appliquer pagination + tri par date de modification decroissant
+            query = query.order_by(FicheMetierDB.date_maj.desc()).limit(limit).offset(offset)
+            db_fiches = session.execute(query).scalars().all()
+
+            # Convertir en réponse
+            results = []
+            for db_fiche in db_fiches:
+                fiche = db_fiche.to_pydantic()
+                nb_variantes = repo.count_variantes(fiche.code_rome)
+                results.append(FicheMetierResponse(
+                    code_rome=fiche.code_rome,
+                    nom_masculin=fiche.nom_masculin,
+                    nom_feminin=fiche.nom_feminin,
+                    nom_epicene=fiche.nom_epicene,
+                    statut=fiche.metadata.statut.value,
+                    description=fiche.description,
+                    description_courte=fiche.description_courte,
+                    date_creation=fiche.metadata.date_creation,
+                    date_maj=fiche.metadata.date_maj,
+                    version=fiche.metadata.version,
+                    has_competences=bool(fiche.competences or fiche.competences_transversales),
+                    has_formations=bool(fiche.formations),
+                    has_salaires=bool(fiche.salaires),
+                    has_perspectives=bool(fiche.perspectives),
+                    nb_variantes=nb_variantes
+                ))
 
         return {
             "total": total,
