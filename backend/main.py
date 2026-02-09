@@ -1178,14 +1178,7 @@ async def register(user_data: UserCreate):
         )
         session.commit()
 
-        # Recuperer l'utilisateur cree
-        user = session.execute(
-            sa_text("SELECT id, email, name FROM users WHERE email = :email"),
-            {"email": user_data.email}
-        ).fetchone()
-
-        token = create_token(user[0], user[1], user[2])
-        return {"token": token, "user": {"id": user[0], "email": user[1], "name": user[2]}}
+        return {"message": "Compte cree avec succes"}
 
     except HTTPException:
         raise
@@ -1208,10 +1201,10 @@ async def login(user_data: UserLogin):
         ).fetchone()
 
         if not user:
-            raise HTTPException(status_code=401, detail="Email ou mot de passe incorrect")
+            raise HTTPException(status_code=401, detail="Email incorrect")
 
         if not verify_password(user_data.password, user[3]):
-            raise HTTPException(status_code=401, detail="Email ou mot de passe incorrect")
+            raise HTTPException(status_code=401, detail="Mot de passe incorrect")
 
         token = create_token(user[0], user[1], user[2])
         return {"token": token, "user": {"id": user[0], "email": user[1], "name": user[2]}}
