@@ -172,6 +172,9 @@ export default function FicheDetailPage() {
   function handleResetFilter() {
     setAppliedVariante(null);
     setFilterError(null);
+    setFilterGenre("masculin");
+    setFilterTranche("18+");
+    setFilterFormat("standard");
   }
 
   useEffect(() => {
@@ -1028,7 +1031,7 @@ export default function FicheDetailPage() {
                   <label key={g.v} className="flex items-center gap-1.5 text-sm text-gray-700 cursor-pointer">
                     <input type="radio" name="filter-genre" value={g.v} checked={filterGenre === g.v}
                       onChange={() => setFilterGenre(g.v)}
-                      className="w-3.5 h-3.5 text-[#4A39C0] focus:ring-[#4A39C0]" />
+                      className="w-3.5 h-3.5 accent-[#4A39C0] focus:ring-0 focus:ring-offset-0" />
                     {g.l}
                   </label>
                 ))}
@@ -1040,7 +1043,7 @@ export default function FicheDetailPage() {
                   <label key={t.v} className="flex items-center gap-1.5 text-sm text-gray-700 cursor-pointer">
                     <input type="radio" name="filter-tranche" value={t.v} checked={filterTranche === t.v}
                       onChange={() => setFilterTranche(t.v)}
-                      className="w-3.5 h-3.5 text-[#4A39C0] focus:ring-[#4A39C0]" />
+                      className="w-3.5 h-3.5 accent-[#4A39C0] focus:ring-0 focus:ring-offset-0" />
                     {t.l}
                   </label>
                 ))}
@@ -1052,7 +1055,7 @@ export default function FicheDetailPage() {
                   <label key={f.v} className="flex items-center gap-1.5 text-sm text-gray-700 cursor-pointer">
                     <input type="radio" name="filter-format" value={f.v} checked={filterFormat === f.v}
                       onChange={() => setFilterFormat(f.v)}
-                      className="w-3.5 h-3.5 text-[#4A39C0] focus:ring-[#4A39C0]" />
+                      className="w-3.5 h-3.5 accent-[#4A39C0] focus:ring-0 focus:ring-offset-0" />
                     {f.l}
                   </label>
                 ))}
@@ -1348,19 +1351,6 @@ export default function FicheDetailPage() {
               </SectionAnchor>
             )}
 
-            {/* ═══ VARIANTES ═══ */}
-            {variantes.length > 0 && (
-              <SectionAnchor id="variantes" title={`Variantes (${variantes.length})`} icon="🌐">
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {variantes.map((v) => (
-                    <div key={v.id} className="p-3.5 rounded-xl border border-gray-200 hover:border-[#4A39C0] transition-all cursor-pointer bg-white hover:shadow-sm">
-                      <div className="text-xs text-gray-400 mb-1">{v.langue.toUpperCase()} &middot; {v.tranche_age} &middot; {v.format_contenu}</div>
-                      <div className="text-sm font-semibold text-[#1A1A2E] capitalize">{v.genre}</div>
-                    </div>
-                  ))}
-                </div>
-              </SectionAnchor>
-            )}
 
           </div>
         </div>
