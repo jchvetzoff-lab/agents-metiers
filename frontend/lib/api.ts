@@ -92,6 +92,8 @@ export interface AuditLog {
   type_evenement: string;
   description: string;
   code_rome?: string;
+  agent?: string;
+  validateur?: string;
   timestamp: string;
 }
 

@@ -148,26 +148,53 @@ export default function DashboardPage() {
               };
               const icon = icons[log.type_evenement] || "📌";
 
+              const typeLabels: Record<string, string> = {
+                creation: "CREATION",
+                modification: "ENRICHISSEMENT IA",
+                correction: "CORRECTION",
+                validation: "VALIDATION",
+                publication: "PUBLICATION",
+                archivage: "ARCHIVAGE",
+                veille_salaires: "VEILLE SALAIRES",
+                veille_metiers: "VEILLE METIERS",
+              };
+
               return (
                 <div key={log.id} className="sojai-card">
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-4 flex-1">
-                      <div className="text-3xl">{icon}</div>
-                      <div>
-                        <div className="font-semibold text-text-dark">
-                          {log.type_evenement.replace("_", " ").toUpperCase()}
-                        </div>
-                        <div className="text-sm text-text-muted">
-                          {log.description}
+                  <div className="flex justify-between items-start">
+                    <div className="flex items-start gap-4 flex-1">
+                      <div className="text-3xl mt-0.5">{icon}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-text-dark">
+                            {typeLabels[log.type_evenement] || log.type_evenement.replace("_", " ").toUpperCase()}
+                          </span>
                           {log.code_rome && (
-                            <span className="ml-2 badge badge-purple text-xs">
+                            <span className="badge badge-purple text-xs">
                               {log.code_rome}
                             </span>
                           )}
+                          {log.agent && (
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${
+                              log.agent === "Claude IA"
+                                ? "bg-blue-100 text-blue-700"
+                                : "bg-gray-100 text-gray-600"
+                            }`}>
+                              {log.agent}
+                            </span>
+                          )}
                         </div>
+                        <div className="text-sm text-text-muted mt-1">
+                          {log.description}
+                        </div>
+                        {log.validateur && (
+                          <div className="text-xs text-green-600 mt-1">
+                            Validateur : {log.validateur}
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <div className="text-xs text-text-muted text-right">
+                    <div className="text-xs text-text-muted text-right shrink-0 ml-4">
                       {new Date(log.timestamp).toLocaleDateString("fr-FR")}
                       <br />
                       {new Date(log.timestamp).toLocaleTimeString("fr-FR", {

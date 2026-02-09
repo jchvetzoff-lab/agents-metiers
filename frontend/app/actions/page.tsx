@@ -653,10 +653,12 @@ function TabValider() {
 // ══════════════════════════════════════
 
 function TabPublier() {
-  const { fiches, setFiches, loading, search, handleSearch, total } = useSearchFiches("en_validation", 200);
+  const { fiches, setFiches, loading, search, handleSearch, total, refetch } = useSearchFiches("en_validation", 200);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [showConfirm, setShowConfirm] = useState(false);
   const [publishing, setPublishing] = useState(false);
-  const [result, setResult] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [commentaire, setCommentaire] = useState("");
+  const [results, setResults] = useState<{ code: string; type: "success" | "error"; message: string }[]>([]);
 
   function toggleSelect(code: string) {
     setSelected(prev => {
@@ -674,36 +676,109 @@ function TabPublier() {
     }
   }
 
-  async function handlePublish() {
+  async function handleConfirmPublish() {
     if (selected.size === 0) return;
     setPublishing(true);
-    setResult(null);
-    try {
-      const res = await api.publishBatch(Array.from(selected));
-      setResult({ type: "success", message: res.message });
-      setFiches(prev => prev.filter(f => !selected.has(f.code_rome)));
-      setSelected(new Set());
-    } catch (err: any) {
-      setResult({ type: "error", message: err.message });
-    } finally {
-      setPublishing(false);
+    const codes = Array.from(selected);
+    for (const code of codes) {
+      try {
+        await api.reviewFiche(code, "approuvee", commentaire || undefined);
+        setResults(prev => [{ code, type: "success", message: "Approuvee et publiee" }, ...prev]);
+      } catch (err: any) {
+        setResults(prev => [{ code, type: "error", message: err.message }, ...prev]);
+      }
     }
+    setFiches(prev => prev.filter(f => !selected.has(f.code_rome)));
+    setSelected(new Set());
+    setShowConfirm(false);
+    setCommentaire("");
+    setPublishing(false);
+  }
+
+  async function handleReject() {
+    if (selected.size === 0) return;
+    setPublishing(true);
+    const codes = Array.from(selected);
+    for (const code of codes) {
+      try {
+        await api.reviewFiche(code, "a_corriger", commentaire || "Renvoyee en correction");
+        setResults(prev => [{ code, type: "success", message: "Renvoyee en correction (brouillon)" }, ...prev]);
+      } catch (err: any) {
+        setResults(prev => [{ code, type: "error", message: err.message }, ...prev]);
+      }
+    }
+    setFiches(prev => prev.filter(f => !selected.has(f.code_rome)));
+    setSelected(new Set());
+    setShowConfirm(false);
+    setCommentaire("");
+    setPublishing(false);
   }
 
   return (
     <div className="space-y-6">
       <div className="bg-[#F9F8FF] border border-[#E4E1FF] rounded-xl p-5">
         <p className="text-sm text-gray-600">
-          Selectionnez les fiches en statut <strong>&quot;en validation&quot;</strong> que vous souhaitez publier.
-          La publication rend les fiches accessibles et change leur statut en <strong>&quot;publiee&quot;</strong>.
+          Selectionnez les fiches a publier, puis <strong>confirmez votre decision</strong>.
+          Chaque publication est tracee dans les logs d&apos;activite du dashboard.
+          Vous pouvez aussi renvoyer des fiches en correction.
         </p>
       </div>
 
-      {result && (
-        <div className={`p-4 rounded-lg text-sm ${
-          result.type === "success" ? "bg-green-50 text-green-800 border border-green-200" : "bg-red-50 text-red-800 border border-red-200"
-        }`}>
-          {result.message}
+      {/* Resultats */}
+      {results.length > 0 && (
+        <div className="space-y-2">
+          {results.slice(0, 5).map((r, i) => (
+            <div key={i} className={`p-3 rounded-lg text-sm ${
+              r.type === "success" ? "bg-green-50 text-green-800 border border-green-200" : "bg-red-50 text-red-800 border border-red-200"
+            }`}>
+              <strong>{r.code}</strong> : {r.message}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Modal de confirmation */}
+      {showConfirm && (
+        <div className="bg-white rounded-2xl border-2 border-[#4A39C0] p-6 space-y-4 shadow-lg">
+          <h3 className="text-lg font-bold text-[#1A1A2E]">
+            Confirmer la publication de {selected.size} fiche{selected.size > 1 ? "s" : ""}
+          </h3>
+          <p className="text-sm text-gray-600">
+            Les fiches selectionnees seront publiees et visibles. Cette action est tracee.
+          </p>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Commentaire (optionnel)</label>
+            <textarea
+              placeholder="Motif de la publication..."
+              value={commentaire}
+              onChange={e => setCommentaire(e.target.value)}
+              rows={2}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#4A39C0] resize-none"
+            />
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={handleConfirmPublish}
+              disabled={publishing}
+              className="px-5 py-2 bg-[#16A34A] text-white rounded-full text-sm font-medium hover:bg-[#15803D] transition disabled:opacity-40"
+            >
+              {publishing ? "Publication..." : "Confirmer la publication"}
+            </button>
+            <button
+              onClick={handleReject}
+              disabled={publishing}
+              className="px-5 py-2 bg-[#EAB308] text-white rounded-full text-sm font-medium hover:bg-[#CA8A04] transition disabled:opacity-40"
+            >
+              Renvoyer en correction
+            </button>
+            <button
+              onClick={() => { setShowConfirm(false); setCommentaire(""); }}
+              disabled={publishing}
+              className="px-5 py-2 border border-gray-300 text-gray-600 rounded-full text-sm font-medium hover:bg-gray-50 transition"
+            >
+              Annuler
+            </button>
+          </div>
         </div>
       )}
 
@@ -720,11 +795,11 @@ function TabPublier() {
                 </button>
               )}
               <button
-                onClick={handlePublish}
-                disabled={selected.size === 0 || publishing}
+                onClick={() => setShowConfirm(true)}
+                disabled={selected.size === 0}
                 className="px-5 py-2 bg-[#16A34A] text-white rounded-full text-sm font-medium hover:bg-[#15803D] transition disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {publishing ? "Publication..." : `Publier (${selected.size})`}
+                Publier ({selected.size})
               </button>
             </div>
           </div>

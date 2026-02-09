@@ -182,11 +182,11 @@ export default function FichesPage() {
                         <td className="p-4 text-center">
                           <Link
                             href={`/fiches/${fiche.code_rome}`}
-                            className="inline-flex items-center gap-2 px-4 py-2 rounded-pill
-                                     bg-primary-purple text-white text-sm font-semibold
-                                     hover:bg-opacity-90 transition-all"
+                            className="inline-flex items-center px-5 py-2 rounded-full border border-[#4A39C0] text-[#4A39C0] text-sm font-semibold
+                                     hover:bg-[#4A39C0] hover:text-white hover:scale-105 hover:shadow-md
+                                     transition-all duration-200 ease-out"
                           >
-                            👁️ Voir
+                            Voir
                           </Link>
                         </td>
                       </tr>
