@@ -19,7 +19,10 @@ AGENTS_METIERS_PATH = Path(__file__).parent.parent.parent / "agents-metiers"
 sys.path.insert(0, str(AGENTS_METIERS_PATH))
 
 from database.repository import Repository
-from database.models import StatutFiche, FicheMetier, VarianteFiche, MobiliteMetier, TypesContrats, AuditLog, TypeEvenement
+from database.models import (
+    StatutFiche, FicheMetier, VarianteFiche, MobiliteMetier, TypesContrats,
+    AuditLog, TypeEvenement, GenreGrammatical, TrancheAge, FormatContenu, LangueSupporte,
+)
 from config import get_config
 
 app = FastAPI(
@@ -1156,6 +1159,195 @@ def auto_correct_fiche(code_rome: str, rapport: AutoCorrectRequest):
         raise HTTPException(status_code=500, detail=f"Erreur parsing JSON Claude: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur auto-correction: {str(e)}")
+
+
+# ==================== GENERATION DE VARIANTES ====================
+
+VARIANTES_PROMPT = """Tu es un expert en adaptation de contenus pédagogiques et multilingues.
+
+FICHE SOURCE :
+- Code ROME : {code_rome}
+- Nom : {nom_masculin} / {nom_feminin}
+- Description : {description}
+- Compétences : {competences}
+- Formations : {formations}
+
+TÂCHE : Générer {nb_variantes} variantes de cette fiche selon les axes suivants :
+- Tranches d'âge : {tranches_str}
+- Formats : {formats_str}
+- Genres : {genres_str}
+
+RÈGLES PAR AXE :
+
+1. TRANCHES D'ÂGE
+   - "11-15" : Langage simple, exemples concrets, ton encourageant, phrases courtes (<20 mots)
+   - "15-18" : Vocabulaire jeune, orientation études, exemples inspirants, phrases moyennes (<25 mots)
+   - "18+" : Langage professionnel, exhaustif, technique si nécessaire
+
+2. FORMATS
+   - "standard" : Rédaction classique
+   - "falc" (Facile À Lire et à Comprendre) : Phrases <15 mots, vocabulaire simple (niveau primaire), 1 idée par phrase, pas de jargon
+
+3. GENRES
+   - "masculin" : Utiliser le masculin partout
+   - "feminin" : Utiliser le féminin partout
+   - "epicene" : Langage neutre (éviter les accords genrés)
+
+STRUCTURE DE SORTIE :
+Réponds UNIQUEMENT avec un objet JSON valide (sans texte avant ou après) :
+
+{{
+    "variantes": [
+        {{
+            "langue": "fr",
+            "tranche_age": "18+",
+            "format_contenu": "standard",
+            "genre": "masculin",
+            "nom": "Nom du métier adapté",
+            "description": "Description complète (3-5 phrases selon le format)",
+            "description_courte": "Description courte (1 phrase max 200 car)",
+            "competences": ["Compétence 1", "Compétence 2", "..."],
+            "competences_transversales": ["Soft skill 1", "Soft skill 2", "..."],
+            "formations": ["Formation 1", "Formation 2", "..."],
+            "certifications": ["Certification 1", "..."],
+            "conditions_travail": ["Condition 1", "..."],
+            "environnements": ["Environnement 1", "..."]
+        }}
+    ]
+}}
+
+IMPORTANT :
+- Génère EXACTEMENT {nb_variantes} variantes (toutes les combinaisons demandées)
+- Pour FALC : PHRASES <15 MOTS, vocabulaire niveau CM1-CM2
+- Pour 11-15 ans : Éviter jargon, expliquer concepts
+- Pour genre épicène : Utiliser des tournures neutres (ex: "La personne qui exerce ce métier...")
+- Langue fixée à FR (français)."""
+
+
+class GenerateVariantesRequest(BaseModel):
+    genres: List[str] = ["masculin", "feminin", "epicene"]
+    tranches_age: List[str] = ["18+"]
+    formats: List[str] = ["standard", "falc"]
+
+
+@app.post("/api/fiches/{code_rome}/variantes/generate")
+def generate_variantes(code_rome: str, request: GenerateVariantesRequest):
+    """Génère des variantes d'une fiche via Claude API."""
+    try:
+        fiche = repo.get_fiche(code_rome)
+        if not fiche:
+            raise HTTPException(status_code=404, detail=f"Fiche {code_rome} non trouvée")
+
+        if not fiche.description:
+            raise HTTPException(status_code=400, detail="Fiche non enrichie, impossible de générer des variantes")
+
+        api_key = os.getenv("ANTHROPIC_API_KEY", "")
+        if not api_key:
+            raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY non configurée")
+
+        # Validate inputs
+        valid_genres = {"masculin", "feminin", "epicene"}
+        valid_tranches = {"18+", "15-18", "11-15"}
+        valid_formats = {"standard", "falc"}
+
+        genres = [g for g in request.genres if g in valid_genres]
+        tranches = [t for t in request.tranches_age if t in valid_tranches]
+        formats = [f for f in request.formats if f in valid_formats]
+
+        if not genres or not tranches or not formats:
+            raise HTTPException(status_code=400, detail="Au moins un genre, une tranche d'âge et un format sont requis")
+
+        nb_variantes = len(genres) * len(tranches) * len(formats)
+
+        import anthropic
+        client = anthropic.Anthropic(api_key=api_key)
+
+        prompt = VARIANTES_PROMPT.format(
+            code_rome=fiche.code_rome,
+            nom_masculin=fiche.nom_masculin,
+            nom_feminin=fiche.nom_feminin,
+            description=fiche.description or "",
+            competences=", ".join((fiche.competences or [])[:5]) + ("..." if len(fiche.competences or []) > 5 else ""),
+            formations=", ".join((fiche.formations or [])[:3]) + ("..." if len(fiche.formations or []) > 3 else ""),
+            nb_variantes=nb_variantes,
+            tranches_str=", ".join(tranches),
+            formats_str=", ".join(formats),
+            genres_str=", ".join(genres),
+        )
+
+        response = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=4096,
+            messages=[{"role": "user", "content": prompt}],
+        )
+
+        content = response.content[0].text.strip()
+        json_match = re.search(r'\{[\s\S]*\}', content)
+        if not json_match:
+            raise HTTPException(status_code=500, detail="Réponse Claude invalide (pas de JSON)")
+
+        data = json.loads(json_match.group())
+        variantes_data = data.get("variantes", [])
+
+        # Map string values to enums
+        genre_map = {
+            "masculin": GenreGrammatical.MASCULIN,
+            "feminin": GenreGrammatical.FEMININ,
+            "epicene": GenreGrammatical.EPICENE,
+        }
+        tranche_map = {
+            "11-15": TrancheAge.JEUNE_11_15,
+            "15-18": TrancheAge.ADOS_15_18,
+            "18+": TrancheAge.ADULTE,
+        }
+        format_map = {
+            "standard": FormatContenu.STANDARD,
+            "falc": FormatContenu.FALC,
+        }
+
+        saved_count = 0
+        for v_data in variantes_data:
+            try:
+                variante = VarianteFiche(
+                    code_rome=code_rome,
+                    langue=LangueSupporte.FR,
+                    tranche_age=tranche_map.get(v_data.get("tranche_age", "18+"), TrancheAge.ADULTE),
+                    format_contenu=format_map.get(v_data.get("format_contenu", "standard"), FormatContenu.STANDARD),
+                    genre=genre_map.get(v_data.get("genre", "masculin"), GenreGrammatical.MASCULIN),
+                    nom=v_data.get("nom", fiche.nom_epicene),
+                    description=v_data.get("description", ""),
+                    description_courte=v_data.get("description_courte"),
+                    competences=v_data.get("competences", []),
+                    competences_transversales=v_data.get("competences_transversales", []),
+                    formations=v_data.get("formations", []),
+                    certifications=v_data.get("certifications", []),
+                    conditions_travail=v_data.get("conditions_travail", []),
+                    environnements=v_data.get("environnements", []),
+                )
+                repo.save_variante(variante)
+                saved_count += 1
+            except Exception as e:
+                print(f"Erreur sauvegarde variante: {e}")
+
+        log_action(
+            TypeEvenement.MODIFICATION,
+            f"Génération de {saved_count} variantes pour {code_rome} ({fiche.nom_epicene})",
+            code_rome=code_rome,
+            agent="Claude IA",
+        )
+
+        return {
+            "message": f"{saved_count} variantes générées pour {code_rome}",
+            "code_rome": code_rome,
+            "variantes_generees": saved_count,
+        }
+
+    except HTTPException:
+        raise
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=500, detail=f"Erreur parsing JSON Claude: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur génération variantes: {str(e)}")
 
 
 # ==================== AUTH ENDPOINTS ====================
