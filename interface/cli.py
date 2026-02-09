@@ -34,8 +34,25 @@ def get_repository() -> Repository:
 
 
 def get_orchestrator(repo: Repository, journal: Journal) -> Orchestrator:
-    """Crée et retourne l'orchestrateur."""
-    return Orchestrator(repository=repo, journal=journal)
+    """Crée et retourne l'orchestrateur avec clients France Travail."""
+    from sources.france_travail import FranceTravailClient
+    from sources.france_travail_rome import FranceTravailROMEClient
+
+    config = get_config()
+
+    # Instancier les clients France Travail si credentials disponibles
+    france_travail_client = None
+    rome_client = None
+    if config.api.france_travail_client_id and config.api.france_travail_client_secret:
+        france_travail_client = FranceTravailClient()
+        rome_client = FranceTravailROMEClient()
+
+    return Orchestrator(
+        repository=repo,
+        journal=journal,
+        france_travail_client=france_travail_client,
+        rome_client=rome_client,
+    )
 
 
 @click.group()
