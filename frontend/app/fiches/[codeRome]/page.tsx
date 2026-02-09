@@ -276,8 +276,8 @@ export default function FicheDetailPage() {
       }
 
       function subTitle(text: string) {
-        ensureSpace(14);
-        y += 4;
+        ensureSpace(35);
+        y += 5;
         pdf.setFontSize(8.5);
         pdf.setFont("helvetica", "bold");
         txt(C.gray500);
@@ -295,7 +295,7 @@ export default function FicheDetailPage() {
           pdf.text(line, ML + 2, y);
           y += 5.5;
         }
-        y += 4;
+        y += 6;
       }
 
       function bulletList(items: string[], color: RGB = C.purple) {
@@ -319,7 +319,7 @@ export default function FicheDetailPage() {
 
       function numberedList(items: string[]) {
         for (let i = 0; i < items.length; i++) {
-          ensureSpace(8);
+          ensureSpace(12);
           // Number in rounded square
           fill(C.purple);
           pdf.roundedRect(ML + 2, y - 5, 7, 7, 2, 2, "F");
@@ -333,13 +333,13 @@ export default function FicheDetailPage() {
           txt(C.gray700);
           const lines = pdf.splitTextToSize(items[i], CW - 16);
           for (let j = 0; j < lines.length; j++) {
-            if (j > 0) ensureSpace(4.5);
+            if (j > 0) ensureSpace(5);
             pdf.text(lines[j], ML + 13, y);
-            y += 4.5;
+            y += 5;
           }
-          y += 2;
+          y += 5;
         }
-        y += 2;
+        y += 3;
       }
 
       function infoBox(title: string, text: string) {
@@ -477,13 +477,8 @@ export default function FicheDetailPage() {
       }
 
       // ══════════════════════════════════════════════
-      // PAGE 2 — STATISTIQUES + SAVOIR-FAIRE
+      // STATISTIQUES
       // ══════════════════════════════════════════════
-      drawFooter();
-      pdf.addPage();
-      pageNum++;
-      drawPageHeader();
-
       const showStats = d.salaires || d.perspectives || (d.types_contrats && (d.types_contrats.cdi > 0 || d.types_contrats.cdd > 0));
       if (showStats) {
         sectionTitle("Statistiques");
@@ -731,16 +726,6 @@ export default function FicheDetailPage() {
           pdf.text("Competences pratiques et techniques en situation professionnelle.", ML + 2, y);
           y += 7;
           numberedList(d.competences!);
-        }
-
-        // ══════════════════════════════════════════════
-        // PAGE 3 — SAVOIR-ETRE + CONTEXTES
-        // ══════════════════════════════════════════════
-        if (hasSE || hasSav) {
-          drawFooter();
-          pdf.addPage();
-          pageNum++;
-          drawPageHeader();
         }
 
         if (hasSE) {
