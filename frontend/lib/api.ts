@@ -233,6 +233,25 @@ class ApiClient {
     });
   }
 
+  // ==================== DELETE ====================
+
+  async deleteFiche(codeRome: string): Promise<{ message: string; code_rome: string }> {
+    return this.request<{ message: string; code_rome: string }>(`/api/fiches/${codeRome}`, {
+      method: "DELETE",
+    });
+  }
+
+  // ==================== AUTO-CORRECTION ====================
+
+  async autoCorrectFiche(codeRome: string, problemes: string[], suggestions: string[]): Promise<{
+    message: string; code_rome: string; nom: string; version: number;
+  }> {
+    return this.request(`/api/fiches/${codeRome}/auto-correct`, {
+      method: "POST",
+      body: JSON.stringify({ problemes, suggestions }),
+    });
+  }
+
   // ==================== LOGS ====================
 
   async getAuditLogs(limit: number = 15): Promise<{ total: number; logs: AuditLog[] }> {

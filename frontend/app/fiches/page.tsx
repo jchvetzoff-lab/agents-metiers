@@ -13,6 +13,9 @@ export default function FichesPage() {
   const [search, setSearch] = useState("");
   const [statutFilter, setStatutFilter] = useState("");
   const [page, setPage] = useState(0);
+  const [deleteTarget, setDeleteTarget] = useState<FicheMetier | null>(null);
+  const [confirmStep, setConfirmStep] = useState(0); // 0=hidden, 1=first confirm, 2=final confirm
+  const [deleting, setDeleting] = useState(false);
   const limit = 50;
 
   useEffect(() => {
@@ -34,6 +37,22 @@ export default function FichesPage() {
       console.error("Erreur chargement fiches:", error);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await api.deleteFiche(deleteTarget.code_rome);
+      setFiches(prev => prev.filter(f => f.code_rome !== deleteTarget.code_rome));
+      setTotal(prev => prev - 1);
+    } catch (error) {
+      console.error("Erreur suppression:", error);
+    } finally {
+      setDeleting(false);
+      setDeleteTarget(null);
+      setConfirmStep(0);
     }
   }
 
@@ -180,14 +199,24 @@ export default function FichesPage() {
                           </span>
                         </td>
                         <td className="p-4 text-center">
-                          <Link
-                            href={`/fiches/${fiche.code_rome}`}
-                            className="inline-flex items-center px-5 py-2 rounded-full border border-[#4A39C0] text-[#4A39C0] text-sm font-semibold
-                                     hover:bg-[#4A39C0] hover:text-white hover:scale-105 hover:shadow-md
-                                     transition-all duration-200 ease-out"
-                          >
-                            Voir
-                          </Link>
+                          <div className="flex items-center justify-center gap-2">
+                            <Link
+                              href={`/fiches/${fiche.code_rome}`}
+                              className="inline-flex items-center px-5 py-2 rounded-full border border-[#4A39C0] text-[#4A39C0] text-sm font-semibold
+                                       hover:bg-[#4A39C0] hover:text-white hover:scale-105 hover:shadow-md
+                                       transition-all duration-200 ease-out"
+                            >
+                              Voir
+                            </Link>
+                            <button
+                              onClick={() => { setDeleteTarget(fiche); setConfirmStep(1); }}
+                              className="inline-flex items-center px-4 py-2 rounded-full border border-red-300 text-red-500 text-sm font-semibold
+                                       hover:bg-red-500 hover:text-white hover:scale-105 hover:shadow-md
+                                       transition-all duration-200 ease-out"
+                            >
+                              Supprimer
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -221,6 +250,73 @@ export default function FichesPage() {
           </>
         )}
       </div>
+
+      {/* Modal de suppression - Double confirmation */}
+      {deleteTarget && confirmStep > 0 && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4">
+            {confirmStep === 1 ? (
+              <>
+                <div className="text-center">
+                  <div className="w-16 h-16 mx-auto rounded-full bg-red-100 flex items-center justify-center mb-4">
+                    <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-bold text-[#1A1A2E]">Supprimer cette fiche ?</h3>
+                  <p className="text-sm text-gray-500 mt-2">
+                    Vous allez supprimer la fiche <strong className="text-[#4A39C0]">{deleteTarget.code_rome}</strong> - <strong>{deleteTarget.nom_masculin}</strong>.
+                  </p>
+                </div>
+                <div className="flex gap-3 justify-center">
+                  <button
+                    onClick={() => setConfirmStep(2)}
+                    className="px-5 py-2.5 bg-red-500 text-white rounded-full text-sm font-semibold hover:bg-red-600 transition"
+                  >
+                    Oui, supprimer
+                  </button>
+                  <button
+                    onClick={() => { setDeleteTarget(null); setConfirmStep(0); }}
+                    className="px-5 py-2.5 border border-gray-300 text-gray-600 rounded-full text-sm font-semibold hover:bg-gray-50 transition"
+                  >
+                    Annuler
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-center">
+                  <div className="w-16 h-16 mx-auto rounded-full bg-red-500 flex items-center justify-center mb-4">
+                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-bold text-red-600">Confirmation finale</h3>
+                  <p className="text-sm text-gray-500 mt-2">
+                    Cette action est <strong>irr&eacute;versible</strong>. La fiche <strong className="text-red-600">{deleteTarget.code_rome}</strong> et toutes ses donn&eacute;es seront d&eacute;finitivement supprim&eacute;es.
+                  </p>
+                </div>
+                <div className="flex gap-3 justify-center">
+                  <button
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    className="px-5 py-2.5 bg-red-600 text-white rounded-full text-sm font-semibold hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-wait"
+                  >
+                    {deleting ? "Suppression..." : "Confirmer la suppression"}
+                  </button>
+                  <button
+                    onClick={() => { setDeleteTarget(null); setConfirmStep(0); }}
+                    disabled={deleting}
+                    className="px-5 py-2.5 border border-gray-300 text-gray-600 rounded-full text-sm font-semibold hover:bg-gray-50 transition"
+                  >
+                    Annuler
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </main>
   );
 }

@@ -397,6 +397,7 @@ function TabValider() {
   const [validating, setValidating] = useState<string | null>(null);
   const [rapports, setRapports] = useState<Record<string, ValidationRapport>>({});
   const [reviewing, setReviewing] = useState<string | null>(null);
+  const [correcting, setCorrecting] = useState<string | null>(null);
   const [commentaire, setCommentaire] = useState("");
   const [results, setResults] = useState<{ code: string; type: "success" | "error"; message: string }[]>([]);
 
@@ -428,6 +429,26 @@ function TabValider() {
       setResults(prev => [{ code: codeRome, type: "error", message: err.message }, ...prev]);
     } finally {
       setReviewing(null);
+    }
+  }
+
+  async function handleAutoCorrect(codeRome: string) {
+    const rapport = rapports[codeRome];
+    if (!rapport) return;
+    setCorrecting(codeRome);
+    try {
+      const res = await api.autoCorrectFiche(codeRome, rapport.problemes, rapport.suggestions);
+      setResults(prev => [{ code: codeRome, type: "success", message: `Auto-correction terminee (v${res.version}). Relancez la validation IA pour verifier.` }, ...prev]);
+      // Supprimer le rapport pour forcer une re-validation
+      setRapports(prev => {
+        const next = { ...prev };
+        delete next[codeRome];
+        return next;
+      });
+    } catch (err: any) {
+      setResults(prev => [{ code: codeRome, type: "error", message: `Auto-correction echouee: ${err.message}` }, ...prev]);
+    } finally {
+      setCorrecting(null);
     }
   }
 
@@ -599,6 +620,32 @@ function TabValider() {
                               </ul>
                             </div>
                           )}
+                        </div>
+                      )}
+
+                      {/* Auto-correct button (appears when score < 90) */}
+                      {rapport.score < 90 && (
+                        <div className="bg-[#F9F8FF] border border-[#E4E1FF] rounded-xl p-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h4 className="text-sm font-semibold text-[#4A39C0]">Correction automatique IA</h4>
+                              <p className="text-xs text-gray-500 mt-1">
+                                Claude corrigera les problemes identifies et completera les sections manquantes pour atteindre un score &gt; 90%.
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => handleAutoCorrect(fiche.code_rome)}
+                              disabled={correcting !== null}
+                              className="px-5 py-2 bg-[#4A39C0] text-white rounded-full text-sm font-medium hover:bg-[#3a2da0] transition disabled:opacity-40 disabled:cursor-wait shrink-0 ml-4"
+                            >
+                              {correcting === fiche.code_rome ? (
+                                <span className="flex items-center gap-2">
+                                  <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                  Correction...
+                                </span>
+                              ) : "Corriger automatiquement"}
+                            </button>
+                          </div>
                         </div>
                       )}
 
