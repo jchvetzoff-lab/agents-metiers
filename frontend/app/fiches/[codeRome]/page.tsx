@@ -261,18 +261,18 @@ export default function FicheDetailPage() {
 
       function sectionTitle(title: string) {
         ensureSpace(45);
-        y += 6;
-        // Purple left bar
+        y += 8;
+        // Purple left bar (tall and prominent)
         fill(C.purple);
-        pdf.roundedRect(ML, y, 3, 9, 1.5, 1.5, "F");
-        pdf.setFontSize(13);
+        pdf.roundedRect(ML, y, 4, 12, 2, 2, "F");
+        pdf.setFontSize(18);
         pdf.setFont("helvetica", "bold");
         txt(C.dark);
-        pdf.text(title, ML + 8, y + 6.5);
+        pdf.text(title, ML + 10, y + 9);
         stroke(C.gray200);
         pdf.setLineWidth(0.2);
-        pdf.line(ML + 8, y + 10, W - MR, y + 10);
-        y += 14;
+        pdf.line(ML + 10, y + 13, W - MR, y + 13);
+        y += 18;
       }
 
       function subTitle(text: string) {
@@ -300,7 +300,7 @@ export default function FicheDetailPage() {
 
       function bulletList(items: string[], color: RGB = C.purple) {
         for (const item of items) {
-          ensureSpace(7);
+          ensureSpace(8);
           fill(color);
           pdf.circle(ML + 6, y - 1.2, 1.5, "F");
           pdf.setFontSize(9.5);
@@ -312,7 +312,7 @@ export default function FicheDetailPage() {
             pdf.text(lines[j], ML + 12, y);
             y += 5;
           }
-          y += 2;
+          y += 4;
         }
         y += 3;
       }
