@@ -18,7 +18,7 @@ AGENTS_METIERS_PATH = Path(__file__).parent.parent.parent / "agents-metiers"
 sys.path.insert(0, str(AGENTS_METIERS_PATH))
 
 from database.repository import Repository
-from database.models import StatutFiche, FicheMetier, VarianteFiche, MobiliteMetier, TypesContrats
+from database.models import StatutFiche, FicheMetier, VarianteFiche, MobiliteMetier, TypesContrats, AuditLog, TypeEvenement
 from config import get_config
 
 app = FastAPI(
@@ -68,6 +68,23 @@ try:
     run_migrations()
 except Exception as e:
     print(f"Migration warning: {e}")
+
+
+# ==================== HELPERS ====================
+
+def log_action(type_evt: TypeEvenement, description: str, code_rome: str = None, agent: str = "Frontend", validateur: str = None):
+    """Enregistre un audit log."""
+    try:
+        log = AuditLog(
+            type_evenement=type_evt,
+            agent=agent,
+            code_rome=code_rome,
+            description=description,
+            validateur=validateur,
+        )
+        repo.add_audit_log(log)
+    except Exception as e:
+        print(f"Audit log error: {e}")
 
 
 # ==================== MODELS ====================
@@ -259,6 +276,13 @@ async def create_fiche(fiche_data: FicheMetierCreate):
         )
 
         fiche_creee = repo.create_fiche(nouvelle_fiche)
+
+        log_action(
+            TypeEvenement.CREATION,
+            f"Création de la fiche {fiche_data.code_rome} ({fiche_data.nom_epicene})",
+            code_rome=fiche_data.code_rome,
+            agent="Utilisateur",
+        )
 
         return {
             "message": "Fiche créée avec succès",
@@ -459,6 +483,8 @@ async def get_audit_logs(limit: int = Query(15, ge=1, le=100)):
                     "type_evenement": log.type_evenement.value,
                     "description": log.description,
                     "code_rome": log.code_rome,
+                    "agent": log.agent,
+                    "validateur": log.validateur,
                     "timestamp": log.timestamp
                 }
                 for log in logs
@@ -597,6 +623,13 @@ def enrich_fiche(code_rome: str):
         updated_fiche = FicheMetier(**fiche_dict)
         repo.update_fiche(updated_fiche)
 
+        log_action(
+            TypeEvenement.MODIFICATION,
+            f"Enrichissement IA de {code_rome} ({fiche.nom_epicene}) - v{updated_fiche.metadata.version}",
+            code_rome=code_rome,
+            agent="Claude IA",
+        )
+
         return {
             "message": "Fiche enrichie avec succès",
             "code_rome": code_rome,
@@ -627,6 +660,13 @@ async def publish_fiche(code_rome: str):
 
         updated_fiche = FicheMetier(**fiche_dict)
         repo.update_fiche(updated_fiche)
+
+        log_action(
+            TypeEvenement.PUBLICATION,
+            f"Publication de {code_rome} ({fiche.nom_epicene})",
+            code_rome=code_rome,
+            agent="Utilisateur",
+        )
 
         return {
             "message": "Fiche publiée",
@@ -663,6 +703,12 @@ async def publish_batch(request: PublishBatchRequest):
             updated_fiche = FicheMetier(**fiche_dict)
             repo.update_fiche(updated_fiche)
             results.append({"code_rome": code_rome, "status": "ok", "message": "Publiée"})
+            log_action(
+                TypeEvenement.PUBLICATION,
+                f"Publication batch de {code_rome}",
+                code_rome=code_rome,
+                agent="Utilisateur",
+            )
         except Exception as e:
             results.append({"code_rome": code_rome, "status": "error", "message": str(e)})
 
@@ -782,6 +828,13 @@ def validate_fiche(code_rome: str):
 
         rapport = json.loads(json_match.group())
 
+        log_action(
+            TypeEvenement.VALIDATION,
+            f"Validation IA de {code_rome} ({fiche.nom_epicene}) - Score: {rapport.get('score', '?')}/100 - Verdict: {rapport.get('verdict', '?')}",
+            code_rome=code_rome,
+            agent="Claude IA",
+        )
+
         return {
             "message": "Validation IA terminée",
             "code_rome": code_rome,
@@ -837,6 +890,21 @@ async def review_fiche(code_rome: str, review: HumanReviewRequest):
             "a_corriger": "brouillon",
             "rejetee": "archivee",
         }
+
+        decision_labels = {
+            "approuvee": "Approuvée",
+            "a_corriger": "Renvoyée en correction",
+            "rejetee": "Rejetée",
+        }
+
+        comment_part = f" - Commentaire: {review.commentaire}" if review.commentaire else ""
+        log_action(
+            TypeEvenement.VALIDATION,
+            f"Review humaine de {code_rome} ({fiche.nom_epicene}): {decision_labels[review.decision]}{comment_part}",
+            code_rome=code_rome,
+            agent="Utilisateur",
+            validateur="Utilisateur",
+        )
 
         return {
             "message": f"Fiche {review.decision}",
