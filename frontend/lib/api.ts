@@ -124,17 +124,20 @@ class ApiClient {
       headers,
     });
 
-    if (response.status === 401) {
-      removeToken();
-      if (typeof window !== "undefined" && !window.location.pathname.includes("/login")) {
-        window.location.href = "/login";
-      }
-      throw new Error("Session expiree, veuillez vous reconnecter");
-    }
-
     if (!response.ok) {
       const body = await response.json().catch(() => null);
       const detail = body?.detail || `${response.status} ${response.statusText}`;
+
+      // 401 sur les pages protegees = session expiree, rediriger
+      // 401 sur /api/auth/ = erreur de login, afficher le message du backend
+      if (response.status === 401 && !endpoint.startsWith("/api/auth/")) {
+        removeToken();
+        if (typeof window !== "undefined" && !window.location.pathname.includes("/login")) {
+          window.location.href = "/login";
+        }
+        throw new Error("Session expiree, veuillez vous reconnecter");
+      }
+
       throw new Error(detail);
     }
 
