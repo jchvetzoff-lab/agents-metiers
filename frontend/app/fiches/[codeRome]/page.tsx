@@ -208,7 +208,19 @@ export default function FicheDetailPage() {
   // ── PDF generation (v5 — clean design matching web layout) ──
   const handleDownloadPdf = useCallback(async () => {
     if (!fiche) return;
-    const d = fiche;
+    const av = appliedVariante;
+    const d = {
+      ...fiche,
+      nom_epicene: av?.nom || fiche.nom_epicene,
+      description: av?.description || fiche.description,
+      description_courte: av?.description_courte || fiche.description_courte,
+      competences: av?.competences?.length ? av.competences : fiche.competences,
+      competences_transversales: av?.competences_transversales?.length ? av.competences_transversales : fiche.competences_transversales,
+      formations: av?.formations?.length ? av.formations : fiche.formations,
+      certifications: av?.certifications?.length ? av.certifications : fiche.certifications,
+      conditions_travail: av?.conditions_travail?.length ? av.conditions_travail : fiche.conditions_travail,
+      environnements: av?.environnements?.length ? av.environnements : fiche.environnements,
+    };
     setPdfLoading(true);
 
     try {
@@ -878,13 +890,14 @@ export default function FicheDetailPage() {
       // ── Final footer ──
       drawFooter();
 
-      pdf.save(`${d.code_rome}_${d.nom_masculin.replace(/\s+/g, "_")}.pdf`);
+      const suffix = av ? `_${av.genre}_${av.tranche_age}_${av.format_contenu}` : "";
+      pdf.save(`${d.code_rome}_${d.nom_epicene.replace(/\s+/g, "_")}${suffix}.pdf`);
     } catch (err) {
       console.error("PDF generation error:", err);
     } finally {
       setPdfLoading(false);
     }
-  }, [fiche]);
+  }, [fiche, appliedVariante]);
 
   if (loading) {
     return (
