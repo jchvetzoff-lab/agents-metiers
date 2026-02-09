@@ -350,17 +350,26 @@ function TabEnrichir() {
           ) : (
             fiches.map(fiche => (
               <div key={fiche.code_rome} className="flex items-center justify-between px-6 py-3 hover:bg-gray-50 transition">
-                <div className="min-w-0">
-                  <span className="text-xs font-bold text-[#4A39C0] mr-2">{fiche.code_rome}</span>
+                <div className="min-w-0 flex items-center gap-2">
+                  <span className="text-xs font-bold text-[#4A39C0]">{fiche.code_rome}</span>
                   <span className="text-sm text-gray-700">{fiche.nom_masculin}</span>
                 </div>
-                <button
-                  onClick={() => handleEnrich(fiche.code_rome)}
-                  disabled={enriching !== null}
-                  className="px-4 py-1.5 bg-[#4A39C0] text-white rounded-full text-xs font-medium hover:bg-[#3a2da0] transition disabled:opacity-40 disabled:cursor-wait shrink-0 ml-4"
-                >
-                  {enriching === fiche.code_rome ? "..." : "Enrichir"}
-                </button>
+                <div className="flex items-center gap-2 shrink-0 ml-4">
+                  <Link
+                    href={`/fiches/${fiche.code_rome}`}
+                    target="_blank"
+                    className="px-3 py-1.5 border border-gray-300 text-gray-600 rounded-full text-xs font-medium hover:border-[#4A39C0] hover:text-[#4A39C0] transition"
+                  >
+                    Voir
+                  </Link>
+                  <button
+                    onClick={() => handleEnrich(fiche.code_rome)}
+                    disabled={enriching !== null}
+                    className="px-4 py-1.5 bg-[#4A39C0] text-white rounded-full text-xs font-medium hover:bg-[#3a2da0] transition disabled:opacity-40 disabled:cursor-wait"
+                  >
+                    {enriching === fiche.code_rome ? "..." : "Enrichir"}
+                  </button>
+                </div>
               </div>
             ))
           )}
@@ -495,20 +504,29 @@ function TabValider() {
                       <span className="text-sm font-medium text-gray-800">{fiche.nom_masculin}</span>
                       <span className="text-xs text-gray-400">v{fiche.version}</span>
                     </div>
-                    {!rapport && (
-                      <button
-                        onClick={() => handleValidateIA(fiche.code_rome)}
-                        disabled={validating !== null}
-                        className="px-4 py-1.5 bg-[#4A39C0] text-white rounded-full text-xs font-medium hover:bg-[#3a2da0] transition disabled:opacity-40 disabled:cursor-wait"
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={`/fiches/${fiche.code_rome}`}
+                        target="_blank"
+                        className="px-3 py-1.5 border border-gray-300 text-gray-600 rounded-full text-xs font-medium hover:border-[#4A39C0] hover:text-[#4A39C0] transition"
                       >
-                        {isValidating ? (
-                          <span className="flex items-center gap-2">
-                            <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                            Analyse IA...
-                          </span>
-                        ) : "Validation IA"}
-                      </button>
-                    )}
+                        Voir
+                      </Link>
+                      {!rapport && (
+                        <button
+                          onClick={() => handleValidateIA(fiche.code_rome)}
+                          disabled={validating !== null}
+                          className="px-4 py-1.5 bg-[#4A39C0] text-white rounded-full text-xs font-medium hover:bg-[#3a2da0] transition disabled:opacity-40 disabled:cursor-wait"
+                        >
+                          {isValidating ? (
+                            <span className="flex items-center gap-2">
+                              <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                              Analyse IA...
+                            </span>
+                          ) : "Validation IA"}
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Rapport IA */}
@@ -721,20 +739,27 @@ function TabPublier() {
             </div>
           ) : (
             fiches.map(fiche => (
-              <label
+              <div
                 key={fiche.code_rome}
-                className="flex items-center gap-4 px-6 py-3 hover:bg-gray-50 transition cursor-pointer"
+                className="flex items-center gap-4 px-6 py-3 hover:bg-gray-50 transition"
               >
                 <input
                   type="checkbox"
                   checked={selected.has(fiche.code_rome)}
                   onChange={() => toggleSelect(fiche.code_rome)}
-                  className="w-4 h-4 rounded border-gray-300 text-[#4A39C0] focus:ring-[#4A39C0]"
+                  className="w-4 h-4 rounded border-gray-300 text-[#4A39C0] focus:ring-[#4A39C0] cursor-pointer"
                 />
                 <span className="text-xs font-bold text-[#4A39C0]">{fiche.code_rome}</span>
                 <span className="text-sm text-gray-700 flex-1 min-w-0 truncate">{fiche.nom_masculin}</span>
                 <span className="text-xs text-gray-400 shrink-0">v{fiche.version}</span>
-              </label>
+                <Link
+                  href={`/fiches/${fiche.code_rome}`}
+                  target="_blank"
+                  className="px-3 py-1.5 border border-gray-300 text-gray-600 rounded-full text-xs font-medium hover:border-[#4A39C0] hover:text-[#4A39C0] transition shrink-0"
+                >
+                  Voir
+                </Link>
+              </div>
             ))
           )}
         </div>
