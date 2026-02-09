@@ -2,6 +2,8 @@
  * Client API pour communiquer avec le backend FastAPI
  */
 
+import { getToken, removeToken } from "./auth";
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export interface FicheMetier {
@@ -106,16 +108,34 @@ class ApiClient {
 
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      ...(options?.headers as Record<string, string>),
+    };
+
+    // Ajouter le token d'authentification si present
+    const token = getToken();
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
     const response = await fetch(url, {
       ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-      },
+      headers,
     });
 
+    if (response.status === 401) {
+      removeToken();
+      if (typeof window !== "undefined" && !window.location.pathname.includes("/login")) {
+        window.location.href = "/login";
+      }
+      throw new Error("Session expiree, veuillez vous reconnecter");
+    }
+
     if (!response.ok) {
-      throw new Error(`API Error: ${response.status} ${response.statusText}`);
+      const body = await response.json().catch(() => null);
+      const detail = body?.detail || `${response.status} ${response.statusText}`;
+      throw new Error(detail);
     }
 
     return response.json();
@@ -258,6 +278,26 @@ class ApiClient {
     return this.request<{ total: number; logs: AuditLog[] }>(
       `/api/audit-logs?limit=${limit}`
     );
+  }
+
+  // ==================== AUTH ====================
+
+  async login(email: string, password: string): Promise<{ token: string; user: { id: number; email: string; name: string } }> {
+    return this.request("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    });
+  }
+
+  async register(email: string, password: string, name: string): Promise<{ token: string; user: { id: number; email: string; name: string } }> {
+    return this.request("/api/auth/register", {
+      method: "POST",
+      body: JSON.stringify({ email, password, name }),
+    });
+  }
+
+  async getMe(): Promise<{ id: number; email: string; name: string }> {
+    return this.request("/api/auth/me");
   }
 }
 

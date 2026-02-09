@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/components/Navbar";
-import BackgroundAnimation from "@/components/BackgroundAnimation";
-import ScrollToTop from "@/components/ScrollToTop";
+import AuthGuard from "@/components/AuthGuard";
+import LayoutShell from "@/components/LayoutShell";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -31,12 +30,11 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${playfair.variable} font-sans antialiased bg-white text-text-dark relative`}
       >
-        <BackgroundAnimation />
-        <div className="relative z-10">
-          <ScrollToTop />
-          <Navbar />
-          {children}
-        </div>
+        <AuthGuard>
+          <LayoutShell>
+            {children}
+          </LayoutShell>
+        </AuthGuard>
       </body>
     </html>
   );
