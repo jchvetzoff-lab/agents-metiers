@@ -229,73 +229,34 @@
 
 /* ==================== LOGIN INTRO ANIMATIONS ==================== */
 
-/* Schema items (icones) apparaissent */
-.intro-schema-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  opacity: 0;
-  transform: translateY(20px);
+/* Ligne de texte : apparition elegante */
+.intro-text-line {
+  animation: textLineIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-.intro-schema-visible {
-  animation: schemaItemIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-}
-
-@keyframes schemaItemIn {
+@keyframes textLineIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+    filter: blur(8px);
+  }
   to {
     opacity: 1;
     transform: translateY(0);
+    filter: blur(0);
   }
 }
 
-/* Fleches entre les icones */
-.intro-arrow {
-  opacity: 0;
-  transform: translateX(-10px);
+/* Texte fade out */
+.intro-text-out {
+  animation: textFadeOut 0.5s ease-in forwards;
 }
 
-.intro-arrow-visible {
-  animation: arrowSlideIn 0.4s ease-out forwards;
-}
-
-@keyframes arrowSlideIn {
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-/* Checkmark pop */
-.intro-check-pop {
-  animation: checkPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-}
-
-@keyframes checkPop {
-  from {
-    opacity: 0;
-    transform: scale(0);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-/* Tagline fade in */
-.intro-tagline {
-  animation: introFadeIn 0.6s ease-out forwards;
-}
-
-/* Schema fade out */
-.intro-schema-out {
-  animation: schemaFadeOut 0.5s ease-in forwards;
-}
-
-@keyframes schemaFadeOut {
+@keyframes textFadeOut {
   to {
     opacity: 0;
-    transform: scale(0.95);
+    transform: scale(0.97);
+    filter: blur(4px);
   }
 }
 
