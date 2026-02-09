@@ -2,7 +2,7 @@
 Backend FastAPI pour Agents Métiers Web.
 Expose une API REST pour accéder à la base de données SQLite et aux agents IA.
 """
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List
@@ -12,6 +12,7 @@ import os
 import json
 import re
 from pathlib import Path
+from sqlalchemy import text as sa_text
 
 # Ajouter le chemin vers le projet agents-metiers existant
 AGENTS_METIERS_PATH = Path(__file__).parent.parent.parent / "agents-metiers"
@@ -68,6 +69,16 @@ try:
     run_migrations()
 except Exception as e:
     print(f"Migration warning: {e}")
+
+# Migration auth : créer la table users
+from backend.auth import (
+    create_users_table, UserCreate, UserLogin, UserResponse, UserDB,
+    hash_password, verify_password, create_token, decode_token, get_current_user
+)
+try:
+    create_users_table(repo.engine)
+except Exception as e:
+    print(f"Users table migration warning: {e}")
 
 
 # ==================== HELPERS ====================
@@ -1141,6 +1152,82 @@ def auto_correct_fiche(code_rome: str, rapport: AutoCorrectRequest):
         raise HTTPException(status_code=500, detail=f"Erreur parsing JSON Claude: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur auto-correction: {str(e)}")
+
+
+# ==================== AUTH ENDPOINTS ====================
+
+@app.post("/api/auth/register")
+async def register(user_data: UserCreate):
+    """Creer un nouveau compte utilisateur."""
+    from sqlalchemy.orm import Session
+    session = Session(repo.engine)
+    try:
+        # Verifier si l'email existe deja
+        existing = session.execute(
+            sa_text("SELECT id FROM users WHERE email = :email"),
+            {"email": user_data.email}
+        ).fetchone()
+        if existing:
+            raise HTTPException(status_code=400, detail="Cet email est deja utilise")
+
+        # Creer l'utilisateur
+        hashed = hash_password(user_data.password)
+        session.execute(
+            sa_text("INSERT INTO users (email, hashed_password, name) VALUES (:email, :hashed_password, :name)"),
+            {"email": user_data.email, "hashed_password": hashed, "name": user_data.name}
+        )
+        session.commit()
+
+        # Recuperer l'utilisateur cree
+        user = session.execute(
+            sa_text("SELECT id, email, name FROM users WHERE email = :email"),
+            {"email": user_data.email}
+        ).fetchone()
+
+        token = create_token(user[0], user[1], user[2])
+        return {"token": token, "user": {"id": user[0], "email": user[1], "name": user[2]}}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(status_code=500, detail=f"Erreur inscription: {str(e)}")
+    finally:
+        session.close()
+
+
+@app.post("/api/auth/login")
+async def login(user_data: UserLogin):
+    """Connecter un utilisateur existant."""
+    from sqlalchemy.orm import Session
+    session = Session(repo.engine)
+    try:
+        user = session.execute(
+            sa_text("SELECT id, email, name, hashed_password FROM users WHERE email = :email"),
+            {"email": user_data.email}
+        ).fetchone()
+
+        if not user:
+            raise HTTPException(status_code=401, detail="Email ou mot de passe incorrect")
+
+        if not verify_password(user_data.password, user[3]):
+            raise HTTPException(status_code=401, detail="Email ou mot de passe incorrect")
+
+        token = create_token(user[0], user[1], user[2])
+        return {"token": token, "user": {"id": user[0], "email": user[1], "name": user[2]}}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur connexion: {str(e)}")
+    finally:
+        session.close()
+
+
+@app.get("/api/auth/me")
+async def get_me(current_user: dict = Depends(get_current_user)):
+    """Retourne les informations de l'utilisateur connecte."""
+    return current_user
 
 
 if __name__ == "__main__":

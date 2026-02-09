@@ -35,6 +35,10 @@ pydantic>=2.5.0
 # Correction orthographique (backup local)
 language-tool-python>=2.8
 
+# Authentification
+bcrypt>=4.1.0
+pyjwt>=2.8.0
+
 # Utilitaires
 python-dotenv>=1.0.0
 tenacity>=8.2.0
