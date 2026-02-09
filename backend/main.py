@@ -1396,6 +1396,172 @@ def generate_variantes(code_rome: str, request: GenerateVariantesRequest):
         raise HTTPException(status_code=500, detail=f"Erreur génération variantes: {str(e)}")
 
 
+# ==================== ROME SYNC ====================
+
+def parse_nom_genre(nom_complet: str) -> dict:
+    """Parse un nom au format 'Masculin / Féminin complément' du ROME."""
+    if ' / ' not in nom_complet:
+        return {'masculin': nom_complet, 'feminin': nom_complet, 'epicene': nom_complet}
+
+    parts = nom_complet.split(' / ', 1)
+    masculin_part = parts[0].strip()
+    feminin_rest = parts[1].strip()
+
+    masc_words = masculin_part.split()
+    fem_words = feminin_rest.split()
+    nb_mots_nom = len(masc_words)
+
+    if len(fem_words) > nb_mots_nom:
+        fem_nom = ' '.join(fem_words[:nb_mots_nom])
+        complement = ' '.join(fem_words[nb_mots_nom:])
+        masculin = f"{masculin_part} {complement}"
+        feminin = f"{fem_nom} {complement}"
+    else:
+        masculin = masculin_part
+        feminin = feminin_rest
+
+    epicene = nom_complet
+    return {'masculin': masculin, 'feminin': feminin, 'epicene': epicene}
+
+
+@app.post("/api/rome/sync")
+async def sync_rome():
+    """Synchronise le référentiel ROME depuis data.gouv.fr (télécharge arborescence_principale.xlsx)."""
+    import tempfile
+    import httpx
+    import openpyxl
+
+    try:
+        # 1. Récupérer les métadonnées du dataset ROME sur data.gouv.fr
+        dataset_url = "https://www.data.gouv.fr/api/1/datasets/repertoire-operationnel-des-metiers-et-des-emplois-rome/"
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+            resp = await client.get(dataset_url)
+            if resp.status_code != 200:
+                raise HTTPException(status_code=502, detail=f"Impossible de contacter data.gouv.fr (HTTP {resp.status_code})")
+            dataset = resp.json()
+
+        # 2. Trouver l'URL du fichier arborescence_principale.xlsx
+        xlsx_url = None
+        for resource in dataset.get("resources", []):
+            title = (resource.get("title") or "").lower()
+            url = resource.get("url", "")
+            if "arborescence" in title and url.endswith(".xlsx"):
+                xlsx_url = url
+                break
+
+        if not xlsx_url:
+            raise HTTPException(status_code=404, detail="Fichier arborescence_principale.xlsx introuvable dans le dataset ROME")
+
+        # 3. Télécharger le fichier XLSX
+        async with httpx.AsyncClient(timeout=60.0, follow_redirects=True) as client:
+            resp = await client.get(xlsx_url)
+            if resp.status_code != 200:
+                raise HTTPException(status_code=502, detail=f"Impossible de télécharger le XLSX (HTTP {resp.status_code})")
+
+        with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as tmp:
+            tmp.write(resp.content)
+            tmp_path = tmp.name
+
+        # 4. Parser le fichier XLSX (même logique que import_rome.py)
+        try:
+            wb = openpyxl.load_workbook(tmp_path)
+            ws = wb[wb.sheetnames[1]]  # Deuxième feuille = données
+
+            fiches_rome = {}
+            current_domaine_nom = ""
+            current_sous_domaine_nom = ""
+
+            for row in ws.iter_rows(min_row=2, values_only=True):
+                col1 = str(row[0]).strip() if row[0] else ""
+                col2 = str(row[1]).strip() if row[1] else ""
+                col3 = str(row[2]).strip() if row[2] else ""
+                col4 = str(row[3]).strip() if row[3] else ""
+
+                # Grand domaine
+                if col1 and not col2 and not col3 and col4:
+                    current_domaine_nom = col4
+                    continue
+
+                # Sous-domaine
+                if col1 and col2 and not col3 and col4:
+                    current_sous_domaine_nom = col4
+                    continue
+
+                # Fiche
+                if col3 and col1 and col2:
+                    code_rome = f"{col1}{col2}{col3}"
+                    if code_rome not in fiches_rome:
+                        noms = parse_nom_genre(col4)
+                        fiches_rome[code_rome] = {
+                            'nom_masculin': noms['masculin'],
+                            'nom_feminin': noms['feminin'],
+                            'nom_epicene': noms['epicene'],
+                        }
+
+            wb.close()
+        finally:
+            os.unlink(tmp_path)
+
+        # 5. Comparer avec la base et créer/mettre à jour
+        from database.models import MetadataFiche
+
+        nouvelles = 0
+        mises_a_jour = 0
+        inchangees = 0
+
+        for code_rome, rome_data in fiches_rome.items():
+            existing = repo.get_fiche(code_rome)
+
+            if not existing:
+                # Nouvelle fiche → créer en brouillon
+                nouvelle_fiche = FicheMetier(
+                    id=code_rome,
+                    code_rome=code_rome,
+                    nom_masculin=rome_data['nom_masculin'],
+                    nom_feminin=rome_data['nom_feminin'],
+                    nom_epicene=rome_data['nom_epicene'],
+                    metadata=MetadataFiche(statut=StatutFiche.BROUILLON, version=1),
+                )
+                repo.create_fiche(nouvelle_fiche)
+                nouvelles += 1
+            else:
+                # Fiche existante → vérifier si les noms ont changé
+                changed = (
+                    existing.nom_masculin != rome_data['nom_masculin']
+                    or existing.nom_feminin != rome_data['nom_feminin']
+                    or existing.nom_epicene != rome_data['nom_epicene']
+                )
+                if changed:
+                    fiche_dict = existing.model_dump()
+                    fiche_dict['nom_masculin'] = rome_data['nom_masculin']
+                    fiche_dict['nom_feminin'] = rome_data['nom_feminin']
+                    fiche_dict['nom_epicene'] = rome_data['nom_epicene']
+                    fiche_dict['metadata']['date_maj'] = datetime.now()
+                    updated_fiche = FicheMetier(**fiche_dict)
+                    repo.update_fiche(updated_fiche)
+                    mises_a_jour += 1
+                else:
+                    inchangees += 1
+
+        log_action(
+            TypeEvenement.MODIFICATION,
+            f"Synchronisation ROME : {nouvelles} nouvelles, {mises_a_jour} mises à jour, {inchangees} inchangées",
+            agent="Système",
+        )
+
+        return {
+            "message": f"Synchronisation ROME terminée",
+            "nouvelles": nouvelles,
+            "mises_a_jour": mises_a_jour,
+            "inchangees": inchangees,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur synchronisation ROME: {str(e)}")
+
+
 # ==================== AUTH ENDPOINTS ====================
 
 @app.post("/api/auth/register")
