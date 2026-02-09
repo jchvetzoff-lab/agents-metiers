@@ -37,6 +37,8 @@ class LangueSupporte(str, Enum):
     ES = "es"
     DE = "de"
     IT = "it"
+    PT = "pt"
+    AR = "ar"
 
 
 class TrancheAge(str, Enum):

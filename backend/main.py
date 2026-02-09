@@ -1216,18 +1216,30 @@ Réponds UNIQUEMENT avec un objet JSON valide (sans texte avant ou après) :
     ]
 }}
 
+4. LANGUES
+   - "fr" : Français
+   - "en" : Anglais (English)
+   - "es" : Espagnol (Español)
+   - "it" : Italien (Italiano)
+   - "de" : Allemand (Deutsch)
+   - "pt" : Portugais (Português)
+   - "ar" : Arabe (العربية) — écrire en arabe avec script arabe
+
 IMPORTANT :
 - Génère EXACTEMENT {nb_variantes} variantes (toutes les combinaisons demandées)
 - Pour FALC : PHRASES <15 MOTS, vocabulaire niveau CM1-CM2
 - Pour 11-15 ans : Éviter jargon, expliquer concepts
 - Pour genre épicène : Utiliser des tournures neutres (ex: "La personne qui exerce ce métier...")
-- Langue fixée à FR (français)."""
+- Langues demandées : {langues_str}
+- Adapte TOUT le contenu dans la langue demandée (nom, description, compétences, formations, etc.)
+- Pour l'arabe, écris en script arabe."""
 
 
 class GenerateVariantesRequest(BaseModel):
     genres: List[str] = ["masculin", "feminin", "epicene"]
     tranches_age: List[str] = ["18+"]
     formats: List[str] = ["standard", "falc"]
+    langues: List[str] = ["fr"]
 
 
 @app.post("/api/fiches/{code_rome}/variantes/generate")
@@ -1249,20 +1261,23 @@ def generate_variantes(code_rome: str, request: GenerateVariantesRequest):
         valid_genres = {"masculin", "feminin", "epicene"}
         valid_tranches = {"18+", "15-18", "11-15"}
         valid_formats = {"standard", "falc"}
+        valid_langues = {"fr", "en", "es", "de", "it", "pt", "ar"}
 
         genres = [g for g in request.genres if g in valid_genres]
         tranches = [t for t in request.tranches_age if t in valid_tranches]
         formats = [f for f in request.formats if f in valid_formats]
+        langues = [l for l in request.langues if l in valid_langues] or ["fr"]
 
         if not genres or not tranches or not formats:
             raise HTTPException(status_code=400, detail="Au moins un genre, une tranche d'âge et un format sont requis")
 
-        # Build all combinations
+        # Build all combinations (langue, tranche, format, genre)
         all_combos = []
-        for t in tranches:
-            for fmt in formats:
-                for g in genres:
-                    all_combos.append((t, fmt, g))
+        for lang in langues:
+            for t in tranches:
+                for fmt in formats:
+                    for g in genres:
+                        all_combos.append((lang, t, fmt, g))
 
         import anthropic
         client = anthropic.Anthropic(api_key=api_key)
@@ -1282,6 +1297,15 @@ def generate_variantes(code_rome: str, request: GenerateVariantesRequest):
             "standard": FormatContenu.STANDARD,
             "falc": FormatContenu.FALC,
         }
+        langue_map = {
+            "fr": LangueSupporte.FR,
+            "en": LangueSupporte.EN,
+            "es": LangueSupporte.ES,
+            "de": LangueSupporte.DE,
+            "it": LangueSupporte.IT,
+            "pt": LangueSupporte.PT,
+            "ar": LangueSupporte.AR,
+        }
 
         # Batch: max 6 variantes per Claude call to stay within token limits
         BATCH_SIZE = 6
@@ -1289,9 +1313,10 @@ def generate_variantes(code_rome: str, request: GenerateVariantesRequest):
 
         for i in range(0, len(all_combos), BATCH_SIZE):
             batch = all_combos[i:i + BATCH_SIZE]
-            batch_tranches = list({c[0] for c in batch})
-            batch_formats = list({c[1] for c in batch})
-            batch_genres = list({c[2] for c in batch})
+            batch_langues = list({c[0] for c in batch})
+            batch_tranches = list({c[1] for c in batch})
+            batch_formats = list({c[2] for c in batch})
+            batch_genres = list({c[3] for c in batch})
 
             prompt = VARIANTES_PROMPT.format(
                 code_rome=fiche.code_rome,
@@ -1304,6 +1329,7 @@ def generate_variantes(code_rome: str, request: GenerateVariantesRequest):
                 tranches_str=", ".join(batch_tranches),
                 formats_str=", ".join(batch_formats),
                 genres_str=", ".join(batch_genres),
+                langues_str=", ".join(batch_langues),
             )
 
             response = client.messages.create(
@@ -1330,7 +1356,7 @@ def generate_variantes(code_rome: str, request: GenerateVariantesRequest):
                 try:
                     variante = VarianteFiche(
                         code_rome=code_rome,
-                        langue=LangueSupporte.FR,
+                        langue=langue_map.get(v_data.get("langue", "fr"), LangueSupporte.FR),
                         tranche_age=tranche_map.get(v_data.get("tranche_age", "18+"), TrancheAge.ADULTE),
                         format_contenu=format_map.get(v_data.get("format_contenu", "standard"), FormatContenu.STANDARD),
                         genre=genre_map.get(v_data.get("genre", "masculin"), GenreGrammatical.MASCULIN),
