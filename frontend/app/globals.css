@@ -229,80 +229,74 @@
 
 /* ==================== LOGIN INTRO ANIMATIONS ==================== */
 
-/* Fiche qui apparait (scale-in) */
-.intro-card {
-  animation: introCardIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-}
-
-@keyframes introCardIn {
-  from {
-    opacity: 0;
-    transform: scale(0.7);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-/* Fiche qui disparait (fade-out + scale-down) */
-.intro-card-out {
-  animation: introCardOut 0.5s ease-in forwards;
-}
-
-@keyframes introCardOut {
-  from {
-    opacity: 1;
-    transform: scale(1);
-  }
-  to {
-    opacity: 0;
-    transform: scale(0.85);
-  }
-}
-
-/* Ligne titre de la fiche (plus epaisse, sombre) */
-.fiche-title-line {
-  height: 16px;
-  border-radius: 3px;
-  margin-bottom: 12px;
-  transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
-
-/* Ligne texte de la fiche (fine, gris fonce) */
-.fiche-text-line {
-  height: 10px;
-  border-radius: 2px;
-  margin-bottom: 8px;
-  transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
-
-.fiche-line-hidden {
+/* Schema items (icones) apparaissent */
+.intro-schema-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   opacity: 0;
-  transform: scaleX(0);
-  transform-origin: left;
+  transform: translateY(20px);
 }
 
-.fiche-title-line.fiche-line-visible {
-  opacity: 1;
-  transform: scaleX(1);
-  transform-origin: left;
-  background: #1A1A2E;
+.intro-schema-visible {
+  animation: schemaItemIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
-.fiche-text-line.fiche-line-visible {
-  opacity: 1;
-  transform: scaleX(1);
-  transform-origin: left;
-  background: linear-gradient(90deg, #374151 0%, #4B5563 50%, #374151 100%);
-  background-size: 300% 100%;
-  animation: ficheTextWrite 2s ease-in-out infinite;
+@keyframes schemaItemIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-@keyframes ficheTextWrite {
-  0% { background-position: 0% 0; }
-  50% { background-position: 100% 0; }
-  100% { background-position: 0% 0; }
+/* Fleches entre les icones */
+.intro-arrow {
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+.intro-arrow-visible {
+  animation: arrowSlideIn 0.4s ease-out forwards;
+}
+
+@keyframes arrowSlideIn {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Checkmark pop */
+.intro-check-pop {
+  animation: checkPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes checkPop {
+  from {
+    opacity: 0;
+    transform: scale(0);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Tagline fade in */
+.intro-tagline {
+  animation: introFadeIn 0.6s ease-out forwards;
+}
+
+/* Schema fade out */
+.intro-schema-out {
+  animation: schemaFadeOut 0.5s ease-in forwards;
+}
+
+@keyframes schemaFadeOut {
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
 }
 
 /* "By JAE Fondation" fade-in */
