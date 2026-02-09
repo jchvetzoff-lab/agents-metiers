@@ -657,7 +657,7 @@ def enrich_fiche(code_rome: str):
 
 
 @app.post("/api/fiches/{code_rome}/publish")
-async def publish_fiche(code_rome: str):
+async def publish_fiche(code_rome: str, current_user: dict = Depends(get_current_user)):
     """Publie une fiche métier (change le statut en publiee)."""
     try:
         fiche = repo.get_fiche(code_rome)
@@ -672,17 +672,19 @@ async def publish_fiche(code_rome: str):
         updated_fiche = FicheMetier(**fiche_dict)
         repo.update_fiche(updated_fiche)
 
+        user_name = current_user.get("name", "Utilisateur")
         log_action(
             TypeEvenement.PUBLICATION,
-            f"Publication de {code_rome} ({fiche.nom_epicene})",
+            f"Publication de {code_rome} ({fiche.nom_epicene}) par {user_name}",
             code_rome=code_rome,
-            agent="Utilisateur",
+            agent=user_name,
         )
 
         return {
             "message": "Fiche publiée",
             "code_rome": code_rome,
             "statut": "publiee",
+            "publie_par": user_name,
         }
 
     except HTTPException:
@@ -867,7 +869,7 @@ class HumanReviewRequest(BaseModel):
 
 
 @app.post("/api/fiches/{code_rome}/review")
-async def review_fiche(code_rome: str, review: HumanReviewRequest):
+async def review_fiche(code_rome: str, review: HumanReviewRequest, current_user: dict = Depends(get_current_user)):
     """Validation humaine : approuver, demander des corrections, ou rejeter une fiche."""
     try:
         fiche = repo.get_fiche(code_rome)
@@ -908,13 +910,14 @@ async def review_fiche(code_rome: str, review: HumanReviewRequest):
             "rejetee": "Rejetée",
         }
 
+        user_name = current_user.get("name", "Utilisateur")
         comment_part = f" - Commentaire: {review.commentaire}" if review.commentaire else ""
         log_action(
             TypeEvenement.VALIDATION,
-            f"Review humaine de {code_rome} ({fiche.nom_epicene}): {decision_labels[review.decision]}{comment_part}",
+            f"Review de {code_rome} ({fiche.nom_epicene}) par {user_name}: {decision_labels[review.decision]}{comment_part}",
             code_rome=code_rome,
-            agent="Utilisateur",
-            validateur="Utilisateur",
+            agent=user_name,
+            validateur=user_name,
         )
 
         return {
@@ -923,6 +926,7 @@ async def review_fiche(code_rome: str, review: HumanReviewRequest):
             "decision": review.decision,
             "commentaire": review.commentaire,
             "nouveau_statut": statut_labels[review.decision],
+            "publie_par": user_name,
         }
 
     except HTTPException:
