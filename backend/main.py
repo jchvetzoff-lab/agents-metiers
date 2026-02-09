@@ -1232,7 +1232,7 @@ class GenerateVariantesRequest(BaseModel):
 
 @app.post("/api/fiches/{code_rome}/variantes/generate")
 def generate_variantes(code_rome: str, request: GenerateVariantesRequest):
-    """Génère des variantes d'une fiche via Claude API."""
+    """Génère des variantes d'une fiche via Claude API (batch par lots de 6 max)."""
     try:
         fiche = repo.get_fiche(code_rome)
         if not fiche:
@@ -1257,37 +1257,15 @@ def generate_variantes(code_rome: str, request: GenerateVariantesRequest):
         if not genres or not tranches or not formats:
             raise HTTPException(status_code=400, detail="Au moins un genre, une tranche d'âge et un format sont requis")
 
-        nb_variantes = len(genres) * len(tranches) * len(formats)
+        # Build all combinations
+        all_combos = []
+        for t in tranches:
+            for fmt in formats:
+                for g in genres:
+                    all_combos.append((t, fmt, g))
 
         import anthropic
         client = anthropic.Anthropic(api_key=api_key)
-
-        prompt = VARIANTES_PROMPT.format(
-            code_rome=fiche.code_rome,
-            nom_masculin=fiche.nom_masculin,
-            nom_feminin=fiche.nom_feminin,
-            description=fiche.description or "",
-            competences=", ".join((fiche.competences or [])[:5]) + ("..." if len(fiche.competences or []) > 5 else ""),
-            formations=", ".join((fiche.formations or [])[:3]) + ("..." if len(fiche.formations or []) > 3 else ""),
-            nb_variantes=nb_variantes,
-            tranches_str=", ".join(tranches),
-            formats_str=", ".join(formats),
-            genres_str=", ".join(genres),
-        )
-
-        response = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=4096,
-            messages=[{"role": "user", "content": prompt}],
-        )
-
-        content = response.content[0].text.strip()
-        json_match = re.search(r'\{[\s\S]*\}', content)
-        if not json_match:
-            raise HTTPException(status_code=500, detail="Réponse Claude invalide (pas de JSON)")
-
-        data = json.loads(json_match.group())
-        variantes_data = data.get("variantes", [])
 
         # Map string values to enums
         genre_map = {
@@ -1305,29 +1283,71 @@ def generate_variantes(code_rome: str, request: GenerateVariantesRequest):
             "falc": FormatContenu.FALC,
         }
 
+        # Batch: max 6 variantes per Claude call to stay within token limits
+        BATCH_SIZE = 6
         saved_count = 0
-        for v_data in variantes_data:
+
+        for i in range(0, len(all_combos), BATCH_SIZE):
+            batch = all_combos[i:i + BATCH_SIZE]
+            batch_tranches = list({c[0] for c in batch})
+            batch_formats = list({c[1] for c in batch})
+            batch_genres = list({c[2] for c in batch})
+
+            prompt = VARIANTES_PROMPT.format(
+                code_rome=fiche.code_rome,
+                nom_masculin=fiche.nom_masculin,
+                nom_feminin=fiche.nom_feminin,
+                description=fiche.description or "",
+                competences=", ".join((fiche.competences or [])[:5]) + ("..." if len(fiche.competences or []) > 5 else ""),
+                formations=", ".join((fiche.formations or [])[:3]) + ("..." if len(fiche.formations or []) > 3 else ""),
+                nb_variantes=len(batch),
+                tranches_str=", ".join(batch_tranches),
+                formats_str=", ".join(batch_formats),
+                genres_str=", ".join(batch_genres),
+            )
+
+            response = client.messages.create(
+                model="claude-sonnet-4-20250514",
+                max_tokens=4096,
+                messages=[{"role": "user", "content": prompt}],
+            )
+
+            content = response.content[0].text.strip()
+            json_match = re.search(r'\{[\s\S]*\}', content)
+            if not json_match:
+                print(f"Batch {i//BATCH_SIZE + 1}: pas de JSON dans la réponse Claude")
+                continue
+
             try:
-                variante = VarianteFiche(
-                    code_rome=code_rome,
-                    langue=LangueSupporte.FR,
-                    tranche_age=tranche_map.get(v_data.get("tranche_age", "18+"), TrancheAge.ADULTE),
-                    format_contenu=format_map.get(v_data.get("format_contenu", "standard"), FormatContenu.STANDARD),
-                    genre=genre_map.get(v_data.get("genre", "masculin"), GenreGrammatical.MASCULIN),
-                    nom=v_data.get("nom", fiche.nom_epicene),
-                    description=v_data.get("description", ""),
-                    description_courte=v_data.get("description_courte"),
-                    competences=v_data.get("competences", []),
-                    competences_transversales=v_data.get("competences_transversales", []),
-                    formations=v_data.get("formations", []),
-                    certifications=v_data.get("certifications", []),
-                    conditions_travail=v_data.get("conditions_travail", []),
-                    environnements=v_data.get("environnements", []),
-                )
-                repo.save_variante(variante)
-                saved_count += 1
-            except Exception as e:
-                print(f"Erreur sauvegarde variante: {e}")
+                data = json.loads(json_match.group())
+            except json.JSONDecodeError as e:
+                print(f"Batch {i//BATCH_SIZE + 1}: erreur JSON: {e}")
+                continue
+
+            variantes_data = data.get("variantes", [])
+
+            for v_data in variantes_data:
+                try:
+                    variante = VarianteFiche(
+                        code_rome=code_rome,
+                        langue=LangueSupporte.FR,
+                        tranche_age=tranche_map.get(v_data.get("tranche_age", "18+"), TrancheAge.ADULTE),
+                        format_contenu=format_map.get(v_data.get("format_contenu", "standard"), FormatContenu.STANDARD),
+                        genre=genre_map.get(v_data.get("genre", "masculin"), GenreGrammatical.MASCULIN),
+                        nom=v_data.get("nom", fiche.nom_epicene),
+                        description=v_data.get("description", ""),
+                        description_courte=v_data.get("description_courte"),
+                        competences=v_data.get("competences", []),
+                        competences_transversales=v_data.get("competences_transversales", []),
+                        formations=v_data.get("formations", []),
+                        certifications=v_data.get("certifications", []),
+                        conditions_travail=v_data.get("conditions_travail", []),
+                        environnements=v_data.get("environnements", []),
+                    )
+                    repo.save_variante(variante)
+                    saved_count += 1
+                except Exception as e:
+                    print(f"Erreur sauvegarde variante: {e}")
 
         log_action(
             TypeEvenement.MODIFICATION,
