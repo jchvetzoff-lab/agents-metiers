@@ -904,12 +904,9 @@ function TabExporter() {
   const fetchFiches = useCallback(async (searchTerm: string) => {
     setLoading(true);
     try {
-      const [valData, pubData] = await Promise.all([
-        api.getFiches({ statut: "en_validation", search: searchTerm || undefined, limit: 200 }),
-        api.getFiches({ statut: "publiee", search: searchTerm || undefined, limit: 200 }),
-      ]);
-      setFiches([...valData.results, ...pubData.results]);
-      setTotalCount(valData.total + pubData.total);
+      const pubData = await api.getFiches({ statut: "publiee", search: searchTerm || undefined, limit: 200 });
+      setFiches(pubData.results);
+      setTotalCount(pubData.total);
     } catch (e) {
       console.error(e);
     } finally {
@@ -931,14 +928,14 @@ function TabExporter() {
     <div className="space-y-6">
       <div className="bg-[#F9F8FF] border border-[#E4E1FF] rounded-xl p-5">
         <p className="text-sm text-gray-600">
-          Cliquez sur une fiche enrichie pour ouvrir sa page de detail et telecharger le PDF.
-          Seules les fiches <strong>enrichies</strong> (en validation ou publiees) sont affichees.
+          Cliquez sur une fiche pour ouvrir sa page de detail et telecharger le PDF.
+          Seules les fiches <strong>publiees</strong> sont affichees.
         </p>
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 space-y-3">
-          <h2 className="text-lg font-bold text-[#1A1A2E]">Fiches enrichies ({totalCount})</h2>
+          <h2 className="text-lg font-bold text-[#1A1A2E]">Fiches publiees ({totalCount})</h2>
           <SearchBar value={search} onChange={onSearch} />
         </div>
         <div className="divide-y divide-gray-100 max-h-[500px] overflow-y-auto">
@@ -946,7 +943,7 @@ function TabExporter() {
             <div className="p-8 text-center text-gray-400">Chargement...</div>
           ) : fiches.length === 0 ? (
             <div className="p-8 text-center text-gray-400">
-              {search ? `Aucune fiche enrichie pour "${search}"` : "Aucune fiche enrichie trouvee"}
+              {search ? `Aucune fiche publiee pour "${search}"` : "Aucune fiche publiee"}
             </div>
           ) : (
             fiches.map(fiche => (
@@ -958,11 +955,6 @@ function TabExporter() {
                 <div className="flex items-center gap-3 min-w-0">
                   <span className="text-xs font-bold text-[#4A39C0]">{fiche.code_rome}</span>
                   <span className="text-sm text-gray-700 truncate">{fiche.nom_masculin}</span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${
-                    fiche.statut === "publiee" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"
-                  }`}>
-                    {fiche.statut === "publiee" ? "Publiee" : "En validation"}
-                  </span>
                 </div>
                 <span className="text-xs text-gray-400 group-hover:text-[#4A39C0] transition shrink-0 ml-4">
                   Voir &amp; telecharger PDF &rarr;
