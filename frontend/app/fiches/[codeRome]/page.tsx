@@ -260,29 +260,29 @@ export default function FicheDetailPage() {
       }
 
       function sectionTitle(title: string) {
-        ensureSpace(20);
-        y += 10;
+        ensureSpace(45);
+        y += 6;
         // Purple left bar
         fill(C.purple);
-        pdf.roundedRect(ML, y, 3, 10, 1.5, 1.5, "F");
-        pdf.setFontSize(14);
+        pdf.roundedRect(ML, y, 3, 9, 1.5, 1.5, "F");
+        pdf.setFontSize(13);
         pdf.setFont("helvetica", "bold");
         txt(C.dark);
-        pdf.text(title, ML + 8, y + 7);
+        pdf.text(title, ML + 8, y + 6.5);
         stroke(C.gray200);
         pdf.setLineWidth(0.2);
-        pdf.line(ML + 8, y + 11, W - MR, y + 11);
-        y += 18;
+        pdf.line(ML + 8, y + 10, W - MR, y + 10);
+        y += 14;
       }
 
       function subTitle(text: string) {
         ensureSpace(12);
-        y += 4;
+        y += 2;
         pdf.setFontSize(8.5);
         pdf.setFont("helvetica", "bold");
         txt(C.gray500);
         pdf.text(text.toUpperCase(), ML + 2, y);
-        y += 7;
+        y += 5;
       }
 
       function bodyText(text: string) {
@@ -319,27 +319,27 @@ export default function FicheDetailPage() {
 
       function numberedList(items: string[]) {
         for (let i = 0; i < items.length; i++) {
-          ensureSpace(10);
+          ensureSpace(8);
           // Number in rounded square
           fill(C.purple);
-          pdf.roundedRect(ML + 2, y - 5.5, 8, 8, 2.5, 2.5, "F");
-          pdf.setFontSize(8);
+          pdf.roundedRect(ML + 2, y - 5, 7, 7, 2, 2, "F");
+          pdf.setFontSize(7.5);
           txt(C.white);
           pdf.setFont("helvetica", "bold");
-          pdf.text(`${i + 1}`, ML + 6, y - 1, { align: "center" });
+          pdf.text(`${i + 1}`, ML + 5.5, y - 1, { align: "center" });
           // Text
           pdf.setFontSize(9.5);
           pdf.setFont("helvetica", "normal");
           txt(C.gray700);
-          const lines = pdf.splitTextToSize(items[i], CW - 18);
+          const lines = pdf.splitTextToSize(items[i], CW - 16);
           for (let j = 0; j < lines.length; j++) {
-            if (j > 0) ensureSpace(5);
-            pdf.text(lines[j], ML + 14, y);
-            y += 5;
+            if (j > 0) ensureSpace(4.5);
+            pdf.text(lines[j], ML + 13, y);
+            y += 4.5;
           }
-          y += 3;
+          y += 2;
         }
-        y += 3;
+        y += 2;
       }
 
       function infoBox(title: string, text: string) {
@@ -411,7 +411,7 @@ export default function FicheDetailPage() {
       txt(C.gray400);
       pdf.text("JAE Fondation", ML + 13, y + 5);
 
-      y = 34;
+      y = 28;
 
       // Code ROME pill
       fill(C.purpleBadgeBg);
@@ -422,19 +422,7 @@ export default function FicheDetailPage() {
       txt(C.purple);
       pdf.text(d.code_rome, ML + 7, y + 1.5);
 
-      // Status pill
-      const statusLabel = d.statut === "publiee" ? "Publiee" : d.statut === "en_validation" ? "En validation" : d.statut.charAt(0).toUpperCase() + d.statut.slice(1);
-      const statusColor: RGB = d.statut === "publiee" ? C.green : d.statut === "en_validation" ? C.yellow : C.gray500;
-      const statusBg: RGB = d.statut === "publiee" ? C.greenBg : d.statut === "en_validation" ? C.yellowBg : C.gray100;
-      pdf.setFontSize(8);
-      pdf.setFont("helvetica", "bold");
-      const stW = pdf.getTextWidth(statusLabel) + 12;
-      fill(statusBg);
-      pdf.roundedRect(ML + romeW + 5, y - 3.5, stW, 8, 3, 3, "F");
-      txt(statusColor);
-      pdf.text(statusLabel, ML + romeW + 11, y + 1.5);
-
-      y += 14;
+      y += 10;
 
       // Title — large
       pdf.setFontSize(26);
@@ -472,7 +460,7 @@ export default function FicheDetailPage() {
       stroke(C.gray200);
       pdf.setLineWidth(0.3);
       pdf.line(ML, y, W - MR, y);
-      y += 8;
+      y += 4;
 
       // ══════════════════════════════════════════════
       // INFORMATIONS CLES
@@ -529,9 +517,12 @@ export default function FicheDetailPage() {
           if (cards.length > 0) {
             ensureSpace(35);
             const gap = 5;
-            const cardW = (CW - (cards.length - 1) * gap) / cards.length;
+            const maxCardW = 60;
+            const cardW = Math.min((CW - (cards.length - 1) * gap) / cards.length, maxCardW);
+            const totalCardsW = cards.length * cardW + (cards.length - 1) * gap;
+            const cardsStartX = ML + (CW - totalCardsW) / 2;
             cards.forEach((card, i) => {
-              const cx = ML + i * (cardW + gap);
+              const cx = cardsStartX + i * (cardW + gap);
               fill(card.bgColor);
               pdf.roundedRect(cx, y, cardW, 30, 5, 5, "F");
               // Value
@@ -760,52 +751,8 @@ export default function FicheDetailPage() {
           pdf.setFont("helvetica", "italic");
           txt(C.gray500);
           pdf.text("Qualites humaines et comportementales.", ML + 2, y);
-          y += 7;
-
-          const colW = (CW - 8) / 2;
-          const items = d.competences_transversales!;
-          for (let i = 0; i < items.length; i += 2) {
-            ensureSpace(16);
-            // Left card
-            const leftLines = pdf.splitTextToSize(items[i], colW - 20);
-            const lh = Math.max(13, leftLines.length * 4.5 + 7);
-            fill(C.pinkBg);
-            pdf.roundedRect(ML + 2, y, colW, lh, 4, 4, "F");
-            fill(C.pink);
-            pdf.circle(ML + 10, y + lh / 2, 4, "F");
-            pdf.setFontSize(9);
-            txt(C.white);
-            pdf.setFont("helvetica", "bold");
-            pdf.text("\u2713", ML + 10, y + lh / 2 + 1.5, { align: "center" });
-            pdf.setFontSize(9);
-            pdf.setFont("helvetica", "normal");
-            txt(C.gray700);
-            let ly = y + (lh - leftLines.length * 4.5) / 2 + 3;
-            for (const l of leftLines) { pdf.text(l, ML + 17, ly); ly += 4.5; }
-
-            if (i + 1 < items.length) {
-              const rightLines = pdf.splitTextToSize(items[i + 1], colW - 20);
-              const rh = Math.max(13, rightLines.length * 4.5 + 7);
-              const maxH = Math.max(lh, rh);
-              fill(C.pinkBg);
-              pdf.roundedRect(ML + 2 + colW + 4, y, colW, maxH, 4, 4, "F");
-              fill(C.pink);
-              pdf.circle(ML + colW + 14, y + maxH / 2, 4, "F");
-              pdf.setFontSize(9);
-              txt(C.white);
-              pdf.setFont("helvetica", "bold");
-              pdf.text("\u2713", ML + colW + 14, y + maxH / 2 + 1.5, { align: "center" });
-              pdf.setFontSize(9);
-              pdf.setFont("helvetica", "normal");
-              txt(C.gray700);
-              let ry = y + (maxH - rightLines.length * 4.5) / 2 + 3;
-              for (const l of rightLines) { pdf.text(l, ML + colW + 21, ry); ry += 4.5; }
-              y += maxH + 4;
-            } else {
-              y += lh + 4;
-            }
-          }
-          y += 3;
+          y += 6;
+          bulletList(d.competences_transversales!, C.pink);
         }
 
         if (hasSav) {
@@ -814,54 +761,8 @@ export default function FicheDetailPage() {
           pdf.setFont("helvetica", "italic");
           txt(C.gray500);
           pdf.text("Connaissances theoriques acquises par la formation.", ML + 2, y);
-          y += 7;
-
-          const colW = (CW - 8) / 2;
-          const items = d.savoirs!;
-          for (let i = 0; i < items.length; i += 2) {
-            ensureSpace(16);
-            const leftLines = pdf.splitTextToSize(items[i], colW - 20);
-            const lh = Math.max(13, leftLines.length * 4.5 + 7);
-            fill(C.cyanBg);
-            stroke(C.cyanBorder);
-            pdf.setLineWidth(0.3);
-            pdf.roundedRect(ML + 2, y, colW, lh, 4, 4, "FD");
-            fill(C.cyan);
-            pdf.roundedRect(ML + 6.5, y + lh / 2 - 3.5, 7, 7, 2, 2, "F");
-            pdf.setFontSize(8);
-            txt(C.white);
-            pdf.setFont("helvetica", "bold");
-            pdf.text("S", ML + 10, y + lh / 2 + 1, { align: "center" });
-            pdf.setFontSize(9);
-            pdf.setFont("helvetica", "normal");
-            txt(C.gray700);
-            let ly = y + (lh - leftLines.length * 4.5) / 2 + 3;
-            for (const l of leftLines) { pdf.text(l, ML + 17, ly); ly += 4.5; }
-
-            if (i + 1 < items.length) {
-              const rightLines = pdf.splitTextToSize(items[i + 1], colW - 20);
-              const rh = Math.max(13, rightLines.length * 4.5 + 7);
-              const maxH = Math.max(lh, rh);
-              fill(C.cyanBg);
-              stroke(C.cyanBorder);
-              pdf.roundedRect(ML + 2 + colW + 4, y, colW, maxH, 4, 4, "FD");
-              fill(C.cyan);
-              pdf.roundedRect(ML + colW + 10.5, y + maxH / 2 - 3.5, 7, 7, 2, 2, "F");
-              pdf.setFontSize(8);
-              txt(C.white);
-              pdf.setFont("helvetica", "bold");
-              pdf.text("S", ML + colW + 14, y + maxH / 2 + 1, { align: "center" });
-              pdf.setFontSize(9);
-              pdf.setFont("helvetica", "normal");
-              txt(C.gray700);
-              let ry = y + (maxH - rightLines.length * 4.5) / 2 + 3;
-              for (const l of rightLines) { pdf.text(l, ML + colW + 21, ry); ry += 4.5; }
-              y += maxH + 4;
-            } else {
-              y += lh + 4;
-            }
-          }
-          y += 3;
+          y += 6;
+          bulletList(d.savoirs!, C.cyan);
         }
       }
 
