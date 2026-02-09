@@ -87,20 +87,40 @@ export default function LoginPage() {
   };
 
   // ==================== PHASE INTRO ====================
+
+  // Lignes de la fiche : type "title" | "line" | "gap", avec largeur en %
+  const ficheLines = [
+    { type: "title", width: 45, delay: 1 },
+    { type: "gap", width: 0, delay: 0 },
+    { type: "line", width: 92, delay: 2 },
+    { type: "line", width: 88, delay: 3 },
+    { type: "line", width: 70, delay: 4 },
+    { type: "gap", width: 0, delay: 0 },
+    { type: "line", width: 95, delay: 5 },
+    { type: "line", width: 85, delay: 6 },
+    { type: "line", width: 50, delay: 7 },
+  ];
+
   if (phase === "intro") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white overflow-hidden">
         {/* Fiche animee */}
         {introStep >= 1 && introStep < 8 && (
           <div className="intro-card">
-            <div className="w-72 md:w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 p-8 space-y-4">
-              {[1, 2, 3, 4, 5, 6].map((lineNum) => (
-                <div
-                  key={lineNum}
-                  className={`intro-line ${introStep >= lineNum + 1 ? "intro-line-visible" : "intro-line-hidden"}`}
-                  style={{ width: `${65 + Math.sin(lineNum * 2.1) * 25}%` }}
-                />
-              ))}
+            <div className="w-80 md:w-96 bg-white rounded-2xl shadow-2xl border border-gray-200/80 p-10">
+              {ficheLines.map((line, i) => {
+                if (line.type === "gap") {
+                  return <div key={i} className="h-4" />;
+                }
+                const visible = introStep >= (line.delay ?? 0) + 1;
+                return (
+                  <div
+                    key={i}
+                    className={`${line.type === "title" ? "fiche-title-line" : "fiche-text-line"} ${visible ? "fiche-line-visible" : "fiche-line-hidden"}`}
+                    style={{ width: `${line.width}%` }}
+                  />
+                );
+              })}
             </div>
           </div>
         )}
@@ -108,14 +128,19 @@ export default function LoginPage() {
         {/* Card fade out */}
         {introStep === 8 && (
           <div className="intro-card-out">
-            <div className="w-72 md:w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 p-8 space-y-4">
-              {[1, 2, 3, 4, 5, 6].map((lineNum) => (
-                <div
-                  key={lineNum}
-                  className="intro-line intro-line-visible"
-                  style={{ width: `${65 + Math.sin(lineNum * 2.1) * 25}%` }}
-                />
-              ))}
+            <div className="w-80 md:w-96 bg-white rounded-2xl shadow-2xl border border-gray-200/80 p-10">
+              {ficheLines.map((line, i) => {
+                if (line.type === "gap") {
+                  return <div key={i} className="h-4" />;
+                }
+                return (
+                  <div
+                    key={i}
+                    className={`${line.type === "title" ? "fiche-title-line" : "fiche-text-line"} fiche-line-visible`}
+                    style={{ width: `${line.width}%` }}
+                  />
+                );
+              })}
             </div>
           </div>
         )}

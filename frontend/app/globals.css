@@ -261,31 +261,48 @@
   }
 }
 
-/* Lignes ondulees qui s'ecrivent */
-.intro-line {
-  height: 12px;
-  border-radius: 6px;
-  transition: all 0.3s ease-out;
+/* Ligne titre de la fiche (plus epaisse, sombre) */
+.fiche-title-line {
+  height: 16px;
+  border-radius: 3px;
+  margin-bottom: 12px;
+  transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
-.intro-line-hidden {
+/* Ligne texte de la fiche (fine, gris fonce) */
+.fiche-text-line {
+  height: 10px;
+  border-radius: 2px;
+  margin-bottom: 8px;
+  transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.fiche-line-hidden {
   opacity: 0;
   transform: scaleX(0);
   transform-origin: left;
 }
 
-.intro-line-visible {
+.fiche-title-line.fiche-line-visible {
   opacity: 1;
   transform: scaleX(1);
   transform-origin: left;
-  background: linear-gradient(90deg, #E4E1FF 0%, #D0CCFF 40%, #E4E1FF 60%, #F0EEFF 100%);
-  background-size: 200% 100%;
-  animation: introLineShimmer 1.5s ease-in-out infinite;
+  background: #1A1A2E;
 }
 
-@keyframes introLineShimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+.fiche-text-line.fiche-line-visible {
+  opacity: 1;
+  transform: scaleX(1);
+  transform-origin: left;
+  background: linear-gradient(90deg, #374151 0%, #4B5563 50%, #374151 100%);
+  background-size: 300% 100%;
+  animation: ficheTextWrite 2s ease-in-out infinite;
+}
+
+@keyframes ficheTextWrite {
+  0% { background-position: 0% 0; }
+  50% { background-position: 100% 0; }
+  100% { background-position: 0% 0; }
 }
 
 /* "By JAE Fondation" fade-in */
