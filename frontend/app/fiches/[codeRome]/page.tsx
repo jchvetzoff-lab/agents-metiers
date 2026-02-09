@@ -276,13 +276,13 @@ export default function FicheDetailPage() {
       }
 
       function subTitle(text: string) {
-        ensureSpace(12);
-        y += 2;
+        ensureSpace(14);
+        y += 4;
         pdf.setFontSize(8.5);
         pdf.setFont("helvetica", "bold");
         txt(C.gray500);
         pdf.text(text.toUpperCase(), ML + 2, y);
-        y += 5;
+        y += 7;
       }
 
       function bodyText(text: string) {
@@ -394,7 +394,7 @@ export default function FicheDetailPage() {
       fill(C.purple);
       pdf.rect(0, 0, W, 3, "F");
 
-      y = 14;
+      y = 16;
 
       // Code ROME pill
       fill(C.purpleBadgeBg);
@@ -405,7 +405,7 @@ export default function FicheDetailPage() {
       txt(C.purple);
       pdf.text(d.code_rome, ML + 7, y + 1.5);
 
-      y += 10;
+      y += 16;
 
       // Title — large
       pdf.setFontSize(26);
@@ -417,19 +417,19 @@ export default function FicheDetailPage() {
         y += 11;
       }
 
-      y += 3;
+      y += 6;
 
       // Description courte
       if (d.description_courte) {
         pdf.setFontSize(11);
         pdf.setFont("helvetica", "italic");
         txt(C.gray500);
-        const descLines = pdf.splitTextToSize(d.description_courte, CW - 4);
+        const descLines = pdf.splitTextToSize(d.description_courte, CW);
         for (const line of descLines) {
-          pdf.text(line, ML + 2, y);
+          pdf.text(line, ML, y);
           y += 5.5;
         }
-        y += 4;
+        y += 5;
       }
 
       // Version & date
@@ -437,7 +437,7 @@ export default function FicheDetailPage() {
       pdf.setFont("helvetica", "normal");
       txt(C.gray400);
       pdf.text(`Version ${d.version}  |  Mis a jour le ${new Date(d.date_maj).toLocaleDateString("fr-FR")}`, ML, y);
-      y += 6;
+      y += 8;
 
       // Separator
       stroke(C.gray200);
@@ -477,8 +477,13 @@ export default function FicheDetailPage() {
       }
 
       // ══════════════════════════════════════════════
-      // STATISTIQUES
+      // PAGE 2 — STATISTIQUES + SAVOIR-FAIRE
       // ══════════════════════════════════════════════
+      drawFooter();
+      pdf.addPage();
+      pageNum++;
+      drawPageHeader();
+
       const showStats = d.salaires || d.perspectives || (d.types_contrats && (d.types_contrats.cdi > 0 || d.types_contrats.cdd > 0));
       if (showStats) {
         sectionTitle("Statistiques");
@@ -726,6 +731,16 @@ export default function FicheDetailPage() {
           pdf.text("Competences pratiques et techniques en situation professionnelle.", ML + 2, y);
           y += 7;
           numberedList(d.competences!);
+        }
+
+        // ══════════════════════════════════════════════
+        // PAGE 3 — SAVOIR-ETRE + CONTEXTES
+        // ══════════════════════════════════════════════
+        if (hasSE || hasSav) {
+          drawFooter();
+          pdf.addPage();
+          pageNum++;
+          drawPageHeader();
         }
 
         if (hasSE) {
