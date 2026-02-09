@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { api, FicheDetail, Variante } from "@/lib/api";
+import { api, FicheDetail, Variante, VarianteDetail } from "@/lib/api";
 import StatusBadge from "@/components/StatusBadge";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
@@ -137,6 +137,42 @@ export default function FicheDetailPage() {
   const [activeTab, setActiveTab] = useState<"sf" | "se" | "sa">("sf");
   const [activeSection, setActiveSection] = useState("infos");
   const [pdfLoading, setPdfLoading] = useState(false);
+
+  // Variante filters
+  const [filterGenre, setFilterGenre] = useState("masculin");
+  const [filterTranche, setFilterTranche] = useState("18+");
+  const [filterFormat, setFilterFormat] = useState("standard");
+  const [appliedVariante, setAppliedVariante] = useState<VarianteDetail | null>(null);
+  const [filterLoading, setFilterLoading] = useState(false);
+  const [filterError, setFilterError] = useState<string | null>(null);
+
+  async function handleApplyFilter() {
+    setFilterLoading(true);
+    setFilterError(null);
+    const match = variantes.find(
+      v => v.genre === filterGenre && v.tranche_age === filterTranche && v.format_contenu === filterFormat
+    );
+    if (!match) {
+      setFilterError("Aucune variante trouvee pour cette combinaison. Generez-la d'abord dans Actions > Variantes.");
+      setAppliedVariante(null);
+      setFilterLoading(false);
+      return;
+    }
+    try {
+      const detail = await api.getVarianteDetail(codeRome, match.id);
+      setAppliedVariante(detail);
+    } catch (e: any) {
+      setFilterError(e.message || "Erreur lors du chargement de la variante");
+      setAppliedVariante(null);
+    } finally {
+      setFilterLoading(false);
+    }
+  }
+
+  function handleResetFilter() {
+    setAppliedVariante(null);
+    setFilterError(null);
+  }
 
   useEffect(() => {
     (async () => {
@@ -891,11 +927,23 @@ export default function FicheDetailPage() {
       ]
     : null;
 
+  // Display data: use variante content when applied, fallback to fiche
+  const v = appliedVariante;
+  const dNom = v?.nom || fiche.nom_epicene;
+  const dDescription = v?.description || fiche.description;
+  const dDescriptionCourte = v?.description_courte || fiche.description_courte;
+  const dCompetences = v?.competences?.length ? v.competences : fiche.competences;
+  const dCompetencesTransversales = v?.competences_transversales?.length ? v.competences_transversales : fiche.competences_transversales;
+  const dFormations = v?.formations?.length ? v.formations : fiche.formations;
+  const dCertifications = v?.certifications?.length ? v.certifications : fiche.certifications;
+  const dConditions = v?.conditions_travail?.length ? v.conditions_travail : fiche.conditions_travail;
+  const dEnvironnements = v?.environnements?.length ? v.environnements : fiche.environnements;
+
   const hasMissions = (fiche.missions_principales?.length ?? 0) > 0;
-  const hasCompetences = (fiche.competences?.length ?? 0) > 0;
-  const hasSavoirEtre = (fiche.competences_transversales?.length ?? 0) > 0;
+  const hasCompetences = (dCompetences?.length ?? 0) > 0;
+  const hasSavoirEtre = (dCompetencesTransversales?.length ?? 0) > 0;
   const hasSavoirs = (fiche.savoirs?.length ?? 0) > 0;
-  const hasContextes = (fiche.conditions_travail?.length ?? 0) > 0 || (fiche.environnements?.length ?? 0) > 0;
+  const hasContextes = (dConditions?.length ?? 0) > 0 || (dEnvironnements?.length ?? 0) > 0;
   const hasMobilite = fiche.mobilite && ((fiche.mobilite.metiers_proches?.length ?? 0) > 0 || (fiche.mobilite.evolutions?.length ?? 0) > 0);
   const hasStats = salaryData || contractData || fiche.perspectives;
 
@@ -923,8 +971,8 @@ export default function FicheDetailPage() {
                 <span className="px-3 py-1 rounded-md bg-[#E4E1FF] text-[#4A39C0] text-sm font-bold">{fiche.code_rome}</span>
                 <StatusBadge statut={fiche.statut} />
               </div>
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#1A1A2E] mb-1">{fiche.nom_epicene}</h1>
-              {fiche.description_courte && <p className="text-gray-500 max-w-2xl">{fiche.description_courte}</p>}
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#1A1A2E] mb-1">{dNom}</h1>
+              {dDescriptionCourte && <p className="text-gray-500 max-w-2xl">{dDescriptionCourte}</p>}
             </div>
             <div className="flex flex-col items-end gap-3 shrink-0">
               {fiche.statut === "publiee" ? (
@@ -968,6 +1016,79 @@ export default function FicheDetailPage() {
         </div>
       </div>
 
+      {/* ── FILTRES VARIANTES ── */}
+      {variantes.length > 0 && (
+        <div className="bg-white border-b border-gray-200">
+          <div className="max-w-7xl mx-auto px-4 md:px-8 py-4">
+            <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
+              {/* Genre */}
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider w-14">Genre</span>
+                {[{ v: "masculin", l: "Masculin" }, { v: "feminin", l: "Feminin" }, { v: "epicene", l: "Epicene" }].map(g => (
+                  <label key={g.v} className="flex items-center gap-1.5 text-sm text-gray-700 cursor-pointer">
+                    <input type="radio" name="filter-genre" value={g.v} checked={filterGenre === g.v}
+                      onChange={() => setFilterGenre(g.v)}
+                      className="w-3.5 h-3.5 text-[#4A39C0] focus:ring-[#4A39C0]" />
+                    {g.l}
+                  </label>
+                ))}
+              </div>
+              {/* Tranche d'age */}
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider w-14">Age</span>
+                {[{ v: "18+", l: "18+" }, { v: "15-18", l: "15-18" }, { v: "11-15", l: "11-15" }].map(t => (
+                  <label key={t.v} className="flex items-center gap-1.5 text-sm text-gray-700 cursor-pointer">
+                    <input type="radio" name="filter-tranche" value={t.v} checked={filterTranche === t.v}
+                      onChange={() => setFilterTranche(t.v)}
+                      className="w-3.5 h-3.5 text-[#4A39C0] focus:ring-[#4A39C0]" />
+                    {t.l}
+                  </label>
+                ))}
+              </div>
+              {/* Format */}
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider w-14">Format</span>
+                {[{ v: "standard", l: "Standard" }, { v: "falc", l: "FALC" }].map(f => (
+                  <label key={f.v} className="flex items-center gap-1.5 text-sm text-gray-700 cursor-pointer">
+                    <input type="radio" name="filter-format" value={f.v} checked={filterFormat === f.v}
+                      onChange={() => setFilterFormat(f.v)}
+                      className="w-3.5 h-3.5 text-[#4A39C0] focus:ring-[#4A39C0]" />
+                    {f.l}
+                  </label>
+                ))}
+              </div>
+              {/* Boutons */}
+              <div className="flex items-center gap-2 ml-auto">
+                {appliedVariante && (
+                  <button
+                    onClick={handleResetFilter}
+                    className="px-4 py-1.5 border border-gray-300 text-gray-600 rounded-full text-xs font-medium hover:bg-gray-50 transition"
+                  >
+                    Fiche originale
+                  </button>
+                )}
+                <button
+                  onClick={handleApplyFilter}
+                  disabled={filterLoading}
+                  className="px-5 py-1.5 bg-[#4A39C0] text-white rounded-full text-xs font-medium hover:bg-[#3a2da0] transition disabled:opacity-50 disabled:cursor-wait"
+                >
+                  {filterLoading ? "Chargement..." : "Appliquer"}
+                </button>
+              </div>
+            </div>
+            {/* Variante active indicator */}
+            {appliedVariante && (
+              <div className="mt-2 text-xs text-[#4A39C0] font-medium">
+                Variante active : {appliedVariante.genre} / {appliedVariante.tranche_age} / {appliedVariante.format_contenu}
+              </div>
+            )}
+            {filterError && (
+              <div className="mt-2 text-xs text-red-600">{filterError}</div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ── CONTENT + SIDEBAR ── */}
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-8">
         <div className="flex gap-8">
@@ -990,9 +1111,9 @@ export default function FicheDetailPage() {
 
             {/* ═══ INFORMATIONS CLÉS ═══ */}
             <SectionAnchor id="infos" title="Informations clés" icon="📋">
-              {fiche.description && (
+              {dDescription && (
                 <div className="mb-6">
-                  <p className="text-gray-700 leading-relaxed text-[16px]">{fiche.description}</p>
+                  <p className="text-gray-700 leading-relaxed text-[16px]">{dDescription}</p>
                 </div>
               )}
               {hasMissions && (
@@ -1008,16 +1129,16 @@ export default function FicheDetailPage() {
                 </div>
               )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {fiche.formations && fiche.formations.length > 0 && (
+                {dFormations && dFormations.length > 0 && (
                   <div>
                     <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Formations & Diplômes</h3>
-                    <BulletList items={fiche.formations} color={PURPLE} />
+                    <BulletList items={dFormations} color={PURPLE} />
                   </div>
                 )}
-                {fiche.certifications && fiche.certifications.length > 0 && (
+                {dCertifications && dCertifications.length > 0 && (
                   <div>
                     <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Certifications</h3>
-                    <BulletList items={fiche.certifications} color={PINK} />
+                    <BulletList items={dCertifications} color={PINK} />
                   </div>
                 )}
               </div>
@@ -1109,8 +1230,8 @@ export default function FicheDetailPage() {
                 <div className="border-b border-gray-200 mb-6 overflow-x-auto scrollbar-hide">
                   <div className="flex gap-0 -mb-px min-w-0">
                     {[
-                      { id: "sf" as const, label: "Savoir-faire", count: fiche.competences?.length ?? 0, show: hasCompetences },
-                      { id: "se" as const, label: "Savoir-être", count: fiche.competences_transversales?.length ?? 0, show: hasSavoirEtre },
+                      { id: "sf" as const, label: "Savoir-faire", count: dCompetences?.length ?? 0, show: hasCompetences },
+                      { id: "se" as const, label: "Savoir-être", count: dCompetencesTransversales?.length ?? 0, show: hasSavoirEtre },
                       { id: "sa" as const, label: "Savoirs", count: fiche.savoirs?.length ?? 0, show: hasSavoirs },
                     ].filter(t => t.show).map(tab => (
                       <button key={tab.id} onClick={() => setActiveTab(tab.id)}
@@ -1130,10 +1251,10 @@ export default function FicheDetailPage() {
                   {activeTab === "se" && "Qualités humaines et comportementales pour interagir avec son environnement de travail."}
                   {activeTab === "sa" && "Connaissances théoriques acquises par la formation et l'expérience."}
                 </p>
-                {activeTab === "sf" && fiche.competences && <NumberedList items={fiche.competences} color={PURPLE} />}
-                {activeTab === "se" && fiche.competences_transversales && (
+                {activeTab === "sf" && dCompetences && <NumberedList items={dCompetences} color={PURPLE} />}
+                {activeTab === "se" && dCompetencesTransversales && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {fiche.competences_transversales.map((c, i) => (
+                    {dCompetencesTransversales.map((c, i) => (
                       <div key={i} className="flex items-center gap-3 p-3.5 rounded-xl bg-[#FFF5F7] border border-[#FFE0E6]/60">
                         <span className="w-8 h-8 rounded-full bg-[#FF3254] text-white flex items-center justify-center text-xs font-bold shrink-0">✓</span>
                         <span className="text-[15px] text-gray-700">{c}</span>
@@ -1158,16 +1279,16 @@ export default function FicheDetailPage() {
             {hasContextes && (
               <SectionAnchor id="contextes" title="Contextes de travail" icon="🏢">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {fiche.conditions_travail && fiche.conditions_travail.length > 0 && (
+                  {dConditions && dConditions.length > 0 && (
                     <div>
                       <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Conditions de travail et risques professionnels</h3>
-                      <BulletList items={fiche.conditions_travail} color={PURPLE} />
+                      <BulletList items={dConditions} color={PURPLE} />
                     </div>
                   )}
-                  {fiche.environnements && fiche.environnements.length > 0 && (
+                  {dEnvironnements && dEnvironnements.length > 0 && (
                     <div>
                       <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Structures & Environnements</h3>
-                      <BulletList items={fiche.environnements} color={CYAN} />
+                      <BulletList items={dEnvironnements} color={CYAN} />
                     </div>
                   )}
                 </div>

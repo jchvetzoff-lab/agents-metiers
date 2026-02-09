@@ -89,6 +89,18 @@ export interface Variante {
   date_maj: string;
 }
 
+export interface VarianteDetail extends Variante {
+  code_rome: string;
+  description?: string;
+  competences: string[];
+  competences_transversales: string[];
+  formations: string[];
+  certifications: string[];
+  conditions_travail: string[];
+  environnements: string[];
+  version: number;
+}
+
 export interface AuditLog {
   id: number;
   type_evenement: string;
@@ -178,8 +190,8 @@ class ApiClient {
     );
   }
 
-  async getVarianteDetail(codeRome: string, varianteId: number): Promise<any> {
-    return this.request<any>(`/api/fiches/${codeRome}/variantes/${varianteId}`);
+  async getVarianteDetail(codeRome: string, varianteId: number): Promise<VarianteDetail> {
+    return this.request<VarianteDetail>(`/api/fiches/${codeRome}/variantes/${varianteId}`);
   }
 
   // ==================== ACTIONS ====================
