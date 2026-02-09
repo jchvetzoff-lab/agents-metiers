@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -44,26 +45,32 @@ const NAV_ITEMS = [
 
 export default function Navbar() {
   const pathname = usePathname();
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Close mobile menu on navigation
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
 
   return (
     <nav className="sticky top-0 z-[100] bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm">
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="flex items-center justify-between h-20">
-          {/* Logo - Plus visible et pro */}
+      <div className="max-w-7xl mx-auto px-4 md:px-6">
+        <div className="flex items-center justify-between h-16 md:h-20">
+          {/* Logo */}
           <Link href="/" className="flex items-center gap-3 group">
             <div className="w-10 h-10 rounded-xl bg-gradient-purple-pink flex items-center justify-center text-white text-xl font-bold shadow-md group-hover:shadow-lg transition-all">
               AM
             </div>
             <div>
               <div className="font-bold text-lg text-gray-900 group-hover:text-purple transition-colors">
-                Agents Métiers
+                Agents Metiers
               </div>
-              <div className="text-xs text-gray-500">By JAE Fondation</div>
+              <div className="text-xs text-gray-500 hidden sm:block">By JAE Fondation</div>
             </div>
           </Link>
 
-          {/* Navigation - Avec icônes */}
-          <div className="flex items-center gap-1">
+          {/* Desktop nav */}
+          <div className="hidden md:flex items-center gap-1">
             {NAV_ITEMS.map((item) => {
               const isActive = pathname === item.href;
               return (
@@ -82,8 +89,50 @@ export default function Navbar() {
               );
             })}
           </div>
+
+          {/* Mobile hamburger */}
+          <button
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition"
+            aria-label="Menu"
+          >
+            {mobileOpen ? (
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            ) : (
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            )}
+          </button>
         </div>
       </div>
+
+      {/* Mobile menu dropdown */}
+      {mobileOpen && (
+        <div className="md:hidden border-t border-gray-200 bg-white/95 backdrop-blur-md">
+          <div className="px-4 py-3 space-y-1">
+            {NAV_ITEMS.map((item) => {
+              const isActive = pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all ${
+                    isActive
+                      ? "bg-purple text-white shadow-md"
+                      : "text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  {item.icon}
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </nav>
   );
 }

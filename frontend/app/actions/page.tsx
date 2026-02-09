@@ -114,12 +114,12 @@ export default function ActionsPage() {
       {/* Tabs */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-5xl mx-auto px-4 md:px-8">
-          <div className="flex gap-0 -mb-px overflow-x-auto">
+          <div className="flex gap-0 -mb-px overflow-x-auto scrollbar-hide">
             {tabs.map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-5 py-3.5 text-sm font-medium border-b-2 transition-all whitespace-nowrap ${
+                className={`px-3 md:px-5 py-3.5 text-xs md:text-sm font-medium border-b-2 transition-all whitespace-nowrap ${
                   activeTab === tab.id
                     ? "border-[#4A39C0] text-[#4A39C0]"
                     : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"

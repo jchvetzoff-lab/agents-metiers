@@ -16,7 +16,7 @@ export default function Home() {
             les <span className="text-purple font-semibold">1 584 fiches métiers</span> du référentiel ROME
           </p>
 
-          <div className="flex gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
             <Link href="/dashboard" className="btn btn-primary">
               Voir le Dashboard →
             </Link>

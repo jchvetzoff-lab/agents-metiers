@@ -55,7 +55,7 @@ export default function DashboardPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
             </div>
-            <h1 className="text-5xl font-serif font-bold gradient-text">Dashboard</h1>
+            <h1 className="text-3xl md:text-5xl font-serif font-bold gradient-text">Dashboard</h1>
           </div>
           <p className="text-xl text-text-muted">
             Vue d'ensemble de vos fiches métiers et statistiques en temps réel
@@ -63,7 +63,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Métriques */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-6 mb-16">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 md:gap-6 mb-16">
           <MetricCard
             label="Total des fiches"
             value={stats?.total || 0}
@@ -107,7 +107,7 @@ export default function DashboardPage() {
             <h3 className="text-xl font-serif font-bold mb-4 text-center">
               Repartition par statut
             </h3>
-            <div className="h-72">
+            <div className="h-56 md:h-72">
               {stats && stats.total > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -152,7 +152,7 @@ export default function DashboardPage() {
             <h3 className="text-xl font-serif font-bold mb-4 text-center">
               Pipeline de traitement
             </h3>
-            <div className="h-72">
+            <div className="h-56 md:h-72">
               {stats && stats.total > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
