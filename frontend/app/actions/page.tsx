@@ -79,13 +79,13 @@ function useSearchFiches(statut: string, limit = 100) {
   return { fiches, setFiches, loading, search, handleSearch, total, refetch: () => fetchFiches(search) };
 }
 
-type Tab = "creer" | "enrichir" | "valider" | "publier" | "variantes" | "exporter";
+type Tab = "maj" | "enrichir" | "valider" | "publier" | "variantes" | "exporter";
 
 export default function ActionsPage() {
-  const [activeTab, setActiveTab] = useState<Tab>("creer");
+  const [activeTab, setActiveTab] = useState<Tab>("maj");
 
   const tabs: { id: Tab; label: string; icon: string }[] = [
-    { id: "creer", label: "Creer une fiche", icon: "+" },
+    { id: "maj", label: "Mise a jour", icon: "R" },
     { id: "enrichir", label: "Enrichissement IA", icon: "A" },
     { id: "valider", label: "Validation", icon: "V" },
     { id: "publier", label: "Publication", icon: "P" },
@@ -135,7 +135,7 @@ export default function ActionsPage() {
 
       {/* Content */}
       <div className="max-w-5xl mx-auto px-4 md:px-8 py-8">
-        {activeTab === "creer" && <TabCreer />}
+        {activeTab === "maj" && <TabMiseAJour />}
         {activeTab === "enrichir" && <TabEnrichir />}
         {activeTab === "valider" && <TabValider />}
         {activeTab === "publier" && <TabPublier />}
@@ -147,115 +147,357 @@ export default function ActionsPage() {
 }
 
 // ══════════════════════════════════════
-// TAB: CREER UNE FICHE
+// TAB: MISE A JOUR
 // ══════════════════════════════════════
 
-function TabCreer() {
-  const [form, setForm] = useState({
-    code_rome: "",
-    nom_masculin: "",
-    nom_feminin: "",
-    nom_epicene: "",
-    description: "",
-  });
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<{ type: "success" | "error"; message: string } | null>(null);
+function useSearchAllFiches(excludeStatut?: string, limit = 100) {
+  const [fiches, setFiches] = useState<FicheMetier[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [total, setTotal] = useState(0);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!form.code_rome || !form.nom_masculin || !form.nom_feminin || !form.nom_epicene) {
-      setResult({ type: "error", message: "Tous les champs obligatoires doivent etre remplis." });
-      return;
-    }
+  const fetchFiches = useCallback(async (searchTerm: string) => {
     setLoading(true);
-    setResult(null);
     try {
-      const res = await api.createFiche(form);
-      setResult({ type: "success", message: `Fiche ${res.code_rome} creee avec succes !` });
-      setForm({ code_rome: "", nom_masculin: "", nom_feminin: "", nom_epicene: "", description: "" });
-    } catch (err: any) {
-      setResult({ type: "error", message: err.message || "Erreur lors de la creation" });
+      const data = await api.getFiches({ search: searchTerm || undefined, limit: 500 });
+      const filtered = excludeStatut
+        ? data.results.filter(f => f.statut !== excludeStatut)
+        : data.results;
+      setFiches(filtered.slice(0, limit));
+      setTotal(excludeStatut ? filtered.length : data.total);
+    } catch (e) {
+      console.error(e);
     } finally {
       setLoading(false);
+    }
+  }, [excludeStatut, limit]);
+
+  useEffect(() => {
+    fetchFiches("");
+  }, [fetchFiches]);
+
+  function handleSearch(value: string) {
+    setSearch(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      fetchFiches(value);
+    }, 300);
+  }
+
+  return { fiches, loading, search, handleSearch, total };
+}
+
+function TabMiseAJour() {
+  // === Section 1: Re-enrichir une fiche ===
+  const { fiches, loading, search, handleSearch, total } = useSearchAllFiches("brouillon", 100);
+  const [enriching, setEnriching] = useState<string | null>(null);
+  const [enrichResults, setEnrichResults] = useState<{ code: string; type: "success" | "error"; message: string }[]>([]);
+
+  // === Section 2: Sync ROME ===
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<{ type: "success" | "error"; message: string; details?: { nouvelles: number; mises_a_jour: number; inchangees: number } } | null>(null);
+
+  // === Section 3: Batch re-enrichment ===
+  const [batchScope, setBatchScope] = useState<"brouillon" | "en_validation" | "all">("brouillon");
+  const [batchStats, setBatchStats] = useState<Stats | null>(null);
+  const [batchRunning, setBatchRunning] = useState(false);
+  const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
+  const [batchLogs, setBatchLogs] = useState<{ code: string; type: "success" | "error"; message: string }[]>([]);
+  const abortRef = useRef(false);
+
+  useEffect(() => {
+    api.getStats().then(setBatchStats).catch(console.error);
+  }, []);
+
+  const batchCount = batchStats
+    ? batchScope === "brouillon" ? batchStats.brouillons
+    : batchScope === "en_validation" ? batchStats.en_validation
+    : batchStats.total
+    : 0;
+
+  async function handleEnrichOne(codeRome: string) {
+    setEnriching(codeRome);
+    try {
+      const res = await api.enrichFiche(codeRome);
+      setEnrichResults(prev => [{ code: codeRome, type: "success", message: res.message }, ...prev]);
+    } catch (err: any) {
+      setEnrichResults(prev => [{ code: codeRome, type: "error", message: err.message }, ...prev]);
+    } finally {
+      setEnriching(null);
+    }
+  }
+
+  async function handleSyncRome() {
+    setSyncing(true);
+    setSyncResult(null);
+    try {
+      const res = await api.syncRome();
+      setSyncResult({
+        type: "success",
+        message: res.message,
+        details: { nouvelles: res.nouvelles, mises_a_jour: res.mises_a_jour, inchangees: res.inchangees },
+      });
+      // Refresh batch stats
+      api.getStats().then(setBatchStats).catch(console.error);
+    } catch (err: any) {
+      setSyncResult({ type: "error", message: err.message || "Erreur lors de la synchronisation" });
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  async function handleBatchEnrich() {
+    abortRef.current = false;
+    setBatchRunning(true);
+    setBatchLogs([]);
+    try {
+      // Fetch all fiches for the selected scope
+      const statut = batchScope === "all" ? undefined : batchScope;
+      const data = await api.getFiches({ statut, limit: 500 });
+      const fichesToEnrich = data.results;
+      setBatchProgress({ current: 0, total: fichesToEnrich.length });
+
+      for (let i = 0; i < fichesToEnrich.length; i++) {
+        if (abortRef.current) {
+          setBatchLogs(prev => [{ code: "-", type: "error", message: "Arrete par l'utilisateur" }, ...prev]);
+          break;
+        }
+        const fiche = fichesToEnrich[i];
+        try {
+          const res = await api.enrichFiche(fiche.code_rome);
+          setBatchLogs(prev => [{ code: fiche.code_rome, type: "success", message: res.message }, ...prev]);
+        } catch (err: any) {
+          setBatchLogs(prev => [{ code: fiche.code_rome, type: "error", message: err.message }, ...prev]);
+        }
+        setBatchProgress({ current: i + 1, total: fichesToEnrich.length });
+      }
+    } catch (err: any) {
+      setBatchLogs(prev => [{ code: "-", type: "error", message: `Erreur: ${err.message}` }, ...prev]);
+    } finally {
+      setBatchRunning(false);
+      api.getStats().then(setBatchStats).catch(console.error);
     }
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-      <div className="px-6 md:px-8 py-5 border-b border-gray-100 bg-gray-50/50">
-        <h2 className="text-lg font-bold text-[#1A1A2E]">Creer une nouvelle fiche metier</h2>
-        <p className="text-sm text-gray-500 mt-1">La fiche sera creee en statut &quot;brouillon&quot;. Enrichissez-la ensuite avec l&apos;IA.</p>
+    <div className="space-y-8">
+      {/* ─── Section 1: Re-enrichir une fiche ─── */}
+      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+        <div className="px-6 md:px-8 py-5 border-b border-gray-100 bg-gray-50/50">
+          <h2 className="text-lg font-bold text-[#1A1A2E]">Re-enrichir une fiche</h2>
+          <p className="text-sm text-gray-500 mt-1">
+            Relancez l&apos;enrichissement Claude sur une fiche deja enrichie. La fiche repassera en statut <strong>en_validation</strong>.
+          </p>
+        </div>
+        <div className="px-6 md:px-8 py-4 space-y-3">
+          {/* Results */}
+          {enrichResults.length > 0 && (
+            <div className="space-y-2">
+              {enrichResults.slice(0, 3).map((r, i) => (
+                <div key={i} className={`p-3 rounded-lg text-sm ${
+                  r.type === "success" ? "bg-green-50 text-green-800 border border-green-200" : "bg-red-50 text-red-800 border border-red-200"
+                }`}>
+                  <strong>{r.code}</strong> : {r.message}
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-700">
+            La fiche repassera en statut <strong>en_validation</strong> apres re-enrichissement.
+          </div>
+
+          <SearchBar value={search} onChange={handleSearch} placeholder="Rechercher une fiche a re-enrichir..." />
+
+          <div className="divide-y divide-gray-100 max-h-[350px] overflow-y-auto border border-gray-100 rounded-lg">
+            {loading ? (
+              <div className="p-6 text-center text-gray-400">Chargement...</div>
+            ) : fiches.length === 0 ? (
+              <div className="p-6 text-center text-gray-400">
+                {search ? `Aucune fiche enrichie pour "${search}"` : "Aucune fiche enrichie trouvee"}
+              </div>
+            ) : (
+              fiches.map(fiche => (
+                <div key={fiche.code_rome} className="flex items-center justify-between px-4 py-2.5 hover:bg-gray-50 transition">
+                  <div className="min-w-0 flex items-center gap-2">
+                    <span className="text-xs font-bold text-[#4A39C0]">{fiche.code_rome}</span>
+                    <span className="text-sm text-gray-700 truncate">{fiche.nom_masculin}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${
+                      fiche.statut === "en_validation" ? "bg-yellow-100 text-yellow-700"
+                      : fiche.statut === "publiee" ? "bg-green-100 text-green-700"
+                      : "bg-gray-100 text-gray-600"
+                    }`}>{fiche.statut}</span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0 ml-4">
+                    <Link
+                      href={`/fiches/${fiche.code_rome}`}
+                      target="_blank"
+                      className="px-3 py-1.5 border border-gray-300 text-gray-600 rounded-full text-xs font-medium hover:border-[#4A39C0] hover:text-[#4A39C0] transition"
+                    >
+                      Voir
+                    </Link>
+                    <button
+                      onClick={() => handleEnrichOne(fiche.code_rome)}
+                      disabled={enriching !== null}
+                      className="px-4 py-1.5 bg-[#4A39C0] text-white rounded-full text-xs font-medium hover:bg-[#3a2da0] transition disabled:opacity-40 disabled:cursor-wait"
+                    >
+                      {enriching === fiche.code_rome ? (
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          ...
+                        </span>
+                      ) : "Re-enrichir"}
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          <div className="text-xs text-gray-400 text-right">{total} fiche{total > 1 ? "s" : ""} (hors brouillons)</div>
+        </div>
       </div>
-      <form onSubmit={handleSubmit} className="px-6 md:px-8 py-6 space-y-5">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Code ROME *</label>
-            <input
-              type="text"
-              placeholder="Ex: M1805"
-              value={form.code_rome}
-              onChange={e => setForm({ ...form, code_rome: e.target.value.toUpperCase() })}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-[#4A39C0] focus:ring-1 focus:ring-[#4A39C0]"
-            />
+
+      {/* ─── Section 2: Synchroniser le ROME ─── */}
+      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+        <div className="px-6 md:px-8 py-5 border-b border-gray-100 bg-gray-50/50">
+          <h2 className="text-lg font-bold text-[#1A1A2E]">Synchroniser le referentiel ROME</h2>
+          <p className="text-sm text-gray-500 mt-1">
+            Telecharge la derniere version du referentiel ROME depuis data.gouv.fr et detecte les nouvelles fiches ou modifications de noms.
+          </p>
+        </div>
+        <div className="px-6 md:px-8 py-5 space-y-4">
+          <div className="bg-[#F9F8FF] border border-[#E4E1FF] rounded-lg p-4 text-sm text-gray-600">
+            Le backend telechargera le fichier <strong>arborescence_principale.xlsx</strong> depuis data.gouv.fr,
+            comparera avec les fiches existantes, et creera les nouvelles fiches manquantes en statut brouillon.
+            Cette operation peut prendre <strong>10-30 secondes</strong>.
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Nom epicene *</label>
-            <input
-              type="text"
-              placeholder="Ex: Analyste de donnees"
-              value={form.nom_epicene}
-              onChange={e => setForm({ ...form, nom_epicene: e.target.value })}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-[#4A39C0] focus:ring-1 focus:ring-[#4A39C0]"
-            />
+
+          {syncResult && (
+            <div className={`p-4 rounded-lg text-sm ${
+              syncResult.type === "success" ? "bg-green-50 text-green-800 border border-green-200" : "bg-red-50 text-red-800 border border-red-200"
+            }`}>
+              <p className="font-medium">{syncResult.message}</p>
+              {syncResult.details && (
+                <div className="mt-2 flex gap-4 text-xs">
+                  <span className="bg-green-200 text-green-900 px-2 py-1 rounded-full">{syncResult.details.nouvelles} nouvelles</span>
+                  <span className="bg-blue-200 text-blue-900 px-2 py-1 rounded-full">{syncResult.details.mises_a_jour} mises a jour</span>
+                  <span className="bg-gray-200 text-gray-700 px-2 py-1 rounded-full">{syncResult.details.inchangees} inchangees</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          <button
+            onClick={handleSyncRome}
+            disabled={syncing}
+            className="px-6 py-2.5 bg-[#4A39C0] text-white rounded-full font-medium text-sm hover:bg-[#3a2da0] transition disabled:opacity-50 disabled:cursor-wait"
+          >
+            {syncing ? (
+              <span className="flex items-center gap-2">
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Synchronisation en cours...
+              </span>
+            ) : "Synchroniser le ROME"}
+          </button>
+        </div>
+      </div>
+
+      {/* ─── Section 3: Re-enrichir en batch ─── */}
+      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+        <div className="px-6 md:px-8 py-5 border-b border-gray-100 bg-gray-50/50">
+          <h2 className="text-lg font-bold text-[#1A1A2E]">Re-enrichir en batch</h2>
+          <p className="text-sm text-gray-500 mt-1">
+            Lancez l&apos;enrichissement Claude sur un lot de fiches. Traitement sequentiel, fiche par fiche.
+          </p>
+        </div>
+        <div className="px-6 md:px-8 py-5 space-y-4">
+          {/* Scope selection */}
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-gray-700">Scope</h3>
+            <div className="flex gap-4">
+              {[
+                { value: "brouillon" as const, label: "Brouillons uniquement", count: batchStats?.brouillons },
+                { value: "en_validation" as const, label: "Deja enrichies", count: batchStats?.en_validation },
+                { value: "all" as const, label: "Toutes les fiches", count: batchStats?.total },
+              ].map(opt => (
+                <label key={opt.value} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="batchScope"
+                    checked={batchScope === opt.value}
+                    onChange={() => setBatchScope(opt.value)}
+                    disabled={batchRunning}
+                    className="w-4 h-4 text-[#4A39C0] focus:ring-[#4A39C0]"
+                  />
+                  {opt.label} {opt.count != null && <span className="text-xs text-gray-400">({opt.count})</span>}
+                </label>
+              ))}
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Nom masculin *</label>
-            <input
-              type="text"
-              placeholder="Ex: Analyste de donnees"
-              value={form.nom_masculin}
-              onChange={e => setForm({ ...form, nom_masculin: e.target.value })}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-[#4A39C0] focus:ring-1 focus:ring-[#4A39C0]"
-            />
+
+          {/* Cost warning */}
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-700">
+            <strong>{batchCount}</strong> fiche{batchCount > 1 ? "s" : ""} a enrichir.
+            Cout estime : <strong>~${(batchCount * 0.015).toFixed(2)}</strong> (~$0.015/fiche).
+            {batchScope !== "brouillon" && " Les fiches enrichies repasseront en statut en_validation."}
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Nom feminin *</label>
-            <input
-              type="text"
-              placeholder="Ex: Analyste de donnees"
-              value={form.nom_feminin}
-              onChange={e => setForm({ ...form, nom_feminin: e.target.value })}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-[#4A39C0] focus:ring-1 focus:ring-[#4A39C0]"
-            />
+
+          {/* Progress */}
+          {(batchRunning || batchProgress.total > 0) && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600">
+                  {batchProgress.current}/{batchProgress.total} fiches
+                  {batchProgress.total > 0 && ` (${Math.round(batchProgress.current / batchProgress.total * 100)}%)`}
+                </span>
+                {batchRunning && (
+                  <div className="flex items-center gap-2 text-[#4A39C0]">
+                    <div className="w-3 h-3 border-2 border-[#4A39C0]/30 border-t-[#4A39C0] rounded-full animate-spin" />
+                    En cours...
+                  </div>
+                )}
+              </div>
+              <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-[#4A39C0] rounded-full transition-all duration-300"
+                  style={{ width: batchProgress.total > 0 ? `${(batchProgress.current / batchProgress.total) * 100}%` : "0%" }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Batch logs */}
+          {batchLogs.length > 0 && (
+            <div className="max-h-[200px] overflow-y-auto space-y-1 border border-gray-100 rounded-lg p-3 bg-gray-50">
+              {batchLogs.slice(0, 50).map((r, i) => (
+                <div key={i} className={`text-xs ${r.type === "success" ? "text-green-700" : "text-red-600"}`}>
+                  <strong>{r.code}</strong> : {r.message}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Buttons */}
+          <div className="flex gap-3">
+            <button
+              onClick={handleBatchEnrich}
+              disabled={batchRunning || batchCount === 0}
+              className="px-6 py-2.5 bg-[#4A39C0] text-white rounded-full font-medium text-sm hover:bg-[#3a2da0] transition disabled:opacity-50 disabled:cursor-wait"
+            >
+              {batchRunning ? "Enrichissement en cours..." : "Lancer le re-enrichissement"}
+            </button>
+            {batchRunning && (
+              <button
+                onClick={() => { abortRef.current = true; }}
+                className="px-6 py-2.5 border border-red-300 text-red-600 rounded-full font-medium text-sm hover:bg-red-50 transition"
+              >
+                Arreter
+              </button>
+            )}
           </div>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Description (optionnel)</label>
-          <textarea
-            placeholder="Description du metier..."
-            value={form.description}
-            onChange={e => setForm({ ...form, description: e.target.value })}
-            rows={3}
-            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-[#4A39C0] focus:ring-1 focus:ring-[#4A39C0] resize-none"
-          />
-        </div>
-
-        {result && (
-          <div className={`p-4 rounded-lg text-sm ${
-            result.type === "success" ? "bg-green-50 text-green-800 border border-green-200" : "bg-red-50 text-red-800 border border-red-200"
-          }`}>
-            {result.message}
-          </div>
-        )}
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="px-6 py-2.5 bg-[#4A39C0] text-white rounded-full font-medium text-sm hover:bg-[#3a2da0] transition disabled:opacity-50 disabled:cursor-wait"
-        >
-          {loading ? "Creation en cours..." : "Creer la fiche"}
-        </button>
-      </form>
+      </div>
     </div>
   );
 }

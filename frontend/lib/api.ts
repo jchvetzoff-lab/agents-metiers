@@ -299,6 +299,12 @@ class ApiClient {
     });
   }
 
+  // ==================== ROME SYNC ====================
+
+  async syncRome(): Promise<{ message: string; nouvelles: number; mises_a_jour: number; inchangees: number }> {
+    return this.request("/api/rome/sync", { method: "POST" });
+  }
+
   // ==================== LOGS ====================
 
   async getAuditLogs(limit: number = 15): Promise<{ total: number; logs: AuditLog[] }> {
