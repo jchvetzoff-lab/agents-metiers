@@ -17,6 +17,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
   // Si deja connecte, rediriger
@@ -51,13 +52,16 @@ export default function LoginPage() {
 
     try {
       if (phase === "signup") {
-        const result = await api.register(email, password, name);
-        setToken(result.token);
+        await api.register(email, password, name);
+        // Compte cree, basculer vers login
+        setPhase("login");
+        setSuccess("Compte cree avec succes. Connectez-vous.");
+        setPassword("");
       } else {
         const result = await api.login(email, password);
         setToken(result.token);
+        router.replace("/dashboard");
       }
-      router.replace("/dashboard");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Erreur de connexion";
       setError(message);
@@ -130,6 +134,12 @@ export default function LoginPage() {
           <h2 className="text-base font-semibold text-gray-900 mb-4 text-center">
             {phase === "login" ? "Connexion" : "Creer un compte"}
           </h2>
+
+          {success && (
+            <div className="mb-3 p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs">
+              {success}
+            </div>
+          )}
 
           {error && (
             <div className="mb-3 p-2.5 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs">
@@ -206,6 +216,7 @@ export default function LoginPage() {
               onClick={() => {
                 setPhase(phase === "login" ? "signup" : "login");
                 setError("");
+                setSuccess("");
               }}
               className="text-xs text-gray-500 hover:text-purple transition-colors"
             >
