@@ -26,34 +26,18 @@ export default function LoginPage() {
     }
   }, [router]);
 
-  // Animation intro - jouee une seule fois par session
+  // Animation intro - rejouee a chaque chargement
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const alreadyPlayed = sessionStorage.getItem("intro_played");
-    if (alreadyPlayed) {
-      setPhase("login");
-      return;
-    }
-
-    // Lancer l'animation
     setPhase("intro");
     const timers: NodeJS.Timeout[] = [];
 
-    // Step 1: "Comprendre les metiers."
     timers.push(setTimeout(() => setIntroStep(1), 300));
-    // Step 2: "Construire l'avenir."
     timers.push(setTimeout(() => setIntroStep(2), 1400));
-    // Step 3: pause
     timers.push(setTimeout(() => setIntroStep(3), 2800));
-    // Step 4: fade out
     timers.push(setTimeout(() => setIntroStep(4), 3800));
-    // Step 5: "By JAE Fondation"
     timers.push(setTimeout(() => setIntroStep(5), 4400));
-    // Step 6: transition login
     timers.push(setTimeout(() => {
       setIntroStep(6);
-      sessionStorage.setItem("intro_played", "1");
       setPhase("login");
     }, 5800));
 
@@ -131,32 +115,32 @@ export default function LoginPage() {
   // ==================== PHASE LOGIN / SIGNUP ====================
   return (
     <div className="min-h-screen flex items-center justify-center bg-white px-4">
-      <div className="intro-form w-full max-w-md">
-        {/* Logo */}
-        <div className="text-center mb-10">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-purple-pink flex items-center justify-center text-white text-2xl font-bold mx-auto shadow-lg mb-4">
+      <div className="intro-form w-full max-w-sm">
+        {/* Logo compact */}
+        <div className="text-center mb-6">
+          <div className="w-12 h-12 rounded-xl bg-gradient-purple-pink flex items-center justify-center text-white text-lg font-bold mx-auto shadow-md mb-2">
             AM
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Agents Metiers</h1>
-          <p className="text-sm text-gray-500 mt-1">By JAE Fondation</p>
+          <h1 className="text-lg font-bold text-gray-900">Agents Metiers</h1>
+          <p className="text-xs text-gray-400 mt-0.5">By JAE Fondation</p>
         </div>
 
         {/* Form Card */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-xl p-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6 text-center">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-xl px-6 py-5">
+          <h2 className="text-base font-semibold text-gray-900 mb-4 text-center">
             {phase === "login" ? "Connexion" : "Creer un compte"}
           </h2>
 
           {error && (
-            <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
+            <div className="mb-3 p-2.5 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs">
               {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-3">
             {phase === "signup" && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label className="block text-xs font-medium text-gray-700 mb-1">
                   Nom
                 </label>
                 <input
@@ -171,7 +155,7 @@ export default function LoginPage() {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-xs font-medium text-gray-700 mb-1">
                 Email
               </label>
               <input
@@ -185,7 +169,7 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-xs font-medium text-gray-700 mb-1">
                 Mot de passe
               </label>
               <input
@@ -202,7 +186,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 rounded-xl bg-gradient-purple-pink text-white font-semibold shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-2.5 rounded-xl bg-gradient-purple-pink text-white text-sm font-semibold shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -217,13 +201,13 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-6 text-center">
+          <div className="mt-4 text-center">
             <button
               onClick={() => {
                 setPhase(phase === "login" ? "signup" : "login");
                 setError("");
               }}
-              className="text-sm text-gray-500 hover:text-purple transition-colors"
+              className="text-xs text-gray-500 hover:text-purple transition-colors"
             >
               {phase === "login" ? (
                 <>
