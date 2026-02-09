@@ -407,44 +407,44 @@ function VariantesCheckboxes({ genres, setGenres, tranches, setTranches, formats
   const total = genres.size * tranches.size * formats.size;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2.5">
       <div>
-        <h5 className="text-xs font-semibold text-gray-700 mb-2">Genre grammatical</h5>
+        <h5 className="text-xs font-semibold text-gray-700 mb-1.5">Genre grammatical</h5>
         <div className="flex gap-3">
           {[{ v: "masculin", l: "Masculin" }, { v: "feminin", l: "Feminin" }, { v: "epicene", l: "Epicene" }].map(g => (
-            <label key={g.v} className="flex items-center gap-1.5 text-sm text-gray-700 cursor-pointer">
+            <label key={g.v} className="flex items-center gap-1.5 text-xs text-gray-700 cursor-pointer">
               <input type="checkbox" checked={genres.has(g.v)} onChange={() => toggle(genres, setGenres, g.v)}
-                className="w-4 h-4 rounded border-gray-300 text-[#4A39C0] focus:ring-[#4A39C0]" />
+                className="w-3.5 h-3.5 rounded border-gray-300 text-[#4A39C0] focus:ring-[#4A39C0]" />
               {g.l}
             </label>
           ))}
         </div>
       </div>
       <div>
-        <h5 className="text-xs font-semibold text-gray-700 mb-2">Tranche d&apos;age</h5>
+        <h5 className="text-xs font-semibold text-gray-700 mb-1.5">Tranche d&apos;age</h5>
         <div className="flex gap-3">
           {[{ v: "18+", l: "Adultes (18+)" }, { v: "15-18", l: "Ados (15-18)" }, { v: "11-15", l: "Jeunes (11-15)" }].map(t => (
-            <label key={t.v} className="flex items-center gap-1.5 text-sm text-gray-700 cursor-pointer">
+            <label key={t.v} className="flex items-center gap-1.5 text-xs text-gray-700 cursor-pointer">
               <input type="checkbox" checked={tranches.has(t.v)} onChange={() => toggle(tranches, setTranches, t.v)}
-                className="w-4 h-4 rounded border-gray-300 text-[#4A39C0] focus:ring-[#4A39C0]" />
+                className="w-3.5 h-3.5 rounded border-gray-300 text-[#4A39C0] focus:ring-[#4A39C0]" />
               {t.l}
             </label>
           ))}
         </div>
       </div>
       <div>
-        <h5 className="text-xs font-semibold text-gray-700 mb-2">Format</h5>
+        <h5 className="text-xs font-semibold text-gray-700 mb-1.5">Format</h5>
         <div className="flex gap-3">
           {[{ v: "standard", l: "Standard" }, { v: "falc", l: "FALC" }].map(f => (
-            <label key={f.v} className="flex items-center gap-1.5 text-sm text-gray-700 cursor-pointer">
+            <label key={f.v} className="flex items-center gap-1.5 text-xs text-gray-700 cursor-pointer">
               <input type="checkbox" checked={formats.has(f.v)} onChange={() => toggle(formats, setFormats, f.v)}
-                className="w-4 h-4 rounded border-gray-300 text-[#4A39C0] focus:ring-[#4A39C0]" />
+                className="w-3.5 h-3.5 rounded border-gray-300 text-[#4A39C0] focus:ring-[#4A39C0]" />
               {f.l}
             </label>
           ))}
         </div>
       </div>
-      <div className="text-sm font-medium text-[#4A39C0]">
+      <div className="text-xs font-medium text-[#4A39C0]">
         {total > 0 ? `${total} variante${total > 1 ? "s" : ""} a generer` : "Selectionnez au moins une option par axe"}
       </div>
     </div>
@@ -804,12 +804,11 @@ function TabValider() {
       {/* Modal variantes */}
       {variantesModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl border-2 border-[#4A39C0] p-6 space-y-5 shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl border-2 border-[#4A39C0] p-5 space-y-3 shadow-xl max-w-md w-full">
             <div>
-              <h3 className="text-lg font-bold text-[#1A1A2E]">Generer des variantes ?</h3>
-              <p className="text-sm text-gray-500 mt-1">
-                La fiche <strong>{variantesModal}</strong> sera approuvee et publiee.
-                Choisissez les variantes a generer (ou publiez sans variantes).
+              <h3 className="text-base font-bold text-[#1A1A2E]">Generer des variantes ?</h3>
+              <p className="text-xs text-gray-500 mt-1">
+                Fiche <strong>{variantesModal}</strong> — sera approuvee et publiee.
               </p>
             </div>
 
@@ -819,36 +818,30 @@ function TabValider() {
               formats={vFormats} setFormats={setVFormats}
             />
 
-            <div className="bg-[#F9F8FF] border border-[#E4E1FF] rounded-lg p-3">
-              <p className="text-xs text-gray-500">
-                La generation utilise Claude API (~$0.01-0.05 par appel) et peut prendre 10-30 secondes.
-              </p>
-            </div>
-
-            <div className="flex gap-3 pt-1">
+            <div className="flex flex-wrap gap-2 pt-1">
               <button
                 onClick={handleApproveWithVariantes}
                 disabled={generating || vGenres.size * vTranches.size * vFormats.size === 0}
-                className="px-5 py-2 bg-[#16A34A] text-white rounded-full text-sm font-medium hover:bg-[#15803D] transition disabled:opacity-40 disabled:cursor-wait"
+                className="px-4 py-2 bg-[#16A34A] text-white rounded-full text-xs font-medium hover:bg-[#15803D] transition disabled:opacity-40 disabled:cursor-wait"
               >
                 {generating ? (
                   <span className="flex items-center gap-2">
                     <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     Generation...
                   </span>
-                ) : "Approuver & Generer variantes"}
+                ) : "Approuver & Generer"}
               </button>
               <button
                 onClick={handleApproveWithoutVariantes}
                 disabled={generating}
-                className="px-5 py-2 border border-gray-300 text-gray-700 rounded-full text-sm font-medium hover:bg-gray-50 transition disabled:opacity-40"
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-full text-xs font-medium hover:bg-gray-50 transition disabled:opacity-40"
               >
-                Approuver sans variantes
+                Sans variantes
               </button>
               <button
                 onClick={() => setVariantesModal(null)}
                 disabled={generating}
-                className="px-5 py-2 text-gray-400 text-sm hover:text-gray-600 transition"
+                className="px-4 py-2 text-gray-400 text-xs hover:text-gray-600 transition"
               >
                 Annuler
               </button>
