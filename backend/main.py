@@ -281,7 +281,7 @@ class FicheMetierCreate(BaseModel):
 
 
 @app.post("/api/fiches", status_code=201)
-async def create_fiche(fiche_data: FicheMetierCreate):
+async def create_fiche(fiche_data: FicheMetierCreate, current_user: dict = Depends(get_current_user)):
     """Crée une nouvelle fiche métier."""
     try:
         # Vérifier si la fiche existe déjà
@@ -307,11 +307,12 @@ async def create_fiche(fiche_data: FicheMetierCreate):
 
         fiche_creee = repo.create_fiche(nouvelle_fiche)
 
+        user_name = current_user.get("name", "Utilisateur")
         log_action(
             TypeEvenement.CREATION,
-            f"Création de la fiche {fiche_data.code_rome} ({fiche_data.nom_epicene})",
+            f"Création de la fiche {fiche_data.code_rome} ({fiche_data.nom_epicene}) par {user_name}",
             code_rome=fiche_data.code_rome,
-            agent="Utilisateur",
+            agent=user_name,
         )
 
         return {
@@ -588,7 +589,7 @@ Notes :
 
 
 @app.post("/api/fiches/{code_rome}/enrich")
-def enrich_fiche(code_rome: str):
+def enrich_fiche(code_rome: str, current_user: dict = Depends(get_current_user)):
     """Enrichit une fiche métier avec Claude API."""
     try:
         fiche = repo.get_fiche(code_rome)
@@ -654,11 +655,12 @@ def enrich_fiche(code_rome: str):
         updated_fiche = FicheMetier(**fiche_dict)
         repo.update_fiche(updated_fiche)
 
+        user_name = current_user.get("name", "Utilisateur")
         log_action(
             TypeEvenement.MODIFICATION,
-            f"Enrichissement IA de {code_rome} ({fiche.nom_epicene}) - v{updated_fiche.metadata.version}",
+            f"Enrichissement IA de {code_rome} ({fiche.nom_epicene}) par {user_name} - v{updated_fiche.metadata.version}",
             code_rome=code_rome,
-            agent="Claude IA",
+            agent=user_name,
         )
 
         return {
@@ -718,7 +720,7 @@ class PublishBatchRequest(BaseModel):
 
 
 @app.post("/api/fiches/publish-batch")
-async def publish_batch(request: PublishBatchRequest):
+async def publish_batch(request: PublishBatchRequest, current_user: dict = Depends(get_current_user)):
     """Publie plusieurs fiches en masse."""
     results = []
     for code_rome in request.codes_rome:
@@ -736,11 +738,12 @@ async def publish_batch(request: PublishBatchRequest):
             updated_fiche = FicheMetier(**fiche_dict)
             repo.update_fiche(updated_fiche)
             results.append({"code_rome": code_rome, "status": "ok", "message": "Publiée"})
+            user_name = current_user.get("name", "Utilisateur")
             log_action(
                 TypeEvenement.PUBLICATION,
-                f"Publication batch de {code_rome}",
+                f"Publication batch de {code_rome} par {user_name}",
                 code_rome=code_rome,
-                agent="Utilisateur",
+                agent=user_name,
             )
         except Exception as e:
             results.append({"code_rome": code_rome, "status": "error", "message": str(e)})
@@ -809,7 +812,7 @@ Notes :
 
 
 @app.post("/api/fiches/{code_rome}/validate")
-def validate_fiche(code_rome: str):
+def validate_fiche(code_rome: str, current_user: dict = Depends(get_current_user)):
     """Validation IA : Claude analyse la qualité de la fiche et retourne un rapport."""
     try:
         fiche = repo.get_fiche(code_rome)
@@ -862,11 +865,12 @@ def validate_fiche(code_rome: str):
 
         rapport = json.loads(json_match.group())
 
+        user_name = current_user.get("name", "Utilisateur")
         log_action(
             TypeEvenement.VALIDATION,
-            f"Validation IA de {code_rome} ({fiche.nom_epicene}) - Score: {rapport.get('score', '?')}/100 - Verdict: {rapport.get('verdict', '?')}",
+            f"Validation IA de {code_rome} ({fiche.nom_epicene}) par {user_name} - Score: {rapport.get('score', '?')}/100 - Verdict: {rapport.get('verdict', '?')}",
             code_rome=code_rome,
-            agent="Claude IA",
+            agent=user_name,
         )
 
         return {
@@ -959,7 +963,7 @@ async def review_fiche(code_rome: str, review: HumanReviewRequest, current_user:
 # ==================== DELETE ====================
 
 @app.delete("/api/fiches/{code_rome}")
-async def delete_fiche(code_rome: str):
+async def delete_fiche(code_rome: str, current_user: dict = Depends(get_current_user)):
     """Supprime définitivement une fiche métier."""
     try:
         fiche = repo.get_fiche(code_rome)
@@ -974,11 +978,12 @@ async def delete_fiche(code_rome: str):
         with repo.session() as session:
             session.execute(sql_delete(FicheMetierDB).where(FicheMetierDB.code_rome == code_rome))
 
+        user_name = current_user.get("name", "Utilisateur")
         log_action(
             TypeEvenement.ARCHIVAGE,
-            f"Suppression définitive de {code_rome} ({nom})",
+            f"Suppression définitive de {code_rome} ({nom}) par {user_name}",
             code_rome=code_rome,
-            agent="Utilisateur",
+            agent=user_name,
         )
 
         return {
@@ -1071,7 +1076,7 @@ class AutoCorrectRequest(BaseModel):
 
 
 @app.post("/api/fiches/{code_rome}/auto-correct")
-def auto_correct_fiche(code_rome: str, rapport: AutoCorrectRequest):
+def auto_correct_fiche(code_rome: str, rapport: AutoCorrectRequest, current_user: dict = Depends(get_current_user)):
     """Correction automatique IA : comble les lacunes identifiées par la validation."""
     try:
         fiche = repo.get_fiche(code_rome)
@@ -1158,11 +1163,12 @@ def auto_correct_fiche(code_rome: str, rapport: AutoCorrectRequest):
         updated_fiche = FicheMetier(**fiche_dict)
         repo.update_fiche(updated_fiche)
 
+        user_name = current_user.get("name", "Utilisateur")
         log_action(
             TypeEvenement.CORRECTION,
-            f"Correction automatique IA de {code_rome} ({fiche.nom_epicene}) - v{updated_fiche.metadata.version}",
+            f"Correction automatique IA de {code_rome} ({fiche.nom_epicene}) par {user_name} - v{updated_fiche.metadata.version}",
             code_rome=code_rome,
-            agent="Claude IA",
+            agent=user_name,
         )
 
         return {
@@ -1262,8 +1268,8 @@ class GenerateVariantesRequest(BaseModel):
 
 
 @app.post("/api/fiches/{code_rome}/variantes/generate")
-def generate_variantes(code_rome: str, request: GenerateVariantesRequest):
-    """Génère des variantes d'une fiche via Claude API (batch par lots de 6 max)."""
+def generate_variantes(code_rome: str, request: GenerateVariantesRequest, current_user: dict = Depends(get_current_user)):
+    """Génère des variantes d'une fiche via Claude API (batch par lots de 3 max)."""
     try:
         fiche = repo.get_fiche(code_rome)
         if not fiche:
@@ -1399,11 +1405,12 @@ def generate_variantes(code_rome: str, request: GenerateVariantesRequest):
                 except Exception as e:
                     print(f"Erreur sauvegarde variante: {e}")
 
+        user_name = current_user.get("name", "Utilisateur")
         log_action(
             TypeEvenement.MODIFICATION,
-            f"Génération de {saved_count} variantes pour {code_rome} ({fiche.nom_epicene})",
+            f"Génération de {saved_count} variantes pour {code_rome} ({fiche.nom_epicene}) par {user_name}",
             code_rome=code_rome,
-            agent="Claude IA",
+            agent=user_name,
         )
 
         return {
@@ -1449,7 +1456,7 @@ def parse_nom_genre(nom_complet: str) -> dict:
 
 
 @app.post("/api/rome/sync")
-async def sync_rome():
+async def sync_rome(current_user: dict = Depends(get_current_user)):
     """Synchronise le référentiel ROME depuis data.gouv.fr (télécharge arborescence_principale.xlsx)."""
     import tempfile
     import httpx
@@ -1567,10 +1574,11 @@ async def sync_rome():
                 else:
                     inchangees += 1
 
+        user_name = current_user.get("name", "Utilisateur")
         log_action(
             TypeEvenement.MODIFICATION,
-            f"Synchronisation ROME : {nouvelles} nouvelles, {mises_a_jour} mises à jour, {inchangees} inchangées",
-            agent="Système",
+            f"Synchronisation ROME par {user_name} : {nouvelles} nouvelles, {mises_a_jour} mises à jour, {inchangees} inchangées",
+            agent=user_name,
         )
 
         return {
