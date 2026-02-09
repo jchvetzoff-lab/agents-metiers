@@ -260,7 +260,7 @@ export default function FicheDetailPage() {
       }
 
       function sectionTitle(title: string) {
-        ensureSpace(45);
+        ensureSpace(65);
         y += 8;
         // Purple left bar (tall and prominent)
         fill(C.purple);
@@ -300,7 +300,7 @@ export default function FicheDetailPage() {
 
       function bulletList(items: string[], color: RGB = C.purple) {
         for (const item of items) {
-          ensureSpace(8);
+          ensureSpace(9);
           fill(color);
           pdf.circle(ML + 6, y - 1.2, 1.5, "F");
           pdf.setFontSize(9.5);
@@ -312,9 +312,9 @@ export default function FicheDetailPage() {
             pdf.text(lines[j], ML + 12, y);
             y += 5;
           }
-          y += 4;
+          y += 5.5;
         }
-        y += 3;
+        y += 2;
       }
 
       function numberedList(items: string[]) {
@@ -394,24 +394,7 @@ export default function FicheDetailPage() {
       fill(C.purple);
       pdf.rect(0, 0, W, 3, "F");
 
-      // Branding: AM logo + name
       y = 14;
-      fill(C.purple);
-      pdf.roundedRect(ML, y - 4, 10, 10, 2.5, 2.5, "F");
-      pdf.setFontSize(7);
-      pdf.setFont("helvetica", "bold");
-      txt(C.white);
-      pdf.text("AM", ML + 5, y + 2, { align: "center" });
-      pdf.setFontSize(10);
-      pdf.setFont("helvetica", "bold");
-      txt(C.dark);
-      pdf.text("Agents Metiers", ML + 13, y);
-      pdf.setFontSize(8);
-      pdf.setFont("helvetica", "normal");
-      txt(C.gray400);
-      pdf.text("JAE Fondation", ML + 13, y + 5);
-
-      y = 28;
 
       // Code ROME pill
       fill(C.purpleBadgeBg);
