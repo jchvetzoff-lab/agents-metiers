@@ -142,6 +142,7 @@ export default function FicheDetailPage() {
   const [filterGenre, setFilterGenre] = useState("masculin");
   const [filterTranche, setFilterTranche] = useState("18+");
   const [filterFormat, setFilterFormat] = useState("standard");
+  const [filterLangue, setFilterLangue] = useState("fr");
   const [appliedVariante, setAppliedVariante] = useState<VarianteDetail | null>(null);
   const [filterLoading, setFilterLoading] = useState(false);
   const [filterError, setFilterError] = useState<string | null>(null);
@@ -150,7 +151,7 @@ export default function FicheDetailPage() {
     setFilterLoading(true);
     setFilterError(null);
     const match = variantes.find(
-      v => v.genre === filterGenre && v.tranche_age === filterTranche && v.format_contenu === filterFormat
+      v => v.genre === filterGenre && v.tranche_age === filterTranche && v.format_contenu === filterFormat && v.langue === filterLangue
     );
     if (!match) {
       setFilterError("Aucune variante trouvee pour cette combinaison. Generez-la d'abord dans Actions > Variantes.");
@@ -175,6 +176,7 @@ export default function FicheDetailPage() {
     setFilterGenre("masculin");
     setFilterTranche("18+");
     setFilterFormat("standard");
+    setFilterLangue("fr");
   }
 
   useEffect(() => {
@@ -890,7 +892,7 @@ export default function FicheDetailPage() {
       // ── Final footer ──
       drawFooter();
 
-      const suffix = av ? `_${av.genre}_${av.tranche_age}_${av.format_contenu}` : "";
+      const suffix = av ? `_${av.langue}_${av.genre}_${av.tranche_age}_${av.format_contenu}` : "";
       pdf.save(`${d.code_rome}_${d.nom_epicene.replace(/\s+/g, "_")}${suffix}.pdf`);
     } catch (err) {
       console.error("PDF generation error:", err);
@@ -1073,6 +1075,18 @@ export default function FicheDetailPage() {
                   </label>
                 ))}
               </div>
+              {/* Langue */}
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider w-14">Langue</span>
+                {[{ v: "fr", l: "FR" }, { v: "en", l: "EN" }, { v: "es", l: "ES" }, { v: "it", l: "IT" }, { v: "pt", l: "PT" }, { v: "ar", l: "AR" }, { v: "de", l: "DE" }].map(lang => (
+                  <label key={lang.v} className="flex items-center gap-1.5 text-sm text-gray-700 cursor-pointer">
+                    <input type="radio" name="filter-langue" value={lang.v} checked={filterLangue === lang.v}
+                      onChange={() => setFilterLangue(lang.v)}
+                      className="w-3.5 h-3.5 accent-[#4A39C0] focus:ring-0 focus:ring-offset-0" />
+                    {lang.l}
+                  </label>
+                ))}
+              </div>
               {/* Boutons */}
               <div className="flex items-center gap-2 ml-auto">
                 {appliedVariante && (
@@ -1095,7 +1109,7 @@ export default function FicheDetailPage() {
             {/* Variante active indicator */}
             {appliedVariante && (
               <div className="mt-2 text-xs text-[#4A39C0] font-medium">
-                Variante active : {appliedVariante.genre} / {appliedVariante.tranche_age} / {appliedVariante.format_contenu}
+                Variante active : {appliedVariante.langue.toUpperCase()} / {appliedVariante.genre} / {appliedVariante.tranche_age} / {appliedVariante.format_contenu}
               </div>
             )}
             {filterError && (
