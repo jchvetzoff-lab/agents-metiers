@@ -222,63 +222,69 @@ export default function FicheDetailPage() {
       }
 
       function drawFooter() {
-        stroke(C.gray200);
-        pdf.setLineWidth(0.3);
-        pdf.line(ML, H - 12, W - MR, H - 12);
+        // Purple thin bar
+        fill(C.purple);
+        pdf.rect(0, H - 14, W, 0.5, "F");
         pdf.setFontSize(7);
-        txt(C.gray400);
         pdf.setFont("helvetica", "normal");
+        txt(C.gray400);
         pdf.text(`${d.code_rome} - ${d.nom_epicene}`, ML, H - 8);
-        pdf.text(`Page ${pageNum}`, W - MR, H - 8, { align: "right" });
+        pdf.text(`Page ${pageNum}`, W / 2, H - 8, { align: "center" });
+        txt(C.gray500);
+        pdf.setFontSize(6.5);
+        pdf.text(`Genere le ${new Date().toLocaleDateString("fr-FR")}`, W - MR, H - 8, { align: "right" });
       }
 
       function drawPageHeader() {
+        // Purple header bar on subsequent pages
         fill(C.purple);
-        pdf.rect(0, 0, W, 2, "F");
+        pdf.rect(0, 0, W, 12, "F");
         pdf.setFontSize(9);
         pdf.setFont("helvetica", "bold");
-        txt(C.purple);
-        pdf.text(d.nom_epicene, ML, 9);
+        txt(C.white);
+        pdf.text(d.nom_epicene, ML, 8);
         pdf.setFont("helvetica", "normal");
-        txt(C.gray400);
-        pdf.text(d.code_rome, W - MR, 9, { align: "right" });
-        stroke(C.gray200);
-        pdf.setLineWidth(0.2);
-        pdf.line(ML, 12, W - MR, 12);
-        y = 16;
+        pdf.text(d.code_rome, W - MR, 8, { align: "right" });
+        y = 18;
       }
 
-      // Section card header (matches web SectionAnchor component)
+      // Section card header with purple left accent
       function sectionCard(title: string) {
         newPageIfNeeded(20);
-        y += 5;
-        // Card header bar (gray bg, like web)
+        y += 8;
+        // Background
         fill(C.gray50);
         stroke(C.gray200);
         pdf.setLineWidth(0.3);
-        pdf.roundedRect(ML, y, CW, 10, 3, 3, "FD");
-        // Cover bottom corners to make it look like a card header
+        pdf.roundedRect(ML, y, CW, 11, 3, 3, "FD");
         fill(C.gray50);
-        pdf.rect(ML, y + 7, CW, 3, "F");
-        // Bottom border of header
-        stroke(C.gray100);
-        pdf.line(ML, y + 10, ML + CW, y + 10);
+        pdf.rect(ML, y + 8, CW, 3, "F");
+        // Purple left accent bar
+        fill(C.purple);
+        pdf.roundedRect(ML, y, 3, 11, 1.5, 1.5, "F");
+        // Bottom border
+        stroke(C.gray200);
+        pdf.setLineWidth(0.2);
+        pdf.line(ML, y + 11, ML + CW, y + 11);
         // Title
-        pdf.setFontSize(11);
+        pdf.setFontSize(12);
         pdf.setFont("helvetica", "bold");
         txt(C.dark);
-        pdf.text(title, ML + 6, y + 7);
-        y += 15;
+        pdf.text(title, ML + 8, y + 7.5);
+        y += 16;
       }
 
-      // Subtitle (matches web h3: text-sm font-bold uppercase tracking-wider)
+      // Subtitle with subtle purple dot
       function subtitle(text: string) {
         newPageIfNeeded(10);
-        pdf.setFontSize(8);
+        y += 1;
+        fill(C.purple);
+        pdf.circle(ML + 4, y - 1.5, 1.5, "F");
+        pdf.setFontSize(8.5);
         pdf.setFont("helvetica", "bold");
         txt(C.gray900);
-        pdf.text(text.toUpperCase(), ML + 2, y);
-        y += 5;
+        pdf.text(text.toUpperCase(), ML + 9, y);
+        y += 6;
       }
 
       // Body text (matches web text-gray-700 leading-relaxed text-[16px])
@@ -379,23 +385,28 @@ export default function FicheDetailPage() {
       }
 
       // ══════════════════════════════════════════════
-      // PAGE 1 — HEADER (white bg, matches web)
+      // PAGE 1 — HEADER (professional cover block)
       // ══════════════════════════════════════════════
 
-      // Thin purple accent at top
+      // Full-width purple header block
+      const headerH = 52;
       fill(C.purple);
-      pdf.rect(0, 0, W, 2.5, "F");
+      pdf.rect(0, 0, W, headerH, "F");
 
-      y = 12;
+      // Subtle darker accent bar at very top
+      pdf.setFillColor(58, 45, 160);
+      pdf.rect(0, 0, W, 3, "F");
 
-      // Code ROME badge (matches web: px-3 py-1 rounded-md bg-[#E4E1FF] text-[#4A39C0])
-      pdf.setFontSize(9);
+      // Code ROME badge (white outline on purple bg)
+      y = 16;
+      pdf.setFontSize(10);
       pdf.setFont("helvetica", "bold");
-      const romeBadgeW = pdf.getTextWidth(d.code_rome) + 8;
-      fill(C.purpleBadgeBg);
-      pdf.roundedRect(ML, y - 3.5, romeBadgeW, 7.5, 2, 2, "F");
-      txt(C.purple);
-      pdf.text(d.code_rome, ML + 4, y + 1);
+      txt(C.white);
+      const romeBadgeW = pdf.getTextWidth(d.code_rome) + 10;
+      pdf.setDrawColor(255, 255, 255);
+      pdf.setLineWidth(0.5);
+      pdf.roundedRect(ML, y - 4, romeBadgeW, 8, 2, 2, "D");
+      pdf.text(d.code_rome, ML + 5, y + 1);
 
       // Status badge
       const statusLabel = d.statut === "en_validation" ? "En validation" : d.statut === "publiee" ? "Publiee" : d.statut.charAt(0).toUpperCase() + d.statut.slice(1);
@@ -407,45 +418,44 @@ export default function FicheDetailPage() {
       txt(C.white);
       pdf.text(statusLabel, ML + romeBadgeW + 8, y + 1);
 
-      y += 8;
+      y += 10;
 
-      // Title (matches web: text-2xl md:text-3xl font-bold text-[#1A1A2E])
-      pdf.setFontSize(20);
+      // Title (large white text on purple)
+      pdf.setFontSize(22);
       pdf.setFont("helvetica", "bold");
-      txt(C.dark);
+      txt(C.white);
       const titleLines = pdf.splitTextToSize(d.nom_epicene, CW);
       for (const line of titleLines) {
         pdf.text(line, ML, y + 5);
-        y += 8;
+        y += 9;
       }
 
-      // Description courte (matches web: text-gray-500)
+      // Version + date (white on purple, right-aligned)
+      pdf.setFontSize(7.5);
+      pdf.setFont("helvetica", "normal");
+      pdf.setTextColor(255, 255, 255, 180);
+      pdf.text(`Version ${d.version}  |  ${new Date(d.date_maj).toLocaleDateString("fr-FR")}`, W - MR, headerH - 6, { align: "right" });
+
+      y = headerH + 6;
+
+      // Description courte below header
       if (d.description_courte) {
-        y += 1;
-        pdf.setFontSize(10);
-        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(10.5);
+        pdf.setFont("helvetica", "italic");
         txt(C.gray500);
         const descLines = pdf.splitTextToSize(d.description_courte, CW);
         for (const line of descLines) {
           pdf.text(line, ML, y);
-          y += 4.8;
+          y += 5;
         }
+        y += 2;
       }
 
-      // Version + date (matches web: text-xs text-gray-400)
-      y += 2;
-      pdf.setFontSize(7);
-      txt(C.gray400);
-      pdf.text(`Version ${d.version}`, W - MR, y, { align: "right" });
-      y += 3.5;
-      pdf.text(`Mis a jour le ${new Date(d.date_maj).toLocaleDateString("fr-FR")}`, W - MR, y, { align: "right" });
-      y += 4;
-
-      // Separator (matches web: border-b border-gray-200)
+      // Subtle separator
       stroke(C.gray200);
       pdf.setLineWidth(0.3);
       pdf.line(ML, y, W - MR, y);
-      y += 4;
+      y += 5;
 
       // ══════════════════════════════════════════════
       // INFORMATIONS CLES

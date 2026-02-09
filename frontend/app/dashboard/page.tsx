@@ -4,6 +4,10 @@ import { useEffect, useState } from "react";
 import { api, Stats, AuditLog } from "@/lib/api";
 import MetricCard from "@/components/MetricCard";
 import SectionHeader from "@/components/SectionHeader";
+import {
+  PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+} from "recharts";
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
@@ -101,27 +105,98 @@ export default function DashboardPage() {
         <div className="grid md:grid-cols-2 gap-8 mb-16">
           <div className="sojai-card">
             <h3 className="text-xl font-serif font-bold mb-4 text-center">
-              🥧 Répartition par statut
+              Repartition par statut
             </h3>
-            <div className="h-64 flex items-center justify-center text-text-muted">
-              {/* TODO: Intégrer Recharts pour le graphique camembert */}
-              <div className="text-center">
-                <div className="text-4xl mb-4">📊</div>
-                <p>Graphique camembert à venir</p>
-              </div>
+            <div className="h-72">
+              {stats && stats.total > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: "Brouillons", value: stats.brouillons },
+                        { name: "En validation", value: stats.en_validation },
+                        { name: "Publiees", value: stats.publiees },
+                        { name: "Archivees", value: stats.archivees },
+                      ].filter(d => d.value > 0)}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={55}
+                      outerRadius={90}
+                      paddingAngle={3}
+                      dataKey="value"
+                      label={({ name, value }) => `${name} (${value})`}
+                      labelLine={{ stroke: "#d1d5db" }}
+                    >
+                      {[
+                        { name: "Brouillons", value: stats.brouillons },
+                        { name: "En validation", value: stats.en_validation },
+                        { name: "Publiees", value: stats.publiees },
+                        { name: "Archivees", value: stats.archivees },
+                      ].filter(d => d.value > 0).map((_, i) => (
+                        <Cell key={i} fill={["#6B7280", "#EAB308", "#16A34A", "#9CA3AF"][i]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value: number) => [value, "Fiches"]} />
+                    <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 13 }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center text-text-muted">
+                  Aucune donnee
+                </div>
+              )}
             </div>
           </div>
 
           <div className="sojai-card">
             <h3 className="text-xl font-serif font-bold mb-4 text-center">
-              📈 Tendances des métiers
+              Pipeline de traitement
             </h3>
-            <div className="h-64 flex items-center justify-center text-text-muted">
-              {/* TODO: Intégrer Recharts pour le graphique barres */}
-              <div className="text-center">
-                <div className="text-4xl mb-4">📈</div>
-                <p>Graphique barres à venir</p>
-              </div>
+            <div className="h-72">
+              {stats && stats.total > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={[
+                      { etape: "Brouillons", count: stats.brouillons, fill: "#6B7280" },
+                      { etape: "En validation", count: stats.en_validation, fill: "#EAB308" },
+                      { etape: "Publiees", count: stats.publiees, fill: "#16A34A" },
+                      { etape: "Archivees", count: stats.archivees, fill: "#9CA3AF" },
+                    ]}
+                    margin={{ top: 10, right: 10, left: -10, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                    <XAxis
+                      dataKey="etape"
+                      tick={{ fontSize: 12, fill: "#6B7280" }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 11, fill: "#9CA3AF" }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip
+                      formatter={(value: number) => [value, "Fiches"]}
+                      contentStyle={{ borderRadius: "12px", border: "1px solid #E5E7EB", fontSize: 13 }}
+                    />
+                    <Bar dataKey="count" radius={[6, 6, 0, 0]} barSize={50}>
+                      {[
+                        { fill: "#6B7280" },
+                        { fill: "#EAB308" },
+                        { fill: "#16A34A" },
+                        { fill: "#9CA3AF" },
+                      ].map((entry, i) => (
+                        <Cell key={i} fill={entry.fill} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center text-text-muted">
+                  Aucune donnee
+                </div>
+              )}
             </div>
           </div>
         </div>
