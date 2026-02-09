@@ -497,7 +497,7 @@ async def get_audit_logs(limit: int = Query(15, ge=1, le=100)):
 # ==================== ACTIONS IA ====================
 
 ENRICH_PROMPT = """Tu es un expert en ressources humaines et en rédaction de fiches métiers en France.
-Génère le contenu complet pour la fiche métier suivante.
+Génère le contenu COMPLET et EXHAUSTIF pour la fiche métier suivante. Chaque section DOIT être remplie avec le MAXIMUM d'éléments pertinents.
 
 Métier : {nom_masculin} / {nom_feminin}
 Code ROME : {code_rome}
@@ -505,18 +505,18 @@ Code ROME : {code_rome}
 
 Réponds UNIQUEMENT avec un objet JSON valide (sans texte avant ou après) contenant :
 {{
-    "description": "Description complète du métier en 3-5 phrases, factuelle et professionnelle.",
-    "description_courte": "Description en 1 phrase (max 200 caractères).",
-    "missions_principales": ["5 à 8 missions principales du métier"],
-    "acces_metier": "Texte décrivant comment accéder à ce métier (formations, parcours, prérequis). 2-3 phrases.",
-    "competences": ["6 à 10 compétences techniques clés (savoir-faire)"],
-    "competences_transversales": ["4 à 6 soft skills / savoir-être"],
-    "savoirs": ["5 à 8 connaissances théoriques nécessaires"],
-    "formations": ["3 à 5 formations ou diplômes typiques"],
-    "certifications": ["1 à 3 certifications professionnelles (ou liste vide si aucune)"],
-    "conditions_travail": ["3 à 5 conditions de travail caractéristiques"],
-    "environnements": ["2 à 4 types de structures/environnements de travail"],
-    "secteurs_activite": ["2 à 4 secteurs d'activité"],
+    "description": "Description complète et détaillée du métier en 5-8 phrases. Couvrir le rôle, les responsabilités, le contexte, l'importance du métier.",
+    "description_courte": "Description en 1 phrase percutante (max 200 caractères).",
+    "missions_principales": ["8 à 12 missions principales du métier - être exhaustif"],
+    "acces_metier": "Texte détaillé décrivant comment accéder à ce métier : formations initiales, parcours alternatifs, expérience requise, prérequis, VAE possible. 4-6 phrases.",
+    "competences": ["10 à 15 compétences techniques clés (savoir-faire) - être très complet"],
+    "competences_transversales": ["6 à 10 soft skills / savoir-être essentiels"],
+    "savoirs": ["8 à 12 connaissances théoriques nécessaires"],
+    "formations": ["5 à 8 formations ou diplômes typiques (du CAP au Master si applicable)"],
+    "certifications": ["3 à 6 certifications professionnelles reconnues dans le domaine"],
+    "conditions_travail": ["5 à 8 conditions de travail caractéristiques (horaires, lieu, contraintes, avantages)"],
+    "environnements": ["4 à 6 types de structures/environnements de travail"],
+    "secteurs_activite": ["4 à 6 secteurs d'activité"],
     "salaires": {{
         "junior": {{"min": 25000, "max": 35000, "median": 30000}},
         "confirme": {{"min": 35000, "max": 50000, "median": 42000}},
@@ -918,6 +918,229 @@ async def review_fiche(code_rome: str, review: HumanReviewRequest):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur review: {str(e)}")
+
+
+# ==================== DELETE ====================
+
+@app.delete("/api/fiches/{code_rome}")
+async def delete_fiche(code_rome: str):
+    """Supprime définitivement une fiche métier."""
+    try:
+        fiche = repo.get_fiche(code_rome)
+        if not fiche:
+            raise HTTPException(status_code=404, detail=f"Fiche {code_rome} non trouvée")
+
+        nom = fiche.nom_epicene
+
+        # Supprimer via SQL direct
+        from sqlalchemy import delete as sql_delete
+        from database.models import FicheMetierDB
+        with repo.session() as session:
+            session.execute(sql_delete(FicheMetierDB).where(FicheMetierDB.code_rome == code_rome))
+
+        log_action(
+            TypeEvenement.ARCHIVAGE,
+            f"Suppression définitive de {code_rome} ({nom})",
+            code_rome=code_rome,
+            agent="Utilisateur",
+        )
+
+        return {
+            "message": f"Fiche {code_rome} supprimée",
+            "code_rome": code_rome,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur suppression: {str(e)}")
+
+
+# ==================== AUTO-CORRECTION IA ====================
+
+AUTOCORRECT_PROMPT = """Tu es un expert en ressources humaines et en fiches métiers ROME.
+
+La fiche métier suivante a été analysée et a obtenu un score de complétude insuffisant.
+Tu dois CORRIGER et COMPLÉTER UNIQUEMENT les sections qui sont incomplètes ou manquantes.
+
+Fiche actuelle :
+- Code ROME : {code_rome}
+- Nom : {nom_masculin} / {nom_feminin}
+- Description : {description}
+- Description courte : {description_courte}
+- Missions principales ({nb_missions} éléments) : {missions_principales}
+- Accès métier : {acces_metier}
+- Compétences techniques ({nb_comp} éléments) : {competences}
+- Compétences transversales ({nb_comp_trans} éléments) : {competences_transversales}
+- Savoirs ({nb_savoirs} éléments) : {savoirs}
+- Formations ({nb_formations} éléments) : {formations}
+- Certifications ({nb_certifs} éléments) : {certifications}
+- Conditions de travail ({nb_conditions} éléments) : {conditions_travail}
+- Environnements ({nb_envs} éléments) : {environnements}
+- Secteurs d'activité ({nb_secteurs} éléments) : {secteurs_activite}
+- Salaires : {salaires}
+- Perspectives : {perspectives}
+- Types de contrats : {types_contrats}
+- Mobilité : {mobilite}
+
+PROBLÈMES IDENTIFIÉS :
+{problemes}
+
+SUGGESTIONS D'AMÉLIORATION :
+{suggestions}
+
+OBJECTIFS MINIMUM PAR SECTION :
+- description : 5-8 phrases détaillées
+- description_courte : 1 phrase percutante (max 200 car.)
+- missions_principales : minimum 8 éléments
+- acces_metier : 4-6 phrases détaillées
+- competences : minimum 10 éléments
+- competences_transversales : minimum 6 éléments
+- savoirs : minimum 8 éléments
+- formations : minimum 5 éléments
+- certifications : minimum 3 éléments
+- conditions_travail : minimum 5 éléments
+- environnements : minimum 4 éléments
+- secteurs_activite : minimum 4 éléments
+- salaires, perspectives, types_contrats, mobilite : tous les champs remplis
+
+Réponds UNIQUEMENT avec un objet JSON contenant TOUTES les sections (même celles déjà complètes, pour ne rien perdre).
+Le JSON doit avoir exactement la même structure que le prompt d'enrichissement initial.
+ENRICHIS les sections faibles en AJOUTANT des éléments pertinents aux listes existantes.
+Ne supprime AUCUN élément existant, ajoute seulement.
+
+{{
+    "description": "...",
+    "description_courte": "...",
+    "missions_principales": ["..."],
+    "acces_metier": "...",
+    "competences": ["..."],
+    "competences_transversales": ["..."],
+    "savoirs": ["..."],
+    "formations": ["..."],
+    "certifications": ["..."],
+    "conditions_travail": ["..."],
+    "environnements": ["..."],
+    "secteurs_activite": ["..."],
+    "salaires": {{"junior": {{"min": 0, "max": 0, "median": 0}}, "confirme": {{"min": 0, "max": 0, "median": 0}}, "senior": {{"min": 0, "max": 0, "median": 0}}}},
+    "perspectives": {{"tension": 0.0, "tendance": "stable", "evolution_5ans": "...", "nombre_offres": 0, "taux_insertion": 0.0}},
+    "types_contrats": {{"cdi": 0, "cdd": 0, "interim": 0, "autre": 0}},
+    "mobilite": {{"metiers_proches": [{{"nom": "...", "contexte": "..."}}], "evolutions": [{{"nom": "...", "contexte": "..."}}]}}
+}}"""
+
+
+class AutoCorrectRequest(BaseModel):
+    problemes: List[str] = []
+    suggestions: List[str] = []
+
+
+@app.post("/api/fiches/{code_rome}/auto-correct")
+def auto_correct_fiche(code_rome: str, rapport: AutoCorrectRequest):
+    """Correction automatique IA : comble les lacunes identifiées par la validation."""
+    try:
+        fiche = repo.get_fiche(code_rome)
+        if not fiche:
+            raise HTTPException(status_code=404, detail=f"Fiche {code_rome} non trouvée")
+
+        api_key = os.getenv("ANTHROPIC_API_KEY", "")
+        if not api_key:
+            raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY non configurée")
+
+        import anthropic
+        client = anthropic.Anthropic(api_key=api_key)
+
+        prompt = AUTOCORRECT_PROMPT.format(
+            code_rome=fiche.code_rome,
+            nom_masculin=fiche.nom_masculin,
+            nom_feminin=fiche.nom_feminin,
+            description=fiche.description or "Non renseignée",
+            description_courte=fiche.description_courte or "Non renseignée",
+            nb_missions=len(fiche.missions_principales or []),
+            missions_principales=json.dumps(fiche.missions_principales or [], ensure_ascii=False),
+            acces_metier=fiche.acces_metier or "Non renseigné",
+            nb_comp=len(fiche.competences or []),
+            competences=json.dumps(fiche.competences or [], ensure_ascii=False),
+            nb_comp_trans=len(fiche.competences_transversales or []),
+            competences_transversales=json.dumps(fiche.competences_transversales or [], ensure_ascii=False),
+            nb_savoirs=len(fiche.savoirs or []),
+            savoirs=json.dumps(fiche.savoirs or [], ensure_ascii=False),
+            nb_formations=len(fiche.formations or []),
+            formations=json.dumps(fiche.formations or [], ensure_ascii=False),
+            nb_certifs=len(fiche.certifications or []),
+            certifications=json.dumps(fiche.certifications or [], ensure_ascii=False),
+            nb_conditions=len(fiche.conditions_travail or []),
+            conditions_travail=json.dumps(fiche.conditions_travail or [], ensure_ascii=False),
+            nb_envs=len(fiche.environnements or []),
+            environnements=json.dumps(fiche.environnements or [], ensure_ascii=False),
+            nb_secteurs=len(fiche.secteurs_activite or []),
+            secteurs_activite=json.dumps(fiche.secteurs_activite or [], ensure_ascii=False),
+            salaires=json.dumps(fiche.salaires.model_dump() if fiche.salaires else {}, ensure_ascii=False),
+            perspectives=json.dumps(fiche.perspectives.model_dump() if fiche.perspectives else {}, ensure_ascii=False),
+            types_contrats=json.dumps(fiche.types_contrats.model_dump() if fiche.types_contrats else {}, ensure_ascii=False),
+            mobilite=json.dumps(fiche.mobilite.model_dump() if fiche.mobilite else {}, ensure_ascii=False),
+            problemes="\n".join(f"- {p}" for p in rapport.problemes) or "Aucun problème spécifique",
+            suggestions="\n".join(f"- {s}" for s in rapport.suggestions) or "Aucune suggestion spécifique",
+        )
+
+        response = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=4096,
+            messages=[{"role": "user", "content": prompt}],
+        )
+
+        content = response.content[0].text.strip()
+        json_match = re.search(r'\{[\s\S]*\}', content)
+        if not json_match:
+            raise HTTPException(status_code=500, detail="Réponse Claude invalide (pas de JSON)")
+
+        data = json.loads(json_match.group())
+
+        # Appliquer les corrections
+        fiche_dict = fiche.model_dump()
+        for key in [
+            "description", "description_courte", "missions_principales",
+            "acces_metier", "competences", "competences_transversales",
+            "savoirs", "formations", "certifications", "conditions_travail",
+            "environnements", "secteurs_activite",
+        ]:
+            if key in data:
+                fiche_dict[key] = data[key]
+
+        if "salaires" in data:
+            fiche_dict["salaires"] = data["salaires"]
+        if "perspectives" in data:
+            fiche_dict["perspectives"] = data["perspectives"]
+        if "types_contrats" in data:
+            fiche_dict["types_contrats"] = data["types_contrats"]
+        if "mobilite" in data:
+            fiche_dict["mobilite"] = data["mobilite"]
+
+        fiche_dict["metadata"]["date_maj"] = datetime.now()
+        fiche_dict["metadata"]["version"] = fiche_dict["metadata"].get("version", 1) + 1
+
+        updated_fiche = FicheMetier(**fiche_dict)
+        repo.update_fiche(updated_fiche)
+
+        log_action(
+            TypeEvenement.CORRECTION,
+            f"Correction automatique IA de {code_rome} ({fiche.nom_epicene}) - v{updated_fiche.metadata.version}",
+            code_rome=code_rome,
+            agent="Claude IA",
+        )
+
+        return {
+            "message": "Fiche corrigée automatiquement",
+            "code_rome": code_rome,
+            "nom": fiche.nom_epicene,
+            "version": updated_fiche.metadata.version,
+        }
+
+    except HTTPException:
+        raise
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=500, detail=f"Erreur parsing JSON Claude: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur auto-correction: {str(e)}")
 
 
 if __name__ == "__main__":
