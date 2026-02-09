@@ -87,8 +87,10 @@ def decode_token(token: str) -> dict:
         return payload
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expire")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Token invalide")
+    except jwt.InvalidTokenError as e:
+        raise HTTPException(status_code=401, detail=f"Token invalide: {type(e).__name__}: {e}")
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"Token error: {type(e).__name__}: {e}")
 
 
 # ==================== DEPENDENCY FASTAPI ====================

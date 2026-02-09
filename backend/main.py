@@ -1230,6 +1230,21 @@ async def get_me(current_user: dict = Depends(get_current_user)):
     return current_user
 
 
+@app.get("/api/auth/debug")
+async def auth_debug():
+    """Debug endpoint to check JWT config."""
+    from backend.auth import JWT_SECRET_KEY, JWT_ALGORITHM
+    import jwt as jwt_module
+    return {
+        "jwt_module": jwt_module.__name__,
+        "jwt_version": getattr(jwt_module, "__version__", "unknown"),
+        "jwt_file": getattr(jwt_module, "__file__", "unknown"),
+        "secret_key_len": len(JWT_SECRET_KEY),
+        "secret_key_first8": JWT_SECRET_KEY[:8],
+        "algorithm": JWT_ALGORITHM,
+    }
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
