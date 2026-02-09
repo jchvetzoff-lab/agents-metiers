@@ -79,7 +79,7 @@ function useSearchFiches(statut: string, limit = 100) {
   return { fiches, setFiches, loading, search, handleSearch, total, refetch: () => fetchFiches(search) };
 }
 
-type Tab = "creer" | "enrichir" | "valider" | "publier" | "exporter";
+type Tab = "creer" | "enrichir" | "valider" | "publier" | "variantes" | "exporter";
 
 export default function ActionsPage() {
   const [activeTab, setActiveTab] = useState<Tab>("creer");
@@ -89,6 +89,7 @@ export default function ActionsPage() {
     { id: "enrichir", label: "Enrichissement IA", icon: "A" },
     { id: "valider", label: "Validation", icon: "V" },
     { id: "publier", label: "Publication", icon: "P" },
+    { id: "variantes", label: "Variantes", icon: "G" },
     { id: "exporter", label: "Export PDF", icon: "D" },
   ];
 
@@ -138,6 +139,7 @@ export default function ActionsPage() {
         {activeTab === "enrichir" && <TabEnrichir />}
         {activeTab === "valider" && <TabValider />}
         {activeTab === "publier" && <TabPublier />}
+        {activeTab === "variantes" && <TabVariantes />}
         {activeTab === "exporter" && <TabExporter />}
       </div>
     </main>
@@ -392,6 +394,63 @@ interface ValidationRapport {
   suggestions: string[];
 }
 
+function VariantesCheckboxes({ genres, setGenres, tranches, setTranches, formats, setFormats }: {
+  genres: Set<string>; setGenres: (s: Set<string>) => void;
+  tranches: Set<string>; setTranches: (s: Set<string>) => void;
+  formats: Set<string>; setFormats: (s: Set<string>) => void;
+}) {
+  function toggle(set: Set<string>, setFn: (s: Set<string>) => void, val: string) {
+    const next = new Set(set);
+    if (next.has(val)) next.delete(val); else next.add(val);
+    setFn(next);
+  }
+  const total = genres.size * tranches.size * formats.size;
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h5 className="text-xs font-semibold text-gray-700 mb-2">Genre grammatical</h5>
+        <div className="flex gap-3">
+          {[{ v: "masculin", l: "Masculin" }, { v: "feminin", l: "Feminin" }, { v: "epicene", l: "Epicene" }].map(g => (
+            <label key={g.v} className="flex items-center gap-1.5 text-sm text-gray-700 cursor-pointer">
+              <input type="checkbox" checked={genres.has(g.v)} onChange={() => toggle(genres, setGenres, g.v)}
+                className="w-4 h-4 rounded border-gray-300 text-[#4A39C0] focus:ring-[#4A39C0]" />
+              {g.l}
+            </label>
+          ))}
+        </div>
+      </div>
+      <div>
+        <h5 className="text-xs font-semibold text-gray-700 mb-2">Tranche d&apos;age</h5>
+        <div className="flex gap-3">
+          {[{ v: "18+", l: "Adultes (18+)" }, { v: "15-18", l: "Ados (15-18)" }, { v: "11-15", l: "Jeunes (11-15)" }].map(t => (
+            <label key={t.v} className="flex items-center gap-1.5 text-sm text-gray-700 cursor-pointer">
+              <input type="checkbox" checked={tranches.has(t.v)} onChange={() => toggle(tranches, setTranches, t.v)}
+                className="w-4 h-4 rounded border-gray-300 text-[#4A39C0] focus:ring-[#4A39C0]" />
+              {t.l}
+            </label>
+          ))}
+        </div>
+      </div>
+      <div>
+        <h5 className="text-xs font-semibold text-gray-700 mb-2">Format</h5>
+        <div className="flex gap-3">
+          {[{ v: "standard", l: "Standard" }, { v: "falc", l: "FALC" }].map(f => (
+            <label key={f.v} className="flex items-center gap-1.5 text-sm text-gray-700 cursor-pointer">
+              <input type="checkbox" checked={formats.has(f.v)} onChange={() => toggle(formats, setFormats, f.v)}
+                className="w-4 h-4 rounded border-gray-300 text-[#4A39C0] focus:ring-[#4A39C0]" />
+              {f.l}
+            </label>
+          ))}
+        </div>
+      </div>
+      <div className="text-sm font-medium text-[#4A39C0]">
+        {total > 0 ? `${total} variante${total > 1 ? "s" : ""} a generer` : "Selectionnez au moins une option par axe"}
+      </div>
+    </div>
+  );
+}
+
 function TabValider() {
   const { fiches, setFiches, loading, search, handleSearch, total } = useSearchFiches("en_validation", 200);
   const [validating, setValidating] = useState<string | null>(null);
@@ -400,6 +459,13 @@ function TabValider() {
   const [correcting, setCorrecting] = useState<string | null>(null);
   const [commentaire, setCommentaire] = useState("");
   const [results, setResults] = useState<{ code: string; type: "success" | "error"; message: string }[]>([]);
+
+  // Variantes modal state
+  const [variantesModal, setVariantesModal] = useState<string | null>(null);
+  const [vGenres, setVGenres] = useState(new Set(["masculin", "feminin", "epicene"]));
+  const [vTranches, setVTranches] = useState(new Set(["18+"]));
+  const [vFormats, setVFormats] = useState(new Set(["standard", "falc"]));
+  const [generating, setGenerating] = useState(false);
 
   async function handleValidateIA(codeRome: string) {
     setValidating(codeRome);
@@ -430,6 +496,49 @@ function TabValider() {
     } finally {
       setReviewing(null);
     }
+  }
+
+  function openVariantesModal(codeRome: string) {
+    setVariantesModal(codeRome);
+    setVGenres(new Set(["masculin", "feminin", "epicene"]));
+    setVTranches(new Set(["18+"]));
+    setVFormats(new Set(["standard", "falc"]));
+  }
+
+  async function handleApproveWithVariantes() {
+    if (!variantesModal) return;
+    const codeRome = variantesModal;
+    setGenerating(true);
+    try {
+      // 1. Approve (publish)
+      const res = await api.reviewFiche(codeRome, "approuvee", commentaire || undefined);
+      setResults(prev => [{ code: codeRome, type: "success", message: `${res.message} → statut: ${res.nouveau_statut}` }, ...prev]);
+
+      // 2. Generate variantes
+      const vRes = await api.generateVariantes(codeRome, {
+        genres: Array.from(vGenres),
+        tranches_age: Array.from(vTranches),
+        formats: Array.from(vFormats),
+      });
+      setResults(prev => [{ code: codeRome, type: "success", message: vRes.message }, ...prev]);
+
+      // Cleanup
+      setFiches(prev => prev.filter(f => f.code_rome !== codeRome));
+      setRapports(prev => { const n = { ...prev }; delete n[codeRome]; return n; });
+      setCommentaire("");
+      setVariantesModal(null);
+    } catch (err: any) {
+      setResults(prev => [{ code: codeRome, type: "error", message: err.message }, ...prev]);
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  async function handleApproveWithoutVariantes() {
+    if (!variantesModal) return;
+    const codeRome = variantesModal;
+    setVariantesModal(null);
+    await handleReview(codeRome, "approuvee");
   }
 
   async function handleAutoCorrect(codeRome: string) {
@@ -661,7 +770,7 @@ function TabValider() {
                         />
                         <div className="flex gap-3">
                           <button
-                            onClick={() => handleReview(fiche.code_rome, "approuvee")}
+                            onClick={() => openVariantesModal(fiche.code_rome)}
                             disabled={isReviewing}
                             className="px-5 py-2 bg-[#16A34A] text-white rounded-full text-sm font-medium hover:bg-[#15803D] transition disabled:opacity-40"
                           >
@@ -691,6 +800,62 @@ function TabValider() {
           </div>
         )}
       </div>
+
+      {/* Modal variantes */}
+      {variantesModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl border-2 border-[#4A39C0] p-6 space-y-5 shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div>
+              <h3 className="text-lg font-bold text-[#1A1A2E]">Generer des variantes ?</h3>
+              <p className="text-sm text-gray-500 mt-1">
+                La fiche <strong>{variantesModal}</strong> sera approuvee et publiee.
+                Choisissez les variantes a generer (ou publiez sans variantes).
+              </p>
+            </div>
+
+            <VariantesCheckboxes
+              genres={vGenres} setGenres={setVGenres}
+              tranches={vTranches} setTranches={setVTranches}
+              formats={vFormats} setFormats={setVFormats}
+            />
+
+            <div className="bg-[#F9F8FF] border border-[#E4E1FF] rounded-lg p-3">
+              <p className="text-xs text-gray-500">
+                La generation utilise Claude API (~$0.01-0.05 par appel) et peut prendre 10-30 secondes.
+              </p>
+            </div>
+
+            <div className="flex gap-3 pt-1">
+              <button
+                onClick={handleApproveWithVariantes}
+                disabled={generating || vGenres.size * vTranches.size * vFormats.size === 0}
+                className="px-5 py-2 bg-[#16A34A] text-white rounded-full text-sm font-medium hover:bg-[#15803D] transition disabled:opacity-40 disabled:cursor-wait"
+              >
+                {generating ? (
+                  <span className="flex items-center gap-2">
+                    <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Generation...
+                  </span>
+                ) : "Approuver & Generer variantes"}
+              </button>
+              <button
+                onClick={handleApproveWithoutVariantes}
+                disabled={generating}
+                className="px-5 py-2 border border-gray-300 text-gray-700 rounded-full text-sm font-medium hover:bg-gray-50 transition disabled:opacity-40"
+              >
+                Approuver sans variantes
+              </button>
+              <button
+                onClick={() => setVariantesModal(null)}
+                disabled={generating}
+                className="px-5 py-2 text-gray-400 text-sm hover:text-gray-600 transition"
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -881,6 +1046,186 @@ function TabPublier() {
                 >
                   Voir
                 </Link>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════
+// TAB: VARIANTES
+// ══════════════════════════════════════
+
+function TabVariantes() {
+  const [fiches, setFiches] = useState<FicheMetier[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [totalCount, setTotalCount] = useState(0);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  // Selected fiche for generation
+  const [selectedFiche, setSelectedFiche] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const [results, setResults] = useState<{ code: string; type: "success" | "error"; message: string }[]>([]);
+
+  // Checkboxes state
+  const [genres, setGenres] = useState(new Set(["masculin", "feminin", "epicene"]));
+  const [tranches, setTranches] = useState(new Set(["18+"]));
+  const [formats, setFormats] = useState(new Set(["standard", "falc"]));
+
+  const fetchFiches = useCallback(async (searchTerm: string) => {
+    setLoading(true);
+    try {
+      const data = await api.getFiches({ statut: "publiee", search: searchTerm || undefined, limit: 200 });
+      setFiches(data.results);
+      setTotalCount(data.total);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchFiches("");
+  }, [fetchFiches]);
+
+  function onSearch(value: string) {
+    setSearch(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => fetchFiches(value), 300);
+  }
+
+  async function handleGenerate() {
+    if (!selectedFiche) return;
+    setGenerating(true);
+    try {
+      const res = await api.generateVariantes(selectedFiche, {
+        genres: Array.from(genres),
+        tranches_age: Array.from(tranches),
+        formats: Array.from(formats),
+      });
+      setResults(prev => [{ code: selectedFiche, type: "success", message: res.message }, ...prev]);
+      // Refresh fiche list to update nb_variantes
+      fetchFiches(search);
+    } catch (err: any) {
+      setResults(prev => [{ code: selectedFiche, type: "error", message: err.message }, ...prev]);
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-[#F9F8FF] border border-[#E4E1FF] rounded-xl p-5">
+        <p className="text-sm text-gray-600">
+          Generez des <strong>variantes</strong> pour les fiches publiees : genre grammatical (M/F/epicene),
+          tranche d&apos;age (11-15, 15-18, 18+), format (standard, FALC).
+          Chaque generation utilise <strong>Claude API</strong> (~$0.01-0.05).
+        </p>
+      </div>
+
+      {/* Results */}
+      {results.length > 0 && (
+        <div className="space-y-2">
+          {results.slice(0, 5).map((r, i) => (
+            <div key={i} className={`p-3 rounded-lg text-sm ${
+              r.type === "success" ? "bg-green-50 text-green-800 border border-green-200" : "bg-red-50 text-red-800 border border-red-200"
+            }`}>
+              <strong>{r.code}</strong> : {r.message}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Generation panel */}
+      {selectedFiche && (
+        <div className="bg-white rounded-2xl border-2 border-[#4A39C0] p-6 space-y-5 shadow-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-bold text-[#1A1A2E]">Generer des variantes</h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Fiche : <strong>{selectedFiche}</strong> — {fiches.find(f => f.code_rome === selectedFiche)?.nom_masculin}
+                {" "}({fiches.find(f => f.code_rome === selectedFiche)?.nb_variantes || 0} variantes existantes)
+              </p>
+            </div>
+            <button onClick={() => setSelectedFiche(null)} className="text-gray-400 hover:text-gray-600">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <VariantesCheckboxes
+            genres={genres} setGenres={setGenres}
+            tranches={tranches} setTranches={setTranches}
+            formats={formats} setFormats={setFormats}
+          />
+
+          <div className="flex gap-3">
+            <button
+              onClick={handleGenerate}
+              disabled={generating || genres.size * tranches.size * formats.size === 0}
+              className="px-5 py-2 bg-[#4A39C0] text-white rounded-full text-sm font-medium hover:bg-[#3a2da0] transition disabled:opacity-40 disabled:cursor-wait"
+            >
+              {generating ? (
+                <span className="flex items-center gap-2">
+                  <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Generation en cours...
+                </span>
+              ) : "Generer les variantes"}
+            </button>
+            <button
+              onClick={() => setSelectedFiche(null)}
+              disabled={generating}
+              className="px-5 py-2 border border-gray-300 text-gray-600 rounded-full text-sm font-medium hover:bg-gray-50 transition"
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Fiches list */}
+      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 space-y-3">
+          <h2 className="text-lg font-bold text-[#1A1A2E]">Fiches publiees ({totalCount})</h2>
+          <SearchBar value={search} onChange={onSearch} />
+        </div>
+        <div className="divide-y divide-gray-100 max-h-[500px] overflow-y-auto">
+          {loading ? (
+            <div className="p-8 text-center text-gray-400">Chargement...</div>
+          ) : fiches.length === 0 ? (
+            <div className="p-8 text-center text-gray-400">
+              {search ? `Aucune fiche publiee pour "${search}"` : "Aucune fiche publiee"}
+            </div>
+          ) : (
+            fiches.map(fiche => (
+              <div
+                key={fiche.code_rome}
+                className={`flex items-center justify-between px-6 py-3 hover:bg-gray-50 transition cursor-pointer ${
+                  selectedFiche === fiche.code_rome ? "bg-[#F9F8FF]" : ""
+                }`}
+                onClick={() => setSelectedFiche(fiche.code_rome)}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="text-xs font-bold text-[#4A39C0]">{fiche.code_rome}</span>
+                  <span className="text-sm text-gray-700 truncate">{fiche.nom_masculin}</span>
+                </div>
+                <div className="flex items-center gap-3 shrink-0 ml-4">
+                  <span className="text-xs text-gray-400">{fiche.nb_variantes} variantes</span>
+                  <Link
+                    href={`/fiches/${fiche.code_rome}`}
+                    target="_blank"
+                    onClick={e => e.stopPropagation()}
+                    className="px-3 py-1.5 border border-gray-300 text-gray-600 rounded-full text-xs font-medium hover:border-[#4A39C0] hover:text-[#4A39C0] transition"
+                  >
+                    Voir
+                  </Link>
+                </div>
               </div>
             ))
           )}

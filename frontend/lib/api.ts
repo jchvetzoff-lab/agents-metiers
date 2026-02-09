@@ -256,6 +256,18 @@ class ApiClient {
     });
   }
 
+  // ==================== VARIANTES GENERATION ====================
+
+  async generateVariantes(
+    codeRome: string,
+    options: { genres?: string[]; tranches_age?: string[]; formats?: string[] }
+  ): Promise<{ message: string; code_rome: string; variantes_generees: number }> {
+    return this.request(`/api/fiches/${codeRome}/variantes/generate`, {
+      method: "POST",
+      body: JSON.stringify(options),
+    });
+  }
+
   // ==================== DELETE ====================
 
   async deleteFiche(codeRome: string): Promise<{ message: string; code_rome: string }> {
