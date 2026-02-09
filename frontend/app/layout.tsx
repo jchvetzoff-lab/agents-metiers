@@ -3,6 +3,7 @@ import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import BackgroundAnimation from "@/components/BackgroundAnimation";
+import ScrollToTop from "@/components/ScrollToTop";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -32,6 +33,7 @@ export default function RootLayout({
       >
         <BackgroundAnimation />
         <div className="relative z-10">
+          <ScrollToTop />
           <Navbar />
           {children}
         </div>
