@@ -86,6 +86,22 @@ except Exception as e:
 
 # ==================== HELPERS ====================
 
+import time as _time
+
+def claude_call_with_retry(client, *, model, max_tokens, messages, max_retries=5):
+    """Call Claude API with retry + exponential backoff on 429 rate-limit errors."""
+    import anthropic
+    for attempt in range(max_retries):
+        try:
+            return client.messages.create(model=model, max_tokens=max_tokens, messages=messages)
+        except anthropic.RateLimitError as e:
+            if attempt == max_retries - 1:
+                raise
+            wait = min(2 ** attempt * 15, 120)  # 15s, 30s, 60s, 120s
+            print(f"Rate limit hit, waiting {wait}s before retry {attempt + 2}/{max_retries}...")
+            _time.sleep(wait)
+
+
 def log_action(type_evt: TypeEvenement, description: str, code_rome: str = None, agent: str = "Frontend", validateur: str = None):
     """Enregistre un audit log."""
     try:
@@ -597,7 +613,8 @@ def enrich_fiche(code_rome: str):
             contexte=contexte,
         )
 
-        response = client.messages.create(
+        response = claude_call_with_retry(
+            client,
             model="claude-sonnet-4-20250514",
             max_tokens=4096,
             messages=[{"role": "user", "content": prompt}],
@@ -831,7 +848,8 @@ def validate_fiche(code_rome: str):
             mobilite=json.dumps(fiche.mobilite.model_dump() if fiche.mobilite else {}, ensure_ascii=False),
         )
 
-        response = client.messages.create(
+        response = claude_call_with_retry(
+            client,
             model="claude-sonnet-4-20250514",
             max_tokens=2048,
             messages=[{"role": "user", "content": prompt}],
@@ -1100,7 +1118,8 @@ def auto_correct_fiche(code_rome: str, rapport: AutoCorrectRequest):
             suggestions="\n".join(f"- {s}" for s in rapport.suggestions) or "Aucune suggestion spécifique",
         )
 
-        response = client.messages.create(
+        response = claude_call_with_retry(
+            client,
             model="claude-sonnet-4-20250514",
             max_tokens=4096,
             messages=[{"role": "user", "content": prompt}],
@@ -1307,11 +1326,15 @@ def generate_variantes(code_rome: str, request: GenerateVariantesRequest):
             "ar": LangueSupporte.AR,
         }
 
-        # Batch: max 6 variantes per Claude call to stay within token limits
-        BATCH_SIZE = 6
+        # Batch: max 3 variantes per Claude call to stay within rate limits (8k output tokens/min)
+        BATCH_SIZE = 3
         saved_count = 0
 
         for i in range(0, len(all_combos), BATCH_SIZE):
+            # Wait between batches to respect rate limits
+            if i > 0:
+                _time.sleep(30)
+
             batch = all_combos[i:i + BATCH_SIZE]
             batch_langues = list({c[0] for c in batch})
             batch_tranches = list({c[1] for c in batch})
@@ -1332,7 +1355,8 @@ def generate_variantes(code_rome: str, request: GenerateVariantesRequest):
                 langues_str=", ".join(batch_langues),
             )
 
-            response = client.messages.create(
+            response = claude_call_with_retry(
+                client,
                 model="claude-sonnet-4-20250514",
                 max_tokens=4096,
                 messages=[{"role": "user", "content": prompt}],
