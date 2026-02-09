@@ -83,23 +83,33 @@ export default function LoginPage() {
   };
 
   // ==================== PHASE INTRO ====================
+  // Helper : split text into individual letter spans with staggered delay
+  const letterSpans = (text: string, baseDelay: number, className: string) =>
+    text.split("").map((char, i) => (
+      <span
+        key={`${baseDelay}-${i}`}
+        className={`intro-letter ${className}`}
+        style={{ animationDelay: `${baseDelay + i * 0.04}s` }}
+      >
+        {char === " " ? "\u00A0" : char}
+      </span>
+    ));
+
   if (phase === "intro") {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white overflow-hidden px-4">
 
-        {/* Phrase principale */}
+        {/* Phrase principale - espace reserve pour les 2 lignes */}
         {introStep >= 1 && introStep <= 4 && (
-          <div className={`flex flex-col items-center gap-4 ${introStep === 4 ? "intro-text-out" : ""}`}>
-            {introStep >= 1 && (
-              <p className="intro-text-line text-3xl md:text-5xl font-bold text-gray-900 tracking-tight">
-                Comprendre les metiers.
-              </p>
-            )}
-            {introStep >= 2 && (
-              <p className="intro-text-line text-3xl md:text-5xl font-bold tracking-tight">
-                <span className="bg-gradient-purple-pink bg-clip-text text-transparent">Construire l&apos;avenir.</span>
-              </p>
-            )}
+          <div className={`flex flex-col items-center ${introStep === 4 ? "intro-text-out" : ""}`}>
+            <p className="text-2xl md:text-4xl font-light text-gray-400 tracking-widest leading-relaxed text-center">
+              {letterSpans("Comprendre les metiers.", 0, "")}
+            </p>
+            <p className="text-2xl md:text-4xl font-light tracking-widest leading-relaxed text-center mt-3" style={{ minHeight: "1em" }}>
+              {introStep >= 2
+                ? letterSpans("Construire l'avenir.", 0, "intro-letter-gradient")
+                : null}
+            </p>
           </div>
         )}
 

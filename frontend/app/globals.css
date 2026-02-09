@@ -229,21 +229,30 @@
 
 /* ==================== LOGIN INTRO ANIMATIONS ==================== */
 
-/* Ligne de texte : apparition elegante */
-.intro-text-line {
-  animation: textLineIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+/* Lettre par lettre : fondu individuel */
+.intro-letter {
+  display: inline-block;
+  opacity: 0;
+  animation: letterIn 0.5s ease-out forwards;
 }
 
-@keyframes textLineIn {
+.intro-letter-gradient {
+  background: linear-gradient(135deg, #4A39C0, #FF3254);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+@keyframes letterIn {
   from {
     opacity: 0;
-    transform: translateY(20px);
-    filter: blur(8px);
+    filter: blur(6px);
+    transform: translateY(4px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
     filter: blur(0);
+    transform: translateY(0);
   }
 }
 
