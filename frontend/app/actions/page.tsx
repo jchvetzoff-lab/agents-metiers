@@ -1,8 +1,83 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { api, FicheMetier, Stats } from "@/lib/api";
+
+// ══════════════════════════════════════
+// Composant recherche reutilisable
+// ══════════════════════════════════════
+
+function SearchBar({ value, onChange, placeholder, count }: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  count?: number;
+}) {
+  return (
+    <div className="relative flex-1">
+      <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      </svg>
+      <input
+        type="text"
+        placeholder={placeholder || "Rechercher par code ROME ou nom..."}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#4A39C0] focus:ring-1 focus:ring-[#4A39C0]"
+      />
+      {value && (
+        <button
+          onClick={() => onChange("")}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      )}
+    </div>
+  );
+}
+
+function useSearchFiches(statut: string, limit = 100) {
+  const [fiches, setFiches] = useState<FicheMetier[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [total, setTotal] = useState(0);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const fetchFiches = useCallback(async (searchTerm: string) => {
+    setLoading(true);
+    try {
+      const data = await api.getFiches({
+        statut,
+        search: searchTerm || undefined,
+        limit,
+      });
+      setFiches(data.results);
+      setTotal(data.total);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }, [statut, limit]);
+
+  useEffect(() => {
+    fetchFiches("");
+  }, [fetchFiches]);
+
+  function handleSearch(value: string) {
+    setSearch(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      fetchFiches(value);
+    }, 300);
+  }
+
+  return { fiches, setFiches, loading, search, handleSearch, total, refetch: () => fetchFiches(search) };
+}
 
 type Tab = "creer" | "enrichir" | "valider" | "publier" | "exporter";
 
@@ -188,30 +263,14 @@ function TabCreer() {
 // ══════════════════════════════════════
 
 function TabEnrichir() {
-  const [fiches, setFiches] = useState<FicheMetier[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { fiches, setFiches, loading, search, handleSearch, total } = useSearchFiches("brouillon", 100);
   const [enriching, setEnriching] = useState<string | null>(null);
   const [results, setResults] = useState<{ code: string; type: "success" | "error"; message: string }[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
 
   useEffect(() => {
-    loadData();
+    api.getStats().then(setStats).catch(console.error);
   }, []);
-
-  async function loadData() {
-    try {
-      const [fichesData, statsData] = await Promise.all([
-        api.getFiches({ statut: "brouillon", limit: 50 }),
-        api.getStats(),
-      ]);
-      setFiches(fichesData.results);
-      setStats(statsData);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   async function handleEnrich(codeRome: string) {
     setEnriching(codeRome);
@@ -269,20 +328,25 @@ function TabEnrichir() {
 
       {/* Fiches list */}
       <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-[#1A1A2E]">Fiches brouillon ({fiches.length})</h2>
-          {enriching && (
-            <div className="flex items-center gap-2 text-sm text-[#4A39C0]">
-              <div className="w-4 h-4 border-2 border-[#4A39C0]/30 border-t-[#4A39C0] rounded-full animate-spin" />
-              Enrichissement en cours...
-            </div>
-          )}
+        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold text-[#1A1A2E]">Fiches brouillon ({total})</h2>
+            {enriching && (
+              <div className="flex items-center gap-2 text-sm text-[#4A39C0]">
+                <div className="w-4 h-4 border-2 border-[#4A39C0]/30 border-t-[#4A39C0] rounded-full animate-spin" />
+                Enrichissement en cours...
+              </div>
+            )}
+          </div>
+          <SearchBar value={search} onChange={handleSearch} />
         </div>
         <div className="divide-y divide-gray-100 max-h-[500px] overflow-y-auto">
           {loading ? (
             <div className="p-8 text-center text-gray-400">Chargement...</div>
           ) : fiches.length === 0 ? (
-            <div className="p-8 text-center text-gray-400">Aucune fiche brouillon a enrichir</div>
+            <div className="p-8 text-center text-gray-400">
+              {search ? `Aucune fiche brouillon pour "${search}"` : "Aucune fiche brouillon a enrichir"}
+            </div>
           ) : (
             fiches.map(fiche => (
               <div key={fiche.code_rome} className="flex items-center justify-between px-6 py-3 hover:bg-gray-50 transition">
@@ -320,28 +384,12 @@ interface ValidationRapport {
 }
 
 function TabValider() {
-  const [fiches, setFiches] = useState<FicheMetier[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { fiches, setFiches, loading, search, handleSearch, total } = useSearchFiches("en_validation", 200);
   const [validating, setValidating] = useState<string | null>(null);
   const [rapports, setRapports] = useState<Record<string, ValidationRapport>>({});
   const [reviewing, setReviewing] = useState<string | null>(null);
   const [commentaire, setCommentaire] = useState("");
   const [results, setResults] = useState<{ code: string; type: "success" | "error"; message: string }[]>([]);
-
-  useEffect(() => {
-    loadFiches();
-  }, []);
-
-  async function loadFiches() {
-    try {
-      const data = await api.getFiches({ statut: "en_validation", limit: 200 });
-      setFiches(data.results);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   async function handleValidateIA(codeRome: string) {
     setValidating(codeRome);
@@ -420,14 +468,17 @@ function TabValider() {
 
       {/* Fiches list */}
       <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
-          <h2 className="text-lg font-bold text-[#1A1A2E]">Fiches en validation ({fiches.length})</h2>
+        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 space-y-3">
+          <h2 className="text-lg font-bold text-[#1A1A2E]">Fiches en validation ({total})</h2>
+          <SearchBar value={search} onChange={handleSearch} />
         </div>
 
         {loading ? (
           <div className="p-8 text-center text-gray-400">Chargement...</div>
         ) : fiches.length === 0 ? (
-          <div className="p-8 text-center text-gray-400">Aucune fiche en validation</div>
+          <div className="p-8 text-center text-gray-400">
+            {search ? `Aucune fiche en validation pour "${search}"` : "Aucune fiche en validation"}
+          </div>
         ) : (
           <div className="divide-y divide-gray-100">
             {fiches.map(fiche => {
@@ -584,26 +635,10 @@ function TabValider() {
 // ══════════════════════════════════════
 
 function TabPublier() {
-  const [fiches, setFiches] = useState<FicheMetier[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { fiches, setFiches, loading, search, handleSearch, total } = useSearchFiches("en_validation", 200);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [publishing, setPublishing] = useState(false);
   const [result, setResult] = useState<{ type: "success" | "error"; message: string } | null>(null);
-
-  useEffect(() => {
-    loadFiches();
-  }, []);
-
-  async function loadFiches() {
-    try {
-      const data = await api.getFiches({ statut: "en_validation", limit: 200 });
-      setFiches(data.results);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   function toggleSelect(code: string) {
     setSelected(prev => {
@@ -655,30 +690,35 @@ function TabPublier() {
       )}
 
       <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-[#1A1A2E]">
-            Fiches en validation ({fiches.length})
-          </h2>
-          <div className="flex items-center gap-3">
-            {fiches.length > 0 && (
-              <button onClick={selectAll} className="text-sm text-[#4A39C0] hover:underline">
-                {selected.size === fiches.length ? "Tout deselectionner" : "Tout selectionner"}
+        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold text-[#1A1A2E]">
+              Fiches en validation ({total})
+            </h2>
+            <div className="flex items-center gap-3">
+              {fiches.length > 0 && (
+                <button onClick={selectAll} className="text-sm text-[#4A39C0] hover:underline">
+                  {selected.size === fiches.length ? "Tout deselectionner" : "Tout selectionner"}
+                </button>
+              )}
+              <button
+                onClick={handlePublish}
+                disabled={selected.size === 0 || publishing}
+                className="px-5 py-2 bg-[#16A34A] text-white rounded-full text-sm font-medium hover:bg-[#15803D] transition disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {publishing ? "Publication..." : `Publier (${selected.size})`}
               </button>
-            )}
-            <button
-              onClick={handlePublish}
-              disabled={selected.size === 0 || publishing}
-              className="px-5 py-2 bg-[#16A34A] text-white rounded-full text-sm font-medium hover:bg-[#15803D] transition disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              {publishing ? "Publication..." : `Publier (${selected.size})`}
-            </button>
+            </div>
           </div>
+          <SearchBar value={search} onChange={handleSearch} />
         </div>
         <div className="divide-y divide-gray-100 max-h-[500px] overflow-y-auto">
           {loading ? (
             <div className="p-8 text-center text-gray-400">Chargement...</div>
           ) : fiches.length === 0 ? (
-            <div className="p-8 text-center text-gray-400">Aucune fiche en validation</div>
+            <div className="p-8 text-center text-gray-400">
+              {search ? `Aucune fiche en validation pour "${search}"` : "Aucune fiche en validation"}
+            </div>
           ) : (
             fiches.map(fiche => (
               <label
@@ -711,29 +751,34 @@ function TabExporter() {
   const [fiches, setFiches] = useState<FicheMetier[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [totalCount, setTotalCount] = useState(0);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  useEffect(() => {
-    loadFiches();
-  }, []);
-
-  async function loadFiches() {
+  const fetchFiches = useCallback(async (searchTerm: string) => {
+    setLoading(true);
     try {
-      const data = await api.getFiches({ statut: "en_validation", limit: 200 });
-      // Also load published
-      const pubData = await api.getFiches({ statut: "publiee", limit: 200 });
-      setFiches([...data.results, ...pubData.results]);
+      const [valData, pubData] = await Promise.all([
+        api.getFiches({ statut: "en_validation", search: searchTerm || undefined, limit: 200 }),
+        api.getFiches({ statut: "publiee", search: searchTerm || undefined, limit: 200 }),
+      ]);
+      setFiches([...valData.results, ...pubData.results]);
+      setTotalCount(valData.total + pubData.total);
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
-  const filtered = fiches.filter(f => {
-    if (!search) return true;
-    const s = search.toLowerCase();
-    return f.code_rome.toLowerCase().includes(s) || f.nom_masculin.toLowerCase().includes(s);
-  });
+  useEffect(() => {
+    fetchFiches("");
+  }, [fetchFiches]);
+
+  function onSearch(value: string) {
+    setSearch(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => fetchFiches(value), 300);
+  }
 
   return (
     <div className="space-y-6">
@@ -745,23 +790,19 @@ function TabExporter() {
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center gap-4">
-          <h2 className="text-lg font-bold text-[#1A1A2E] shrink-0">Fiches enrichies ({filtered.length})</h2>
-          <input
-            type="text"
-            placeholder="Rechercher..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#4A39C0]"
-          />
+        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 space-y-3">
+          <h2 className="text-lg font-bold text-[#1A1A2E]">Fiches enrichies ({totalCount})</h2>
+          <SearchBar value={search} onChange={onSearch} />
         </div>
         <div className="divide-y divide-gray-100 max-h-[500px] overflow-y-auto">
           {loading ? (
             <div className="p-8 text-center text-gray-400">Chargement...</div>
-          ) : filtered.length === 0 ? (
-            <div className="p-8 text-center text-gray-400">Aucune fiche enrichie trouvee</div>
+          ) : fiches.length === 0 ? (
+            <div className="p-8 text-center text-gray-400">
+              {search ? `Aucune fiche enrichie pour "${search}"` : "Aucune fiche enrichie trouvee"}
+            </div>
           ) : (
-            filtered.map(fiche => (
+            fiches.map(fiche => (
               <Link
                 key={fiche.code_rome}
                 href={`/fiches/${fiche.code_rome}`}
