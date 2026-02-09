@@ -71,7 +71,7 @@ def verify_password(password: str, hashed: str) -> bool:
 def create_token(user_id: int, email: str, name: str) -> str:
     """Cree un token JWT pour un utilisateur."""
     payload = {
-        "sub": user_id,
+        "sub": str(user_id),
         "email": email,
         "name": name,
         "exp": datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRATION_HOURS),
@@ -87,10 +87,8 @@ def decode_token(token: str) -> dict:
         return payload
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expire")
-    except jwt.InvalidTokenError as e:
-        raise HTTPException(status_code=401, detail=f"Token invalide: {type(e).__name__}: {e}")
-    except Exception as e:
-        raise HTTPException(status_code=401, detail=f"Token error: {type(e).__name__}: {e}")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Token invalide")
 
 
 # ==================== DEPENDENCY FASTAPI ====================
@@ -100,7 +98,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     token = credentials.credentials
     payload = decode_token(token)
     return {
-        "id": payload["sub"],
+        "id": int(payload["sub"]),
         "email": payload["email"],
         "name": payload["name"],
     }
