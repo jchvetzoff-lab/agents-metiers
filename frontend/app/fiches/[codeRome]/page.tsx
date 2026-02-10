@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { api, FicheDetail, Variante, VarianteDetail } from "@/lib/api";
+import { getTranslations, translateTendance } from "@/lib/translations";
 import StatusBadge from "@/components/StatusBadge";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
@@ -49,13 +50,13 @@ function StatCard({ label, value, sub, color = PURPLE }: {
   );
 }
 
-function TensionGauge({ value }: { value: number }) {
+function TensionGauge({ value, labels }: { value: number; labels: { title: string; high: string; moderate: string; low: string } }) {
   const pct = Math.round(value * 100);
   const color = pct >= 70 ? "#16a34a" : pct >= 40 ? "#eab308" : "#ef4444";
-  const label = pct >= 70 ? "Forte demande" : pct >= 40 ? "Demande modérée" : "Faible demande";
+  const label = pct >= 70 ? labels.high : pct >= 40 ? labels.moderate : labels.low;
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-5">
-      <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Tension du marché</div>
+      <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">{labels.title}</div>
       <div className="flex items-center justify-between mb-2">
         <span className="text-sm font-semibold" style={{ color }}>{label}</span>
         <span className="text-lg font-bold" style={{ color }}>{pct}%</span>
@@ -67,13 +68,13 @@ function TensionGauge({ value }: { value: number }) {
   );
 }
 
-function ChartTooltip({ active, payload, label }: any) {
+function ChartTooltip({ active, payload, label, locale = "fr-FR" }: any) {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-white border border-gray-200 rounded-lg px-4 py-2.5 shadow-lg text-sm">
       <p className="font-semibold mb-1">{label}</p>
       {payload.map((p: any, i: number) => (
-        <p key={i} style={{ color: p.color }}>{p.name} : {p.value?.toLocaleString("fr-FR")} €</p>
+        <p key={i} style={{ color: p.color }}>{p.name} : {p.value?.toLocaleString(locale)} &euro;</p>
       ))}
     </div>
   );
@@ -147,6 +148,10 @@ export default function FicheDetailPage() {
   const [filterLoading, setFilterLoading] = useState(false);
   const [filterError, setFilterError] = useState<string | null>(null);
 
+  // ── i18n: derive language from applied variante ──
+  const lang = appliedVariante?.langue || "fr";
+  const t = getTranslations(lang);
+
   async function handleApplyFilter() {
     setFilterLoading(true);
     setFilterError(null);
@@ -154,7 +159,7 @@ export default function FicheDetailPage() {
       v => v.genre === filterGenre && v.tranche_age === filterTranche && v.format_contenu === filterFormat && v.langue === filterLangue
     );
     if (!match) {
-      setFilterError("Aucune variante trouvee pour cette combinaison. Generez-la d'abord dans Actions > Variantes.");
+      setFilterError(t.noVariante);
       setAppliedVariante(null);
       setFilterLoading(false);
       return;
@@ -163,7 +168,7 @@ export default function FicheDetailPage() {
       const detail = await api.getVarianteDetail(codeRome, match.id);
       setAppliedVariante(detail);
     } catch (e: any) {
-      setFilterError(e.message || "Erreur lors du chargement de la variante");
+      setFilterError(e.message || t.varianteError);
       setAppliedVariante(null);
     } finally {
       setFilterLoading(false);
@@ -906,7 +911,7 @@ export default function FicheDetailPage() {
       <div className="min-h-screen flex items-center justify-center bg-[#F8F9FA]">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 rounded-full border-4 border-[#E4E1FF] border-t-[#4A39C0] animate-spin" />
-          <p className="text-sm text-gray-400">Chargement de la fiche...</p>
+          <p className="text-sm text-gray-400">{t.loading}</p>
         </div>
       </div>
     );
@@ -917,10 +922,10 @@ export default function FicheDetailPage() {
       <div className="min-h-screen flex items-center justify-center bg-[#F8F9FA]">
         <div className="text-center">
           <div className="text-6xl mb-4">🔍</div>
-          <h2 className="text-2xl font-bold mb-2">Fiche non trouvée</h2>
-          <p className="text-gray-500 mb-6">Le code ROME {codeRome} n&apos;existe pas.</p>
+          <h2 className="text-2xl font-bold mb-2">{t.notFound}</h2>
+          <p className="text-gray-500 mb-6">{codeRome} {t.notFoundDesc}</p>
           <Link href="/fiches" className="inline-flex items-center gap-2 px-6 py-3 bg-[#4A39C0] text-white rounded-full font-medium hover:bg-[#3a2da0] transition">
-            Retour aux fiches
+            {t.backToList}
           </Link>
         </div>
       </div>
@@ -930,18 +935,18 @@ export default function FicheDetailPage() {
   // ── Données dérivées ──
   const salaryData = fiche.salaires && (fiche.salaires.junior?.median || fiche.salaires.confirme?.median || fiche.salaires.senior?.median)
     ? [
-        { niveau: "Junior", min: fiche.salaires.junior?.min ?? 0, median: fiche.salaires.junior?.median ?? 0, max: fiche.salaires.junior?.max ?? 0 },
-        { niveau: "Confirmé", min: fiche.salaires.confirme?.min ?? 0, median: fiche.salaires.confirme?.median ?? 0, max: fiche.salaires.confirme?.max ?? 0 },
-        { niveau: "Senior", min: fiche.salaires.senior?.min ?? 0, median: fiche.salaires.senior?.median ?? 0, max: fiche.salaires.senior?.max ?? 0 },
+        { niveau: t.junior, min: fiche.salaires.junior?.min ?? 0, median: fiche.salaires.junior?.median ?? 0, max: fiche.salaires.junior?.max ?? 0 },
+        { niveau: t.confirmed, min: fiche.salaires.confirme?.min ?? 0, median: fiche.salaires.confirme?.median ?? 0, max: fiche.salaires.confirme?.max ?? 0 },
+        { niveau: t.senior, min: fiche.salaires.senior?.min ?? 0, median: fiche.salaires.senior?.median ?? 0, max: fiche.salaires.senior?.max ?? 0 },
       ]
     : null;
 
   const contractData = fiche.types_contrats && (fiche.types_contrats.cdi > 0 || fiche.types_contrats.cdd > 0)
     ? [
-        { name: "CDI", value: fiche.types_contrats.cdi },
-        { name: "CDD", value: fiche.types_contrats.cdd },
-        { name: "Intérim", value: fiche.types_contrats.interim },
-        ...(fiche.types_contrats.autre > 0 ? [{ name: "Autre", value: fiche.types_contrats.autre }] : []),
+        { name: t.cdi, value: fiche.types_contrats.cdi },
+        { name: t.cdd, value: fiche.types_contrats.cdd },
+        { name: t.interim, value: fiche.types_contrats.interim },
+        ...(fiche.types_contrats.autre > 0 ? [{ name: t.other, value: fiche.types_contrats.autre }] : []),
       ]
     : null;
 
@@ -966,12 +971,12 @@ export default function FicheDetailPage() {
   const hasStats = salaryData || contractData || fiche.perspectives;
 
   const sections = [
-    { id: "infos", label: "Informations clés", icon: "📋", show: true },
-    { id: "stats", label: "Statistiques", icon: "📊", show: hasStats },
-    { id: "competences", label: "Compétences", icon: "⚡", show: hasCompetences || hasSavoirEtre || hasSavoirs },
-    { id: "contextes", label: "Contextes de travail", icon: "🏢", show: hasContextes },
-    { id: "services", label: "Services & offres", icon: "🔗", show: true },
-    { id: "mobilite", label: "Métiers proches", icon: "🔄", show: hasMobilite },
+    { id: "infos", label: t.secKeyInfo, icon: "📋", show: true },
+    { id: "stats", label: t.secStatistics, icon: "📊", show: hasStats },
+    { id: "competences", label: t.secSkills, icon: "⚡", show: hasCompetences || hasSavoirEtre || hasSavoirs },
+    { id: "contextes", label: t.secWorkContexts, icon: "🏢", show: hasContextes },
+    { id: "services", label: t.secServices, icon: "🔗", show: true },
+    { id: "mobilite", label: t.secRelatedJobs, icon: "🔄", show: hasMobilite },
   ].filter(s => s.show);
 
   return (
@@ -981,7 +986,7 @@ export default function FicheDetailPage() {
         <div className="max-w-7xl mx-auto px-4 md:px-8 py-6">
           <Link href="/fiches" className="inline-flex items-center gap-1.5 text-sm text-[#4A39C0] hover:underline mb-4">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            Retour aux fiches
+            {t.backToList}
           </Link>
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
             <div>
@@ -1002,7 +1007,7 @@ export default function FicheDetailPage() {
                   {pdfLoading ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Génération...
+                      {t.generating}
                     </>
                   ) : (
                     <>
@@ -1011,7 +1016,7 @@ export default function FicheDetailPage() {
                         <polyline points="7 10 12 15 17 10" />
                         <line x1="12" y1="15" x2="12" y2="3" />
                       </svg>
-                      Télécharger PDF
+                      {t.downloadPdf}
                     </>
                   )}
                 </button>
@@ -1021,13 +1026,13 @@ export default function FicheDetailPage() {
                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                     <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                   </svg>
-                  <span className="hidden sm:inline">PDF disponible apres publication</span>
-                  <span className="sm:hidden">Publier d&apos;abord</span>
+                  <span className="hidden sm:inline">{t.pdfLocked}</span>
+                  <span className="sm:hidden">{t.publishFirst}</span>
                 </span>
               )}
               <div className="text-xs text-gray-400 text-right space-y-0.5">
-                <div>Version {fiche.version}</div>
-                <div>Mis à jour le {new Date(fiche.date_maj).toLocaleDateString("fr-FR")}</div>
+                <div>{t.version} {fiche.version}</div>
+                <div>{t.updatedOn} {new Date(fiche.date_maj).toLocaleDateString(t.locale)}</div>
               </div>
             </div>
           </div>
@@ -1041,8 +1046,8 @@ export default function FicheDetailPage() {
             <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
               {/* Genre */}
               <div className="flex items-center gap-3">
-                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider w-14">Genre</span>
-                {[{ v: "masculin", l: "Masculin" }, { v: "feminin", l: "Feminin" }, { v: "epicene", l: "Epicene" }].map(g => (
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider w-14">{t.genre}</span>
+                {[{ v: "masculin", l: t.masculine }, { v: "feminin", l: t.feminine }, { v: "epicene", l: t.epicene }].map(g => (
                   <label key={g.v} className="flex items-center gap-1.5 text-sm text-gray-700 cursor-pointer">
                     <input type="radio" name="filter-genre" value={g.v} checked={filterGenre === g.v}
                       onChange={() => setFilterGenre(g.v)}
@@ -1053,7 +1058,7 @@ export default function FicheDetailPage() {
               </div>
               {/* Tranche d'age */}
               <div className="flex items-center gap-3">
-                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider w-14">Age</span>
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider w-14">{t.age}</span>
                 {[{ v: "18+", l: "18+" }, { v: "15-18", l: "15-18" }, { v: "11-15", l: "11-15" }].map(t => (
                   <label key={t.v} className="flex items-center gap-1.5 text-sm text-gray-700 cursor-pointer">
                     <input type="radio" name="filter-tranche" value={t.v} checked={filterTranche === t.v}
@@ -1065,8 +1070,8 @@ export default function FicheDetailPage() {
               </div>
               {/* Format */}
               <div className="flex items-center gap-3">
-                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider w-14">Format</span>
-                {[{ v: "standard", l: "Standard" }, { v: "falc", l: "FALC" }].map(f => (
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider w-14">{t.format}</span>
+                {[{ v: "standard", l: t.standard }, { v: "falc", l: "FALC" }].map(f => (
                   <label key={f.v} className="flex items-center gap-1.5 text-sm text-gray-700 cursor-pointer">
                     <input type="radio" name="filter-format" value={f.v} checked={filterFormat === f.v}
                       onChange={() => setFilterFormat(f.v)}
@@ -1077,7 +1082,7 @@ export default function FicheDetailPage() {
               </div>
               {/* Langue */}
               <div className="flex items-center gap-3">
-                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider w-14">Langue</span>
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider w-14">{t.langue}</span>
                 {[{ v: "fr", l: "FR" }, { v: "en", l: "EN" }, { v: "es", l: "ES" }, { v: "it", l: "IT" }, { v: "pt", l: "PT" }, { v: "ar", l: "AR" }, { v: "de", l: "DE" }].map(lang => (
                   <label key={lang.v} className="flex items-center gap-1.5 text-sm text-gray-700 cursor-pointer">
                     <input type="radio" name="filter-langue" value={lang.v} checked={filterLangue === lang.v}
@@ -1094,7 +1099,7 @@ export default function FicheDetailPage() {
                     onClick={handleResetFilter}
                     className="px-4 py-1.5 border border-gray-300 text-gray-600 rounded-full text-xs font-medium hover:bg-gray-50 transition"
                   >
-                    Fiche originale
+                    {t.originalFiche}
                   </button>
                 )}
                 <button
@@ -1102,14 +1107,14 @@ export default function FicheDetailPage() {
                   disabled={filterLoading}
                   className="px-5 py-1.5 bg-[#4A39C0] text-white rounded-full text-xs font-medium hover:bg-[#3a2da0] transition disabled:opacity-50 disabled:cursor-wait"
                 >
-                  {filterLoading ? "Chargement..." : "Appliquer"}
+                  {filterLoading ? t.loadingShort : t.apply}
                 </button>
               </div>
             </div>
             {/* Variante active indicator */}
             {appliedVariante && (
               <div className="mt-2 text-xs text-[#4A39C0] font-medium">
-                Variante active : {appliedVariante.langue.toUpperCase()} / {appliedVariante.genre} / {appliedVariante.tranche_age} / {appliedVariante.format_contenu}
+                {t.activeVariante} : {appliedVariante.langue.toUpperCase()} / {appliedVariante.genre} / {appliedVariante.tranche_age} / {appliedVariante.format_contenu}
               </div>
             )}
             {filterError && (
@@ -1140,7 +1145,7 @@ export default function FicheDetailPage() {
           <div className="flex-1 min-w-0 space-y-6">
 
             {/* ═══ INFORMATIONS CLÉS ═══ */}
-            <SectionAnchor id="infos" title="Informations clés" icon="📋">
+            <SectionAnchor id="infos" title={t.secKeyInfo} icon="📋">
               {dDescription && (
                 <div className="mb-6">
                   <p className="text-gray-700 leading-relaxed text-[16px]">{dDescription}</p>
@@ -1148,33 +1153,33 @@ export default function FicheDetailPage() {
               )}
               {hasMissions && (
                 <div className="mb-6">
-                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Missions principales</h3>
+                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">{t.mainMissions}</h3>
                   <NumberedList items={fiche.missions_principales} color={PURPLE} />
                 </div>
               )}
               {fiche.acces_metier && (
                 <div className="mb-6 p-5 bg-[#F9F8FF] rounded-xl border border-[#E4E1FF]/60">
-                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-2">Comment y accéder ?</h3>
+                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-2">{t.howToAccess}</h3>
                   <p className="text-[15px] text-gray-600 leading-relaxed">{fiche.acces_metier}</p>
                 </div>
               )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {dFormations && dFormations.length > 0 && (
                   <div>
-                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Formations & Diplômes</h3>
+                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">{t.trainingDiplomas}</h3>
                     <BulletList items={dFormations} color={PURPLE} />
                   </div>
                 )}
                 {dCertifications && dCertifications.length > 0 && (
                   <div>
-                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Certifications</h3>
+                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">{t.certifications}</h3>
                     <BulletList items={dCertifications} color={PINK} />
                   </div>
                 )}
               </div>
               {fiche.secteurs_activite && fiche.secteurs_activite.length > 0 && (
                 <div className="mt-5 pt-5 border-t border-gray-100">
-                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Secteur d&apos;activité</span>
+                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t.activitySectors}</span>
                   <div className="flex flex-wrap gap-2 mt-2">
                     {fiche.secteurs_activite.map((s, i) => (
                       <span key={i} className="px-3 py-1 rounded-full bg-gray-100 text-sm text-gray-700">{s}</span>
@@ -1186,39 +1191,39 @@ export default function FicheDetailPage() {
 
             {/* ═══ STATISTIQUES ═══ */}
             {hasStats && (
-              <SectionAnchor id="stats" title="Statistiques sur ce métier" icon="📊">
+              <SectionAnchor id="stats" title={t.statsTitle} icon="📊">
                 {fiche.perspectives && (fiche.perspectives.nombre_offres != null || fiche.perspectives.taux_insertion != null) && (
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
                     {fiche.perspectives.nombre_offres != null && (
-                      <StatCard label="offres d'emploi par an" value={fiche.perspectives.nombre_offres.toLocaleString("fr-FR")} sub="Estimation nationale" color={PURPLE} />
+                      <StatCard label={t.offersPerYear} value={fiche.perspectives.nombre_offres.toLocaleString(t.locale)} sub={t.nationalEstimate} color={PURPLE} />
                     )}
                     {fiche.perspectives.taux_insertion != null && (
-                      <StatCard label="taux d'insertion à 6 mois" value={`${(fiche.perspectives.taux_insertion * 100).toFixed(0)}%`} sub="Après formation" color={CYAN} />
+                      <StatCard label={t.insertionRate} value={`${(fiche.perspectives.taux_insertion * 100).toFixed(0)}%`} sub={t.afterTraining} color={CYAN} />
                     )}
                     <div className="col-span-2 md:col-span-1">
-                      <TensionGauge value={fiche.perspectives.tension ?? 0.5} />
+                      <TensionGauge value={fiche.perspectives.tension ?? 0.5} labels={{ title: t.marketTension, high: t.highDemand, moderate: t.moderateDemand, low: t.lowDemand }} />
                     </div>
                   </div>
                 )}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {salaryData && (
                     <div>
-                      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">Salaires annuels bruts</h3>
+                      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">{t.grossSalaries}</h3>
                       <ResponsiveContainer width="100%" height={240}>
                         <BarChart data={salaryData} barCategoryGap="20%">
                           <XAxis dataKey="niveau" tick={{ fontSize: 12, fill: "#6B7280" }} axisLine={false} tickLine={false} />
                           <YAxis tick={{ fontSize: 11, fill: "#9CA3AF" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k€`} />
-                          <Tooltip content={<ChartTooltip />} />
-                          <Bar dataKey="min" name="Min" fill="#E4E1FF" radius={[4, 4, 0, 0]} />
-                          <Bar dataKey="median" name="Médian" fill={PURPLE} radius={[4, 4, 0, 0]} />
-                          <Bar dataKey="max" name="Max" fill={LIGHT_PURPLE} radius={[4, 4, 0, 0]} />
+                          <Tooltip content={<ChartTooltip locale={t.locale} />} />
+                          <Bar dataKey="min" name={t.min} fill="#E4E1FF" radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="median" name={t.median} fill={PURPLE} radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="max" name={t.max} fill={LIGHT_PURPLE} radius={[4, 4, 0, 0]} />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
                   )}
                   {contractData && (
                     <div>
-                      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">Répartition des embauches</h3>
+                      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">{t.hiringBreakdown}</h3>
                       <ResponsiveContainer width="100%" height={240}>
                         <PieChart>
                           <Pie data={contractData} cx="50%" cy="50%" innerRadius={50} outerRadius={85} paddingAngle={3} dataKey="value"
@@ -1234,19 +1239,19 @@ export default function FicheDetailPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
                   {fiche.perspectives && (
                     <div className="bg-gray-50 rounded-xl p-5">
-                      <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Tendance du métier</div>
+                      <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{t.jobTrend}</div>
                       <div className="flex items-center gap-3">
                         <span className="text-3xl">{fiche.perspectives.tendance === "emergence" ? "📈" : fiche.perspectives.tendance === "disparition" ? "📉" : "➡️"}</span>
                         <div>
-                          <div className="text-lg font-bold capitalize">{fiche.perspectives.tendance}</div>
-                          <div className="text-xs text-gray-500">Sur les 5 prochaines années</div>
+                          <div className="text-lg font-bold capitalize">{translateTendance(fiche.perspectives.tendance, t)}</div>
+                          <div className="text-xs text-gray-500">{t.next5Years}</div>
                         </div>
                       </div>
                     </div>
                   )}
                   {fiche.perspectives?.evolution_5ans && (
                     <div className="bg-gray-50 rounded-xl p-5">
-                      <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Évolution à 5 ans</div>
+                      <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{t.evolution5y}</div>
                       <p className="text-sm text-gray-600 leading-relaxed">{fiche.perspectives.evolution_5ans}</p>
                     </div>
                   )}
@@ -1256,13 +1261,13 @@ export default function FicheDetailPage() {
 
             {/* ═══ COMPÉTENCES ═══ */}
             {(hasCompetences || hasSavoirEtre || hasSavoirs) && (
-              <SectionAnchor id="competences" title="Compétences" icon="⚡">
+              <SectionAnchor id="competences" title={t.secSkills} icon="⚡">
                 <div className="border-b border-gray-200 mb-6 overflow-x-auto scrollbar-hide">
                   <div className="flex gap-0 -mb-px min-w-0">
                     {[
-                      { id: "sf" as const, label: "Savoir-faire", count: dCompetences?.length ?? 0, show: hasCompetences },
-                      { id: "se" as const, label: "Savoir-être", count: dCompetencesTransversales?.length ?? 0, show: hasSavoirEtre },
-                      { id: "sa" as const, label: "Savoirs", count: fiche.savoirs?.length ?? 0, show: hasSavoirs },
+                      { id: "sf" as const, label: t.knowHow, count: dCompetences?.length ?? 0, show: hasCompetences },
+                      { id: "se" as const, label: t.softSkills, count: dCompetencesTransversales?.length ?? 0, show: hasSavoirEtre },
+                      { id: "sa" as const, label: t.knowledge, count: fiche.savoirs?.length ?? 0, show: hasSavoirs },
                     ].filter(t => t.show).map(tab => (
                       <button key={tab.id} onClick={() => setActiveTab(tab.id)}
                         className={`px-3 md:px-4 py-3 text-xs md:text-sm font-medium border-b-2 transition-all whitespace-nowrap ${
@@ -1277,9 +1282,9 @@ export default function FicheDetailPage() {
                   </div>
                 </div>
                 <p className="text-sm text-gray-500 mb-4 italic">
-                  {activeTab === "sf" && "Compétences pratiques et techniques pouvant être appliquées en situation professionnelle."}
-                  {activeTab === "se" && "Qualités humaines et comportementales pour interagir avec son environnement de travail."}
-                  {activeTab === "sa" && "Connaissances théoriques acquises par la formation et l'expérience."}
+                  {activeTab === "sf" && t.knowHowDesc}
+                  {activeTab === "se" && t.softSkillsDesc}
+                  {activeTab === "sa" && t.knowledgeDesc}
                 </p>
                 {activeTab === "sf" && dCompetences && <NumberedList items={dCompetences} color={PURPLE} />}
                 {activeTab === "se" && dCompetencesTransversales && (
@@ -1307,17 +1312,17 @@ export default function FicheDetailPage() {
 
             {/* ═══ CONTEXTES DE TRAVAIL ═══ */}
             {hasContextes && (
-              <SectionAnchor id="contextes" title="Contextes de travail" icon="🏢">
+              <SectionAnchor id="contextes" title={t.secWorkContexts} icon="🏢">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   {dConditions && dConditions.length > 0 && (
                     <div>
-                      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Conditions de travail et risques professionnels</h3>
+                      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">{t.workConditions}</h3>
                       <BulletList items={dConditions} color={PURPLE} />
                     </div>
                   )}
                   {dEnvironnements && dEnvironnements.length > 0 && (
                     <div>
-                      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Structures & Environnements</h3>
+                      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">{t.structuresEnv}</h3>
                       <BulletList items={dEnvironnements} color={CYAN} />
                     </div>
                   )}
@@ -1326,28 +1331,28 @@ export default function FicheDetailPage() {
             )}
 
             {/* ═══ SERVICES & OFFRES ═══ */}
-            <SectionAnchor id="services" title="Services & offres" icon="🔗">
-              <p className="text-sm text-gray-500 mb-4">Les services pour vous accompagner dans votre parcours professionnel.</p>
+            <SectionAnchor id="services" title={t.secServices} icon="🔗">
+              <p className="text-sm text-gray-500 mb-4">{t.servicesIntro}</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <ServiceLink icon="🎓" title="Trouver ma formation" desc="Recherchez et inscrivez-vous à une formation" url="https://candidat.francetravail.fr/formations/recherche" />
-                <ServiceLink icon="💰" title="Mon Compte Formation (CPF)" desc="Mobilisez vos droits à la formation" url="https://www.moncompteformation.gouv.fr" />
-                <ServiceLink icon="🏭" title="Immersion facilitée" desc="Découvrez ce métier en conditions réelles" url="https://immersion-facile.beta.gouv.fr" />
-                <ServiceLink icon="📑" title="La Bonne Alternance" desc="Trouvez un contrat en alternance" url="https://labonnealternance.apprentissage.beta.gouv.fr" />
-                <ServiceLink icon="🏅" title="France VAE" desc="Valorisez votre expérience par la VAE" url="https://vae.gouv.fr" />
-                <ServiceLink icon="🚗" title="Aides à la mobilité" desc="Découvrez les aides pour vos déplacements" url="https://candidat.francetravail.fr/aides" />
-                <ServiceLink icon="📅" title="Événements France Travail" desc="Consultez les rencontres sur votre territoire" url="https://mesevenementsemploi.francetravail.fr" />
-                <ServiceLink icon="💼" title="Offres d'emploi" desc={`Voir les offres pour ${fiche.nom_epicene}`} url={`https://candidat.francetravail.fr/offres/recherche?motsCles=${encodeURIComponent(fiche.nom_masculin)}`} />
+                <ServiceLink icon="🎓" title={t.findTraining} desc={t.findTrainingDesc} url="https://candidat.francetravail.fr/formations/recherche" />
+                <ServiceLink icon="💰" title={t.cpf} desc={t.cpfDesc} url="https://www.moncompteformation.gouv.fr" />
+                <ServiceLink icon="🏭" title={t.immersion} desc={t.immersionDesc} url="https://immersion-facile.beta.gouv.fr" />
+                <ServiceLink icon="📑" title={t.alternance} desc={t.alternanceDesc} url="https://labonnealternance.apprentissage.beta.gouv.fr" />
+                <ServiceLink icon="🏅" title={t.vae} desc={t.vaeDesc} url="https://vae.gouv.fr" />
+                <ServiceLink icon="🚗" title={t.mobilityAids} desc={t.mobilityAidsDesc} url="https://candidat.francetravail.fr/aides" />
+                <ServiceLink icon="📅" title={t.ftEvents} desc={t.ftEventsDesc} url="https://mesevenementsemploi.francetravail.fr" />
+                <ServiceLink icon="💼" title={t.jobOffers} desc={`${t.seeOffersFor} ${fiche.nom_epicene}`} url={`https://candidat.francetravail.fr/offres/recherche?motsCles=${encodeURIComponent(fiche.nom_masculin)}`} />
               </div>
             </SectionAnchor>
 
             {/* ═══ MÉTIERS PROCHES ═══ */}
             {hasMobilite && (
-              <SectionAnchor id="mobilite" title="Métiers proches" icon="🔄">
-                <p className="text-sm text-gray-500 mb-5">Découvrez les métiers ayant des compétences communes ou des évolutions possibles.</p>
+              <SectionAnchor id="mobilite" title={t.secRelatedJobs} icon="🔄">
+                <p className="text-sm text-gray-500 mb-5">{t.relatedJobsIntro}</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   {fiche.mobilite!.metiers_proches?.length > 0 && (
                     <div>
-                      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Métiers avec compétences communes</h3>
+                      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">{t.commonSkillsJobs}</h3>
                       <div className="space-y-3">
                         {fiche.mobilite!.metiers_proches.map((m, i) => (
                           <div key={i} className="p-4 rounded-xl border border-gray-200 bg-white hover:border-[#4A39C0] hover:shadow-sm transition-all">
@@ -1360,7 +1365,7 @@ export default function FicheDetailPage() {
                   )}
                   {fiche.mobilite!.evolutions?.length > 0 && (
                     <div>
-                      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Évolutions possibles</h3>
+                      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">{t.possibleEvolutions}</h3>
                       <div className="space-y-3">
                         {fiche.mobilite!.evolutions.map((e, i) => (
                           <div key={i} className="p-4 rounded-xl border border-[#CCFBF1] bg-[#F0FDFA] hover:shadow-sm transition-all">
