@@ -1600,6 +1600,196 @@ async def sync_rome(current_user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=500, detail=f"Erreur synchronisation ROME: {str(e)}")
 
 
+# ==================== REGIONAL DATA (France Travail Offres API) ====================
+
+FRANCE_REGIONS = [
+    {"code": "01", "libelle": "Guadeloupe"},
+    {"code": "02", "libelle": "Martinique"},
+    {"code": "03", "libelle": "Guyane"},
+    {"code": "04", "libelle": "La Réunion"},
+    {"code": "06", "libelle": "Mayotte"},
+    {"code": "11", "libelle": "Île-de-France"},
+    {"code": "24", "libelle": "Centre-Val de Loire"},
+    {"code": "27", "libelle": "Bourgogne-Franche-Comté"},
+    {"code": "28", "libelle": "Normandie"},
+    {"code": "32", "libelle": "Hauts-de-France"},
+    {"code": "44", "libelle": "Grand Est"},
+    {"code": "52", "libelle": "Pays de la Loire"},
+    {"code": "53", "libelle": "Bretagne"},
+    {"code": "75", "libelle": "Nouvelle-Aquitaine"},
+    {"code": "76", "libelle": "Occitanie"},
+    {"code": "84", "libelle": "Auvergne-Rhône-Alpes"},
+    {"code": "93", "libelle": "Provence-Alpes-Côte d'Azur"},
+    {"code": "94", "libelle": "Corse"},
+]
+
+
+def _get_ft_token():
+    """Obtient un token OAuth2 France Travail (Offres d'emploi v2)."""
+    client_id = os.getenv("FT_CLIENT_ID", "")
+    client_secret = os.getenv("FT_CLIENT_SECRET", "")
+    if not client_id or not client_secret:
+        return None
+
+    import httpx as _httpx
+    resp = _httpx.post(
+        "https://entreprise.francetravail.fr/connexion/oauth2/access_token?realm=/partenaire",
+        data={
+            "grant_type": "client_credentials",
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "scope": "api_offresdemploiv2 o2dsoffre",
+        },
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        timeout=15.0,
+    )
+    if resp.status_code != 200:
+        return None
+    return resp.json().get("access_token")
+
+
+def _parse_salary_annual(libelle: str) -> float | None:
+    """Extrait un salaire annuel brut approximatif depuis le libellé France Travail."""
+    if not libelle:
+        return None
+    import re as _re
+    nums = [float(n) for n in _re.findall(r'(\d+(?:\.\d+)?)', libelle) if float(n) > 100]
+    if not nums:
+        return None
+
+    if "Annuel" in libelle or "Mensuel" in libelle:
+        # Values > 1000 are likely annual; take average of first two
+        vals = [n for n in nums if n > 1000]
+        if vals:
+            return sum(vals[:2]) / len(vals[:2])
+    elif "Horaire" in libelle:
+        vals = [n for n in nums if n < 100]
+        if vals:
+            avg = sum(vals[:2]) / len(vals[:2])
+            return avg * 1607  # heures/an en France
+    return None
+
+
+@app.get("/api/regions")
+async def get_regions():
+    """Retourne la liste des régions françaises."""
+    return {"regions": FRANCE_REGIONS}
+
+
+@app.get("/api/fiches/{code_rome}/regional")
+async def get_regional_data(
+    code_rome: str,
+    region: str = Query(..., description="Code région (ex: 11 pour Île-de-France)"),
+):
+    """Récupère les données régionales pour un métier via l'API Offres d'emploi France Travail."""
+    import httpx as _httpx
+
+    token = _get_ft_token()
+    if not token:
+        raise HTTPException(
+            status_code=503,
+            detail="Credentials France Travail non configurés (FT_CLIENT_ID / FT_CLIENT_SECRET)"
+        )
+
+    # Vérifier que la région existe
+    region_name = next((r["libelle"] for r in FRANCE_REGIONS if r["code"] == region), None)
+    if not region_name:
+        raise HTTPException(status_code=400, detail=f"Région inconnue: {region}")
+
+    try:
+        async with _httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.get(
+                "https://api.francetravail.io/partenaire/offresdemploi/v2/offres/search",
+                params={"codeROME": code_rome, "region": region, "range": "0-149"},
+                headers={"Authorization": f"Bearer {token}"},
+            )
+
+        if resp.status_code == 404:
+            return {
+                "region": region,
+                "region_name": region_name,
+                "code_rome": code_rome,
+                "nb_offres": 0,
+                "salaires": None,
+                "types_contrats": None,
+            }
+
+        if resp.status_code not in (200, 206):
+            raise HTTPException(status_code=502, detail=f"Erreur API France Travail: HTTP {resp.status_code}")
+
+        data = resp.json()
+        resultats = data.get("resultats", [])
+        filtres = data.get("filtresPossibles", [])
+
+        # Nombre total d'offres depuis les filtres (plus précis que len(resultats))
+        nb_offres = 0
+        for f in filtres:
+            if f["filtre"] == "typeContrat":
+                nb_offres = sum(a["nbResultats"] for a in f["agregation"])
+                break
+        if nb_offres == 0:
+            nb_offres = len(resultats)
+
+        # Agréger les salaires
+        salaires_annuels = []
+        for r in resultats:
+            sal = _parse_salary_annual(r.get("salaire", {}).get("libelle", ""))
+            if sal and 15000 < sal < 200000:  # filtre aberrants
+                salaires_annuels.append(sal)
+
+        salaires_annuels.sort()
+        salaires_result = None
+        if salaires_annuels:
+            n = len(salaires_annuels)
+            salaires_result = {
+                "nb_offres_avec_salaire": n,
+                "min": round(salaires_annuels[0]),
+                "max": round(salaires_annuels[-1]),
+                "median": round(salaires_annuels[n // 2]),
+                "moyenne": round(sum(salaires_annuels) / n),
+            }
+
+        # Agréger les types de contrats
+        contrats_result = None
+        for f in filtres:
+            if f["filtre"] == "typeContrat":
+                cdi = cdd = interim = autre = 0
+                for a in f["agregation"]:
+                    v = a["valeurPossible"]
+                    nb = a["nbResultats"]
+                    if v == "CDI":
+                        cdi = nb
+                    elif v == "CDD":
+                        cdd = nb
+                    elif v == "MIS":
+                        interim = nb
+                    else:
+                        autre += nb
+                total = cdi + cdd + interim + autre
+                if total > 0:
+                    contrats_result = {
+                        "cdi": round(cdi / total * 100),
+                        "cdd": round(cdd / total * 100),
+                        "interim": round(interim / total * 100),
+                        "autre": round(autre / total * 100),
+                    }
+                break
+
+        return {
+            "region": region,
+            "region_name": region_name,
+            "code_rome": code_rome,
+            "nb_offres": nb_offres,
+            "salaires": salaires_result,
+            "types_contrats": contrats_result,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur données régionales: {str(e)}")
+
+
 # ==================== AUTH ENDPOINTS ====================
 
 @app.post("/api/auth/register")
