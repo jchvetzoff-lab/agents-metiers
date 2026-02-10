@@ -23,7 +23,7 @@ export default function LoginPage() {
   // Si deja connecte, rediriger
   useEffect(() => {
     if (isAuthenticated()) {
-      router.replace("/dashboard");
+      router.replace("/");
     }
   }, [router]);
 
@@ -60,7 +60,7 @@ export default function LoginPage() {
       } else {
         const result = await api.login(email, password);
         setToken(result.token);
-        router.replace("/dashboard");
+        router.replace("/");
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Erreur de connexion";
