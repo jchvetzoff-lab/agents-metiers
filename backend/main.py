@@ -1197,25 +1197,37 @@ FICHE SOURCE :
 - Compétences : {competences}
 - Formations : {formations}
 
-TÂCHE : Générer {nb_variantes} variantes de cette fiche selon les axes suivants :
+TÂCHE : Générer EXACTEMENT {nb_variantes} variantes de cette fiche selon les axes suivants :
+- Langues : {langues_str}
 - Tranches d'âge : {tranches_str}
 - Formats : {formats_str}
 - Genres : {genres_str}
 
+Chaque variante DOIT être dans la langue demandée. Tout le contenu (nom, description, compétences, formations, certifications, conditions, environnements) doit être traduit et adapté dans cette langue.
+
 RÈGLES PAR AXE :
 
-1. TRANCHES D'ÂGE
+1. LANGUES
+   - "fr" : Français
+   - "en" : Anglais (English) — tout le contenu en anglais
+   - "es" : Espagnol (Español) — tout le contenu en espagnol
+   - "it" : Italien (Italiano) — tout le contenu en italien
+   - "de" : Allemand (Deutsch) — tout le contenu en allemand
+   - "pt" : Portugais (Português) — tout le contenu en portugais
+   - "ar" : Arabe (العربية) — tout le contenu en arabe avec script arabe
+
+2. TRANCHES D'ÂGE
    - "11-15" : Langage simple, exemples concrets, ton encourageant, phrases courtes (<20 mots)
    - "15-18" : Vocabulaire jeune, orientation études, exemples inspirants, phrases moyennes (<25 mots)
    - "18+" : Langage professionnel, exhaustif, technique si nécessaire
 
-2. FORMATS
+3. FORMATS
    - "standard" : Rédaction classique
    - "falc" (Facile À Lire et à Comprendre) : Phrases <15 mots, vocabulaire simple (niveau primaire), 1 idée par phrase, pas de jargon
 
-3. GENRES
-   - "masculin" : Utiliser le masculin partout
-   - "feminin" : Utiliser le féminin partout
+4. GENRES
+   - "masculin" : Utiliser le masculin partout (ou équivalent dans la langue)
+   - "feminin" : Utiliser le féminin partout (ou équivalent dans la langue)
    - "epicene" : Langage neutre (éviter les accords genrés)
 
 STRUCTURE DE SORTIE :
@@ -1224,40 +1236,29 @@ Réponds UNIQUEMENT avec un objet JSON valide (sans texte avant ou après) :
 {{
     "variantes": [
         {{
-            "langue": "fr",
+            "langue": "{exemple_langue}",
             "tranche_age": "18+",
             "format_contenu": "standard",
             "genre": "masculin",
-            "nom": "Nom du métier adapté",
-            "description": "Description complète (3-5 phrases selon le format)",
-            "description_courte": "Description courte (1 phrase max 200 car)",
-            "competences": ["Compétence 1", "Compétence 2", "..."],
-            "competences_transversales": ["Soft skill 1", "Soft skill 2", "..."],
-            "formations": ["Formation 1", "Formation 2", "..."],
+            "nom": "Nom du métier dans la langue demandée",
+            "description": "Description complète dans la langue demandée (3-5 phrases)",
+            "description_courte": "Description courte dans la langue demandée (1 phrase max 200 car)",
+            "competences": ["Compétence 1 dans la langue", "Compétence 2", "..."],
+            "competences_transversales": ["Soft skill 1 dans la langue", "..."],
+            "formations": ["Formation 1 dans la langue", "..."],
             "certifications": ["Certification 1", "..."],
-            "conditions_travail": ["Condition 1", "..."],
-            "environnements": ["Environnement 1", "..."]
+            "conditions_travail": ["Condition 1 dans la langue", "..."],
+            "environnements": ["Environnement 1 dans la langue", "..."]
         }}
     ]
 }}
 
-4. LANGUES
-   - "fr" : Français
-   - "en" : Anglais (English)
-   - "es" : Espagnol (Español)
-   - "it" : Italien (Italiano)
-   - "de" : Allemand (Deutsch)
-   - "pt" : Portugais (Português)
-   - "ar" : Arabe (العربية) — écrire en arabe avec script arabe
-
 IMPORTANT :
-- Génère EXACTEMENT {nb_variantes} variantes (toutes les combinaisons demandées)
+- Le champ "langue" de chaque variante DOIT correspondre à la langue demandée (ex: "en" pour anglais, "es" pour espagnol)
 - Pour FALC : PHRASES <15 MOTS, vocabulaire niveau CM1-CM2
 - Pour 11-15 ans : Éviter jargon, expliquer concepts
-- Pour genre épicène : Utiliser des tournures neutres (ex: "La personne qui exerce ce métier...")
-- Langues demandées : {langues_str}
-- Adapte TOUT le contenu dans la langue demandée (nom, description, compétences, formations, etc.)
-- Pour l'arabe, écris en script arabe."""
+- Pour genre épicène : Utiliser des tournures neutres
+- Pour l'arabe, écrire en script arabe"""
 
 
 class GenerateVariantesRequest(BaseModel):
@@ -1359,6 +1360,7 @@ def generate_variantes(code_rome: str, request: GenerateVariantesRequest, curren
                 formats_str=", ".join(batch_formats),
                 genres_str=", ".join(batch_genres),
                 langues_str=", ".join(batch_langues),
+                exemple_langue=batch_langues[0],
             )
 
             response = claude_call_with_retry(
@@ -1422,8 +1424,12 @@ def generate_variantes(code_rome: str, request: GenerateVariantesRequest, curren
     except HTTPException:
         raise
     except json.JSONDecodeError as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Erreur parsing JSON Claude: {str(e)}")
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Erreur génération variantes: {str(e)}")
 
 
