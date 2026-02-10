@@ -101,6 +101,31 @@ export interface VarianteDetail extends Variante {
   version: number;
 }
 
+export interface Region {
+  code: string;
+  libelle: string;
+}
+
+export interface RegionalData {
+  region: string;
+  region_name: string;
+  code_rome: string;
+  nb_offres: number;
+  salaires: {
+    nb_offres_avec_salaire: number;
+    min: number;
+    max: number;
+    median: number;
+    moyenne: number;
+  } | null;
+  types_contrats: {
+    cdi: number;
+    cdd: number;
+    interim: number;
+    autre: number;
+  } | null;
+}
+
 export interface AuditLog {
   id: number;
   type_evenement: string;
@@ -297,6 +322,16 @@ class ApiClient {
       method: "POST",
       body: JSON.stringify({ problemes, suggestions }),
     });
+  }
+
+  // ==================== REGIONAL DATA ====================
+
+  async getRegions(): Promise<{ regions: Region[] }> {
+    return this.request<{ regions: Region[] }>("/api/regions");
+  }
+
+  async getRegionalData(codeRome: string, region: string): Promise<RegionalData> {
+    return this.request<RegionalData>(`/api/fiches/${codeRome}/regional?region=${region}`);
   }
 
   // ==================== ROME SYNC ====================

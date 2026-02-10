@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { api, FicheDetail, Variante, VarianteDetail } from "@/lib/api";
+import { api, FicheDetail, Variante, VarianteDetail, Region, RegionalData } from "@/lib/api";
 import { getTranslations, translateTendance } from "@/lib/translations";
 import StatusBadge from "@/components/StatusBadge";
 import {
@@ -148,6 +148,12 @@ export default function FicheDetailPage() {
   const [filterLoading, setFilterLoading] = useState(false);
   const [filterError, setFilterError] = useState<string | null>(null);
 
+  // Regional data
+  const [regions, setRegions] = useState<Region[]>([]);
+  const [selectedRegion, setSelectedRegion] = useState<string>("");
+  const [regionalData, setRegionalData] = useState<RegionalData | null>(null);
+  const [regionalLoading, setRegionalLoading] = useState(false);
+
   // ── i18n: derive language from applied variante ──
   const lang = appliedVariante?.langue || "fr";
   const t = getTranslations(lang);
@@ -193,10 +199,27 @@ export default function FicheDetailPage() {
         ]);
         setFiche(ficheData);
         setVariantes(variantesData.variantes);
+        // Load regions list (non-blocking)
+        api.getRegions().then(r => setRegions(r.regions)).catch(() => {});
       } catch (e) { console.error(e); }
       finally { setLoading(false); }
     })();
   }, [codeRome]);
+
+  // Fetch regional data when region changes
+  useEffect(() => {
+    if (!selectedRegion) {
+      setRegionalData(null);
+      return;
+    }
+    let cancelled = false;
+    setRegionalLoading(true);
+    api.getRegionalData(codeRome, selectedRegion)
+      .then(data => { if (!cancelled) setRegionalData(data); })
+      .catch(() => { if (!cancelled) setRegionalData(null); })
+      .finally(() => { if (!cancelled) setRegionalLoading(false); });
+    return () => { cancelled = true; };
+  }, [codeRome, selectedRegion]);
 
   // Scroll spy
   useEffect(() => {
@@ -1192,6 +1215,88 @@ export default function FicheDetailPage() {
             {/* ═══ STATISTIQUES ═══ */}
             {hasStats && (
               <SectionAnchor id="stats" title={t.statsTitle} icon="📊">
+                {/* ── Region selector ── */}
+                {regions.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-3 mb-6 p-4 bg-[#F9F8FF] rounded-xl border border-[#E4E1FF]">
+                    <label className="text-sm font-semibold text-[#4A39C0]">{t.filterByRegion || "Filtrer par région"} :</label>
+                    <select
+                      value={selectedRegion}
+                      onChange={(e) => setSelectedRegion(e.target.value)}
+                      className="px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#4A39C0] focus:border-transparent"
+                    >
+                      <option value="">{t.allFrance || "France entière"}</option>
+                      {regions.filter(r => parseInt(r.code) >= 11).map(r => (
+                        <option key={r.code} value={r.code}>{r.libelle}</option>
+                      ))}
+                      <optgroup label="Outre-mer">
+                        {regions.filter(r => parseInt(r.code) < 11).map(r => (
+                          <option key={r.code} value={r.code}>{r.libelle}</option>
+                        ))}
+                      </optgroup>
+                    </select>
+                    {regionalLoading && (
+                      <div className="w-5 h-5 border-2 border-[#E4E1FF] border-t-[#4A39C0] rounded-full animate-spin" />
+                    )}
+                    {selectedRegion && regionalData && !regionalLoading && (
+                      <span className="text-sm text-gray-500">
+                        {regionalData.nb_offres} {t.offersInRegion || "offres dans cette région"}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* ── Regional data banner ── */}
+                {selectedRegion && regionalData && !regionalLoading && (
+                  <div className="mb-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <span className="text-lg">📍</span>
+                      <h3 className="text-base font-bold text-[#4A39C0]">{regionalData.region_name}</h3>
+                      <span className="px-2 py-0.5 rounded-full bg-[#E4E1FF] text-[#4A39C0] text-xs font-semibold">
+                        {t.liveData || "Données temps réel"} — France Travail
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                      <StatCard label={t.activeOffers || "Offres actives"} value={regionalData.nb_offres.toLocaleString(t.locale)} color={PURPLE} />
+                      {regionalData.salaires && (
+                        <>
+                          <StatCard label={t.medianSalary || "Salaire médian"} value={`${(regionalData.salaires.median / 1000).toFixed(0)}k€`} sub={t.grossAnnual || "brut annuel"} color={CYAN} />
+                          <StatCard label={t.min || "Min"} value={`${(regionalData.salaires.min / 1000).toFixed(0)}k€`} sub={`${regionalData.salaires.nb_offres_avec_salaire} ${t.offersWithSalary || "offres avec salaire"}`} color="#6B7280" />
+                          <StatCard label={t.max || "Max"} value={`${(regionalData.salaires.max / 1000).toFixed(0)}k€`} color={PINK} />
+                        </>
+                      )}
+                      {!regionalData.salaires && regionalData.nb_offres === 0 && (
+                        <div className="col-span-3 text-sm text-gray-400 italic p-4">{t.noOffersRegion || "Aucune offre dans cette région pour ce métier."}</div>
+                      )}
+                    </div>
+
+                    {/* Regional contract breakdown */}
+                    {regionalData.types_contrats && (
+                      <div className="mb-6">
+                        <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">{t.regionalContracts || "Répartition des contrats"} — {regionalData.region_name}</h3>
+                        <div className="flex gap-2 flex-wrap">
+                          {[
+                            { name: t.cdi, value: regionalData.types_contrats.cdi, color: PURPLE },
+                            { name: t.cdd, value: regionalData.types_contrats.cdd, color: PINK },
+                            { name: t.interim, value: regionalData.types_contrats.interim, color: CYAN },
+                            ...(regionalData.types_contrats.autre > 0 ? [{ name: t.other, value: regionalData.types_contrats.autre, color: "#F59E0B" }] : []),
+                          ].map((c, i) => (
+                            <div key={i} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-gray-200">
+                              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: c.color }} />
+                              <span className="text-sm font-semibold text-gray-700">{c.name}</span>
+                              <span className="text-sm font-bold" style={{ color: c.color }}>{c.value}%</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="border-t border-gray-200 pt-4">
+                      <p className="text-xs text-gray-400 italic">{t.nationalDataBelow || "Données nationales (enrichies par IA) ci-dessous"} ↓</p>
+                    </div>
+                  </div>
+                )}
+
                 {fiche.perspectives && (fiche.perspectives.nombre_offres != null || fiche.perspectives.taux_insertion != null) && (
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
                     {fiche.perspectives.nombre_offres != null && (
