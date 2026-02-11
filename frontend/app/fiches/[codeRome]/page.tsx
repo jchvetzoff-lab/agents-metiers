@@ -957,10 +957,13 @@ export default function FicheDetailPage() {
 
   // ── Données dérivées (region-aware) ──
   const isRegional = !!(selectedRegion && regionalData && !regionalLoading);
+  // Key suffix to force Recharts remount when data source changes
+  const chartKey = isRegional ? `reg-${selectedRegion}` : "national";
 
   // Salary data: prefer regional salaires_par_niveau when available
   const regSal = isRegional ? regionalData?.salaires_par_niveau : null;
-  const salarySource = regSal || fiche.salaires;
+  const useSalRegional = !!(regSal && (regSal.junior || regSal.confirme || regSal.senior));
+  const salarySource = useSalRegional ? regSal! : fiche.salaires;
   const salaryData = salarySource && (salarySource.junior?.median || salarySource.confirme?.median || salarySource.senior?.median)
     ? [
         { niveau: t.junior, min: salarySource.junior?.min ?? 0, median: salarySource.junior?.median ?? 0, max: salarySource.junior?.max ?? 0 },
@@ -971,7 +974,8 @@ export default function FicheDetailPage() {
 
   // Contract data: prefer regional when available
   const regContrats = isRegional ? regionalData?.types_contrats : null;
-  const contratSource = regContrats || fiche.types_contrats;
+  const useContratRegional = !!(regContrats && (regContrats.cdi > 0 || regContrats.cdd > 0));
+  const contratSource = useContratRegional ? regContrats! : fiche.types_contrats;
   const contractData = contratSource && (contratSource.cdi > 0 || contratSource.cdd > 0)
     ? [
         { name: t.cdi, value: contratSource.cdi },
@@ -1301,14 +1305,14 @@ export default function FicheDetailPage() {
                     <div>
                       <div className="flex items-center gap-2 mb-4">
                         <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">{t.grossSalaries}</h3>
-                        {isRegional && regSal && (
+                        {useSalRegional && (
                           <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#E4E1FF] text-[#4A39C0] font-semibold">{t.regionalLive}</span>
                         )}
-                        {(!isRegional || !regSal) && (
+                        {!useSalRegional && (
                           <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-semibold">{t.nationalData}</span>
                         )}
                       </div>
-                      <ResponsiveContainer width="100%" height={240}>
+                      <ResponsiveContainer key={`sal-${chartKey}`} width="100%" height={240}>
                         <BarChart data={salaryData} barCategoryGap="20%">
                           <XAxis dataKey="niveau" tick={{ fontSize: 12, fill: "#6B7280" }} axisLine={false} tickLine={false} />
                           <YAxis tick={{ fontSize: 11, fill: "#9CA3AF" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k€`} />
@@ -1346,14 +1350,14 @@ export default function FicheDetailPage() {
                     <div>
                       <div className="flex items-center gap-2 mb-4">
                         <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">{t.hiringBreakdown}</h3>
-                        {isRegional && regContrats && (
+                        {useContratRegional && (
                           <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#E4E1FF] text-[#4A39C0] font-semibold">{t.regionalLive}</span>
                         )}
-                        {(!isRegional || !regContrats) && (
+                        {!useContratRegional && (
                           <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-semibold">{t.nationalData}</span>
                         )}
                       </div>
-                      <ResponsiveContainer width="100%" height={240}>
+                      <ResponsiveContainer key={`ctr-${chartKey}`} width="100%" height={240}>
                         <PieChart>
                           <Pie data={contractData} cx="50%" cy="50%" innerRadius={50} outerRadius={85} paddingAngle={3} dataKey="value"
                             label={({ name, value }) => `${name} (${value}%)`} labelLine={{ stroke: "#d1d5db" }}>
