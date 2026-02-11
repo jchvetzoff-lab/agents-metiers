@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { api, Stats, AuditLog } from "@/lib/api";
 import MetricCard from "@/components/MetricCard";
 import SectionHeader from "@/components/SectionHeader";
+import { FadeInView, StaggerContainer, StaggerItem } from "@/components/motion";
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -56,52 +57,64 @@ export default function DashboardPage() {
         )}
 
         {/* Header */}
-        <div className="text-center mb-16">
-          <div className="flex items-center justify-center gap-4 mb-4">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-purple-pink flex items-center justify-center shadow-lg">
-              <svg className="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
+        <FadeInView>
+          <div className="text-center mb-16">
+            <div className="flex items-center justify-center gap-4 mb-4">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-600 to-cyan-500 flex items-center justify-center shadow-lg">
+                <svg className="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+              <h1 className="text-3xl md:text-5xl font-serif font-bold gradient-text">Dashboard</h1>
             </div>
-            <h1 className="text-3xl md:text-5xl font-serif font-bold gradient-text">Dashboard</h1>
+            <p className="text-xl text-text-muted">
+              Vue d'ensemble de vos fiches métiers et statistiques en temps réel
+            </p>
           </div>
-          <p className="text-xl text-text-muted">
-            Vue d'ensemble de vos fiches métiers et statistiques en temps réel
-          </p>
-        </div>
+        </FadeInView>
 
         {/* Métriques */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 md:gap-6 mb-16">
-          <MetricCard
-            label="Total des fiches"
-            value={stats?.total || 0}
-            icon="📄"
-          />
-          <MetricCard
-            label="Brouillons"
-            value={stats?.brouillons || 0}
-            trend="neutral"
-            trendValue={`${pctBrouillon.toFixed(0)}%`}
-            icon="📝"
-          />
-          <MetricCard
-            label="En validation"
-            value={stats?.en_validation || 0}
-            icon="🔍"
-          />
-          <MetricCard
-            label="Publiées"
-            value={stats?.publiees || 0}
-            trend="up"
-            trendValue={`${pctPubliees.toFixed(0)}%`}
-            icon="✅"
-          />
-          <MetricCard
-            label="Archivées"
-            value={stats?.archivees || 0}
-            icon="📦"
-          />
-        </div>
+        <StaggerContainer stagger={0.08} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 md:gap-6 mb-16">
+          <StaggerItem>
+            <MetricCard
+              label="Total des fiches"
+              value={stats?.total || 0}
+              icon="📄"
+            />
+          </StaggerItem>
+          <StaggerItem>
+            <MetricCard
+              label="Brouillons"
+              value={stats?.brouillons || 0}
+              trend="neutral"
+              trendValue={`${pctBrouillon.toFixed(0)}%`}
+              icon="📝"
+            />
+          </StaggerItem>
+          <StaggerItem>
+            <MetricCard
+              label="En validation"
+              value={stats?.en_validation || 0}
+              icon="🔍"
+            />
+          </StaggerItem>
+          <StaggerItem>
+            <MetricCard
+              label="Publiées"
+              value={stats?.publiees || 0}
+              trend="up"
+              trendValue={`${pctPubliees.toFixed(0)}%`}
+              icon="✅"
+            />
+          </StaggerItem>
+          <StaggerItem>
+            <MetricCard
+              label="Archivées"
+              value={stats?.archivees || 0}
+              icon="📦"
+            />
+          </StaggerItem>
+        </StaggerContainer>
 
         {/* Graphiques Section */}
         <SectionHeader
@@ -118,10 +131,10 @@ export default function DashboardPage() {
             <div className="h-56 md:h-72">
               {stats && stats.total > 0 ? (() => {
                 const pieData = [
-                  { name: "Brouillons", value: stats.brouillons, color: "#6B7280" },
-                  { name: "En validation", value: stats.en_validation, color: "#EAB308" },
-                  { name: "Publiees", value: stats.publiees, color: "#16A34A" },
-                  { name: "Archivees", value: stats.archivees, color: "#9CA3AF" },
+                  { name: "Brouillons", value: stats.brouillons, color: "#4F46E5" },
+                  { name: "En validation", value: stats.en_validation, color: "#06B6D4" },
+                  { name: "Publiees", value: stats.publiees, color: "#F97316" },
+                  { name: "Archivees", value: stats.archivees, color: "#78716C" },
                 ].filter(d => d.value > 0);
                 return (
                 <ResponsiveContainer width="100%" height="100%">
@@ -163,10 +176,10 @@ export default function DashboardPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={[
-                      { etape: "Brouillons", count: stats.brouillons, fill: "#6B7280" },
-                      { etape: "En validation", count: stats.en_validation, fill: "#EAB308" },
-                      { etape: "Publiees", count: stats.publiees, fill: "#16A34A" },
-                      { etape: "Archivees", count: stats.archivees, fill: "#9CA3AF" },
+                      { etape: "Brouillons", count: stats.brouillons, fill: "#4F46E5" },
+                      { etape: "En validation", count: stats.en_validation, fill: "#06B6D4" },
+                      { etape: "Publiees", count: stats.publiees, fill: "#F97316" },
+                      { etape: "Archivees", count: stats.archivees, fill: "#78716C" },
                     ]}
                     margin={{ top: 10, right: 10, left: -10, bottom: 5 }}
                   >
@@ -184,14 +197,14 @@ export default function DashboardPage() {
                     />
                     <Tooltip
                       formatter={(value: number) => [value, "Fiches"]}
-                      contentStyle={{ borderRadius: "12px", border: "1px solid #E5E7EB", fontSize: 13 }}
+                      contentStyle={{ borderRadius: "16px", border: "1px solid #E5E7EB", fontSize: 13 }}
                     />
                     <Bar dataKey="count" radius={[6, 6, 0, 0]} barSize={50}>
                       {[
-                        { fill: "#6B7280" },
-                        { fill: "#EAB308" },
-                        { fill: "#16A34A" },
-                        { fill: "#9CA3AF" },
+                        { fill: "#4F46E5" },
+                        { fill: "#06B6D4" },
+                        { fill: "#F97316" },
+                        { fill: "#78716C" },
                       ].map((entry, i) => (
                         <Cell key={i} fill={entry.fill} />
                       ))}
@@ -214,7 +227,7 @@ export default function DashboardPage() {
           description="Les 15 dernières actions effectuées sur les fiches"
         />
 
-        <div className="space-y-3">
+        <StaggerContainer stagger={0.08} className="space-y-3">
           {logs.length > 0 ? (
             logs.map((log) => {
               const icons: Record<string, string> = {
@@ -241,50 +254,52 @@ export default function DashboardPage() {
               };
 
               return (
-                <div key={log.id} className="sojai-card">
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-start gap-4 flex-1">
-                      <div className="text-3xl mt-0.5">{icon}</div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold text-text-dark">
-                            {typeLabels[log.type_evenement] || log.type_evenement.replace("_", " ").toUpperCase()}
-                          </span>
-                          {log.code_rome && (
-                            <span className="badge badge-purple text-xs">
-                              {log.code_rome}
+                <StaggerItem key={log.id}>
+                  <div className="sojai-card" style={{ borderLeft: "3px solid #4F46E5" }}>
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-start gap-4 flex-1">
+                        <div className="text-3xl mt-0.5">{icon}</div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-semibold text-text-dark">
+                              {typeLabels[log.type_evenement] || log.type_evenement.replace("_", " ").toUpperCase()}
                             </span>
-                          )}
-                          {log.agent && (
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${
-                              log.agent === "Claude IA"
-                                ? "bg-blue-100 text-blue-700"
-                                : "bg-gray-100 text-gray-600"
-                            }`}>
-                              {log.agent}
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-sm text-text-muted mt-1">
-                          {log.description}
-                        </div>
-                        {log.validateur && (
-                          <div className="text-xs text-green-600 mt-1">
-                            Validateur : {log.validateur}
+                            {log.code_rome && (
+                              <span className="badge badge-purple text-xs">
+                                {log.code_rome}
+                              </span>
+                            )}
+                            {log.agent && (
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                log.agent === "Claude IA"
+                                  ? "bg-blue-100 text-blue-700"
+                                  : "bg-gray-100 text-gray-600"
+                              }`}>
+                                {log.agent}
+                              </span>
+                            )}
                           </div>
-                        )}
+                          <div className="text-sm text-text-muted mt-1">
+                            {log.description}
+                          </div>
+                          {log.validateur && (
+                            <div className="text-xs text-green-600 mt-1">
+                              Validateur : {log.validateur}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-xs text-text-muted text-right shrink-0 ml-4">
+                        {new Date(log.timestamp).toLocaleDateString("fr-FR")}
+                        <br />
+                        {new Date(log.timestamp).toLocaleTimeString("fr-FR", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
                       </div>
                     </div>
-                    <div className="text-xs text-text-muted text-right shrink-0 ml-4">
-                      {new Date(log.timestamp).toLocaleDateString("fr-FR")}
-                      <br />
-                      {new Date(log.timestamp).toLocaleTimeString("fr-FR", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </div>
                   </div>
-                </div>
+                </StaggerItem>
               );
             })
           ) : (
@@ -296,7 +311,7 @@ export default function DashboardPage() {
               </p>
             </div>
           )}
-        </div>
+        </StaggerContainer>
 
         {/* Footer */}
         <div className="mt-12 text-center text-sm text-text-muted">

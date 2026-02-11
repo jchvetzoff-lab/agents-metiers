@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { motion } from "framer-motion";
 import Link from "next/link";
 import { api, FicheMetier, Stats } from "@/lib/api";
+import { FadeInView } from "@/components/motion";
 
 // ══════════════════════════════════════
 // Composant recherche reutilisable
@@ -24,7 +26,7 @@ function SearchBar({ value, onChange, placeholder, count }: {
         placeholder={placeholder || "Rechercher par code ROME ou nom..."}
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#4A39C0] focus:ring-1 focus:ring-[#4A39C0]"
+        className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
       />
       {value && (
         <button
@@ -98,17 +100,19 @@ export default function ActionsPage() {
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-5xl mx-auto px-4 md:px-8 py-8">
-          <div className="flex items-center gap-4 mb-2">
-            <div className="w-12 h-12 rounded-xl bg-[#4A39C0] flex items-center justify-center">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
+          <FadeInView>
+            <div className="flex items-center gap-4 mb-2">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-600 to-cyan-500 flex items-center justify-center shadow-lg">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold gradient-text">Actions</h1>
+                <p className="text-gray-500 text-sm">Gerez vos fiches metiers avec les agents IA</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-[#1A1A2E]">Actions</h1>
-              <p className="text-gray-500 text-sm">Gerez vos fiches metiers avec les agents IA</p>
-            </div>
-          </div>
+          </FadeInView>
         </div>
       </div>
 
@@ -120,12 +124,19 @@ export default function ActionsPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-3 md:px-5 py-3.5 text-xs md:text-sm font-medium border-b-2 transition-all whitespace-nowrap ${
+                className={`relative px-3 md:px-5 py-3.5 text-xs md:text-sm font-medium transition-all whitespace-nowrap ${
                   activeTab === tab.id
-                    ? "border-[#4A39C0] text-[#4A39C0]"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    ? "text-indigo-600"
+                    : "text-gray-500 hover:text-gray-700"
                 }`}
               >
+                {activeTab === tab.id && (
+                  <motion.div
+                    layoutId="actions-tab-underline"
+                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-indigo-600 to-pink-500"
+                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                  />
+                )}
                 {tab.label}
               </button>
             ))}
@@ -321,7 +332,7 @@ function TabMiseAJour() {
               fiches.map(fiche => (
                 <div key={fiche.code_rome} className="flex items-center justify-between px-4 py-2.5 hover:bg-gray-50 transition">
                   <div className="min-w-0 flex items-center gap-2">
-                    <span className="text-xs font-bold text-[#4A39C0]">{fiche.code_rome}</span>
+                    <span className="text-xs font-bold text-indigo-600">{fiche.code_rome}</span>
                     <span className="text-sm text-gray-700 truncate">{fiche.nom_masculin}</span>
                     <span className={`text-xs px-2 py-0.5 rounded-full ${
                       fiche.statut === "en_validation" ? "bg-yellow-100 text-yellow-700"
@@ -333,14 +344,14 @@ function TabMiseAJour() {
                     <Link
                       href={`/fiches/${fiche.code_rome}`}
                       target="_blank"
-                      className="px-3 py-1.5 border border-gray-300 text-gray-600 rounded-full text-xs font-medium hover:border-[#4A39C0] hover:text-[#4A39C0] transition"
+                      className="px-3 py-1.5 border border-gray-300 text-gray-600 rounded-full text-xs font-medium hover:border-indigo-500 hover:text-indigo-600 transition"
                     >
                       Voir
                     </Link>
                     <button
                       onClick={() => handleEnrichOne(fiche.code_rome)}
                       disabled={enriching !== null}
-                      className="px-4 py-1.5 bg-[#4A39C0] text-white rounded-full text-xs font-medium hover:bg-[#3a2da0] transition disabled:opacity-40 disabled:cursor-wait"
+                      className="px-4 py-1.5 bg-indigo-600 text-white rounded-full text-xs font-medium hover:bg-indigo-700 transition disabled:opacity-40 disabled:cursor-wait"
                     >
                       {enriching === fiche.code_rome ? (
                         <span className="flex items-center gap-1.5">
@@ -367,7 +378,7 @@ function TabMiseAJour() {
           </p>
         </div>
         <div className="px-6 md:px-8 py-5 space-y-4">
-          <div className="bg-[#F9F8FF] border border-[#E4E1FF] rounded-lg p-4 text-sm text-gray-600">
+          <div className="bg-indigo-50/50 border border-indigo-200 rounded-lg p-4 text-sm text-gray-600">
             Le backend telechargera le fichier <strong>arborescence_principale.xlsx</strong> depuis data.gouv.fr,
             comparera avec les fiches existantes, et creera les nouvelles fiches manquantes en statut brouillon.
             Cette operation peut prendre <strong>10-30 secondes</strong>.
@@ -391,7 +402,7 @@ function TabMiseAJour() {
           <button
             onClick={handleSyncRome}
             disabled={syncing}
-            className="px-6 py-2.5 bg-[#4A39C0] text-white rounded-full font-medium text-sm hover:bg-[#3a2da0] transition disabled:opacity-50 disabled:cursor-wait"
+            className="px-6 py-2.5 bg-indigo-600 text-white rounded-full font-medium text-sm hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-wait"
           >
             {syncing ? (
               <span className="flex items-center gap-2">
@@ -428,7 +439,7 @@ function TabMiseAJour() {
                     checked={batchScope === opt.value}
                     onChange={() => setBatchScope(opt.value)}
                     disabled={batchRunning}
-                    className="w-4 h-4 text-[#4A39C0] focus:ring-[#4A39C0]"
+                    className="w-4 h-4 text-indigo-600 focus:ring-indigo-500"
                   />
                   {opt.label} {opt.count != null && <span className="text-xs text-gray-400">({opt.count})</span>}
                 </label>
@@ -452,15 +463,15 @@ function TabMiseAJour() {
                   {batchProgress.total > 0 && ` (${Math.round(batchProgress.current / batchProgress.total * 100)}%)`}
                 </span>
                 {batchRunning && (
-                  <div className="flex items-center gap-2 text-[#4A39C0]">
-                    <div className="w-3 h-3 border-2 border-[#4A39C0]/30 border-t-[#4A39C0] rounded-full animate-spin" />
+                  <div className="flex items-center gap-2 text-indigo-600">
+                    <div className="w-3 h-3 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
                     En cours...
                   </div>
                 )}
               </div>
               <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-[#4A39C0] rounded-full transition-all duration-300"
+                  className="h-full bg-indigo-600 rounded-full transition-all duration-300"
                   style={{ width: batchProgress.total > 0 ? `${(batchProgress.current / batchProgress.total) * 100}%` : "0%" }}
                 />
               </div>
@@ -483,7 +494,7 @@ function TabMiseAJour() {
             <button
               onClick={handleBatchEnrich}
               disabled={batchRunning || batchCount === 0}
-              className="px-6 py-2.5 bg-[#4A39C0] text-white rounded-full font-medium text-sm hover:bg-[#3a2da0] transition disabled:opacity-50 disabled:cursor-wait"
+              className="px-6 py-2.5 bg-indigo-600 text-white rounded-full font-medium text-sm hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-wait"
             >
               {batchRunning ? "Enrichissement en cours..." : "Lancer le re-enrichissement"}
             </button>
@@ -536,7 +547,7 @@ function TabEnrichir() {
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { label: "Total", value: stats.total, color: "#4A39C0" },
+            { label: "Total", value: stats.total, color: "#4F46E5" },
             { label: "Brouillons", value: stats.brouillons, color: "#6B7280" },
             { label: "En validation", value: stats.en_validation, color: "#EAB308" },
             { label: "Publiees", value: stats.publiees, color: "#16A34A" },
@@ -550,7 +561,7 @@ function TabEnrichir() {
       )}
 
       {/* Info box */}
-      <div className="bg-[#F9F8FF] border border-[#E4E1FF] rounded-xl p-5">
+      <div className="bg-indigo-50/50 border border-indigo-200 rounded-xl p-5">
         <p className="text-sm text-gray-600">
           L&apos;enrichissement utilise <strong>Claude API</strong> pour generer automatiquement : description, competences,
           salaires, perspectives, conditions de travail, mobilite, etc. Chaque enrichissement coute environ <strong>$0.01-0.03</strong>.
@@ -576,8 +587,8 @@ function TabEnrichir() {
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold text-[#1A1A2E]">Fiches brouillon ({total})</h2>
             {enriching && (
-              <div className="flex items-center gap-2 text-sm text-[#4A39C0]">
-                <div className="w-4 h-4 border-2 border-[#4A39C0]/30 border-t-[#4A39C0] rounded-full animate-spin" />
+              <div className="flex items-center gap-2 text-sm text-indigo-600">
+                <div className="w-4 h-4 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
                 Enrichissement en cours...
               </div>
             )}
@@ -595,21 +606,21 @@ function TabEnrichir() {
             fiches.map(fiche => (
               <div key={fiche.code_rome} className="flex items-center justify-between px-6 py-3 hover:bg-gray-50 transition">
                 <div className="min-w-0 flex items-center gap-2">
-                  <span className="text-xs font-bold text-[#4A39C0]">{fiche.code_rome}</span>
+                  <span className="text-xs font-bold text-indigo-600">{fiche.code_rome}</span>
                   <span className="text-sm text-gray-700">{fiche.nom_masculin}</span>
                 </div>
                 <div className="flex items-center gap-2 shrink-0 ml-4">
                   <Link
                     href={`/fiches/${fiche.code_rome}`}
                     target="_blank"
-                    className="px-3 py-1.5 border border-gray-300 text-gray-600 rounded-full text-xs font-medium hover:border-[#4A39C0] hover:text-[#4A39C0] transition"
+                    className="px-3 py-1.5 border border-gray-300 text-gray-600 rounded-full text-xs font-medium hover:border-indigo-500 hover:text-indigo-600 transition"
                   >
                     Voir
                   </Link>
                   <button
                     onClick={() => handleEnrich(fiche.code_rome)}
                     disabled={enriching !== null}
-                    className="px-4 py-1.5 bg-[#4A39C0] text-white rounded-full text-xs font-medium hover:bg-[#3a2da0] transition disabled:opacity-40 disabled:cursor-wait"
+                    className="px-4 py-1.5 bg-indigo-600 text-white rounded-full text-xs font-medium hover:bg-indigo-700 transition disabled:opacity-40 disabled:cursor-wait"
                   >
                     {enriching === fiche.code_rome ? "..." : "Enrichir"}
                   </button>
@@ -657,7 +668,7 @@ function VariantesCheckboxes({ genres, setGenres, tranches, setTranches, formats
           {[{ v: "masculin", l: "Masculin" }, { v: "feminin", l: "Feminin" }, { v: "epicene", l: "Epicene" }].map(g => (
             <label key={g.v} className="flex items-center gap-1.5 text-xs text-gray-700 cursor-pointer">
               <input type="checkbox" checked={genres.has(g.v)} onChange={() => toggle(genres, setGenres, g.v)}
-                className="w-3.5 h-3.5 rounded border-gray-300 text-[#4A39C0] focus:ring-[#4A39C0]" />
+                className="w-3.5 h-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
               {g.l}
             </label>
           ))}
@@ -669,7 +680,7 @@ function VariantesCheckboxes({ genres, setGenres, tranches, setTranches, formats
           {[{ v: "18+", l: "Adultes (18+)" }, { v: "15-18", l: "Ados (15-18)" }, { v: "11-15", l: "Jeunes (11-15)" }].map(t => (
             <label key={t.v} className="flex items-center gap-1.5 text-xs text-gray-700 cursor-pointer">
               <input type="checkbox" checked={tranches.has(t.v)} onChange={() => toggle(tranches, setTranches, t.v)}
-                className="w-3.5 h-3.5 rounded border-gray-300 text-[#4A39C0] focus:ring-[#4A39C0]" />
+                className="w-3.5 h-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
               {t.l}
             </label>
           ))}
@@ -681,7 +692,7 @@ function VariantesCheckboxes({ genres, setGenres, tranches, setTranches, formats
           {[{ v: "standard", l: "Standard" }, { v: "falc", l: "FALC" }].map(f => (
             <label key={f.v} className="flex items-center gap-1.5 text-xs text-gray-700 cursor-pointer">
               <input type="checkbox" checked={formats.has(f.v)} onChange={() => toggle(formats, setFormats, f.v)}
-                className="w-3.5 h-3.5 rounded border-gray-300 text-[#4A39C0] focus:ring-[#4A39C0]" />
+                className="w-3.5 h-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
               {f.l}
             </label>
           ))}
@@ -693,13 +704,13 @@ function VariantesCheckboxes({ genres, setGenres, tranches, setTranches, formats
           {[{ v: "fr", l: "Francais" }, { v: "en", l: "Anglais" }, { v: "es", l: "Espagnol" }, { v: "it", l: "Italien" }, { v: "pt", l: "Portugais" }, { v: "ar", l: "Arabe" }, { v: "de", l: "Allemand" }].map(lang => (
             <label key={lang.v} className="flex items-center gap-1.5 text-xs text-gray-700 cursor-pointer">
               <input type="checkbox" checked={langues.has(lang.v)} onChange={() => toggle(langues, setLangues, lang.v)}
-                className="w-3.5 h-3.5 rounded border-gray-300 text-[#4A39C0] focus:ring-[#4A39C0]" />
+                className="w-3.5 h-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
               {lang.l}
             </label>
           ))}
         </div>
       </div>
-      <div className="text-xs font-medium text-[#4A39C0]">
+      <div className="text-xs font-medium text-indigo-600">
         {total > 0 ? `${total} variante${total > 1 ? "s" : ""} a generer` : "Selectionnez au moins une option par axe"}
       </div>
     </div>
@@ -841,7 +852,7 @@ function TabValider() {
   return (
     <div className="space-y-6">
       {/* Info */}
-      <div className="bg-[#F9F8FF] border border-[#E4E1FF] rounded-xl p-5">
+      <div className="bg-indigo-50/50 border border-indigo-200 rounded-xl p-5">
         <p className="text-sm text-gray-600">
           <strong>Etape 1 :</strong> L&apos;IA analyse la qualite de la fiche (completude, exactitude, coherence, redaction, pertinence) et donne un score sur 100.
           <br />
@@ -887,7 +898,7 @@ function TabValider() {
                   {/* Fiche header */}
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-3">
-                      <span className="text-xs font-bold text-[#4A39C0]">{fiche.code_rome}</span>
+                      <span className="text-xs font-bold text-indigo-600">{fiche.code_rome}</span>
                       <span className="text-sm font-medium text-gray-800">{fiche.nom_masculin}</span>
                       <span className="text-xs text-gray-400">v{fiche.version}</span>
                     </div>
@@ -895,7 +906,7 @@ function TabValider() {
                       <Link
                         href={`/fiches/${fiche.code_rome}`}
                         target="_blank"
-                        className="px-3 py-1.5 border border-gray-300 text-gray-600 rounded-full text-xs font-medium hover:border-[#4A39C0] hover:text-[#4A39C0] transition"
+                        className="px-3 py-1.5 border border-gray-300 text-gray-600 rounded-full text-xs font-medium hover:border-indigo-500 hover:text-indigo-600 transition"
                       >
                         Voir
                       </Link>
@@ -903,7 +914,7 @@ function TabValider() {
                         <button
                           onClick={() => handleValidateIA(fiche.code_rome)}
                           disabled={validating !== null}
-                          className="px-4 py-1.5 bg-[#4A39C0] text-white rounded-full text-xs font-medium hover:bg-[#3a2da0] transition disabled:opacity-40 disabled:cursor-wait"
+                          className="px-4 py-1.5 bg-indigo-600 text-white rounded-full text-xs font-medium hover:bg-indigo-700 transition disabled:opacity-40 disabled:cursor-wait"
                         >
                           {isValidating ? (
                             <span className="flex items-center gap-2">
@@ -991,10 +1002,10 @@ function TabValider() {
 
                       {/* Auto-correct button (appears when score < 90) */}
                       {rapport.score < 90 && (
-                        <div className="bg-[#F9F8FF] border border-[#E4E1FF] rounded-xl p-4">
+                        <div className="bg-indigo-50/50 border border-indigo-200 rounded-xl p-4">
                           <div className="flex items-center justify-between">
                             <div>
-                              <h4 className="text-sm font-semibold text-[#4A39C0]">Correction automatique IA</h4>
+                              <h4 className="text-sm font-semibold text-indigo-600">Correction automatique IA</h4>
                               <p className="text-xs text-gray-500 mt-1">
                                 Claude corrigera les problemes identifies et completera les sections manquantes pour atteindre un score &gt; 90%.
                               </p>
@@ -1002,7 +1013,7 @@ function TabValider() {
                             <button
                               onClick={() => handleAutoCorrect(fiche.code_rome)}
                               disabled={correcting !== null}
-                              className="px-5 py-2 bg-[#4A39C0] text-white rounded-full text-sm font-medium hover:bg-[#3a2da0] transition disabled:opacity-40 disabled:cursor-wait shrink-0 ml-4"
+                              className="px-5 py-2 bg-indigo-600 text-white rounded-full text-sm font-medium hover:bg-indigo-700 transition disabled:opacity-40 disabled:cursor-wait shrink-0 ml-4"
                             >
                               {correcting === fiche.code_rome ? (
                                 <span className="flex items-center gap-2">
@@ -1023,7 +1034,7 @@ function TabValider() {
                           value={commentaire}
                           onChange={e => setCommentaire(e.target.value)}
                           rows={2}
-                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm mb-3 focus:outline-none focus:border-[#4A39C0] resize-none"
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm mb-3 focus:outline-none focus:border-indigo-500 resize-none"
                         />
                         <div className="flex gap-3">
                           <button
@@ -1061,7 +1072,7 @@ function TabValider() {
       {/* Modal variantes */}
       {variantesModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl border-2 border-[#4A39C0] p-5 space-y-3 shadow-xl max-w-md w-full">
+          <div className="bg-white rounded-2xl border-2 border-indigo-600 p-5 space-y-3 shadow-xl max-w-md w-full">
             <div>
               <h3 className="text-base font-bold text-[#1A1A2E]">Generer des variantes ?</h3>
               <p className="text-xs text-gray-500 mt-1">
@@ -1179,7 +1190,7 @@ function TabPublier() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-[#F9F8FF] border border-[#E4E1FF] rounded-xl p-5">
+      <div className="bg-indigo-50/50 border border-indigo-200 rounded-xl p-5">
         <p className="text-sm text-gray-600">
           Selectionnez les fiches a publier, puis <strong>confirmez votre decision</strong>.
           Chaque publication est tracee dans les logs d&apos;activite du dashboard.
@@ -1202,7 +1213,7 @@ function TabPublier() {
 
       {/* Modal de confirmation */}
       {showConfirm && (
-        <div className="bg-white rounded-2xl border-2 border-[#4A39C0] p-6 space-y-4 shadow-lg">
+        <div className="bg-white rounded-2xl border-2 border-indigo-600 p-6 space-y-4 shadow-lg">
           <h3 className="text-lg font-bold text-[#1A1A2E]">
             Confirmer la publication de {selected.size} fiche{selected.size > 1 ? "s" : ""}
           </h3>
@@ -1216,7 +1227,7 @@ function TabPublier() {
               value={commentaire}
               onChange={e => setCommentaire(e.target.value)}
               rows={2}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#4A39C0] resize-none"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 resize-none"
             />
           </div>
           <div className="flex gap-3">
@@ -1253,7 +1264,7 @@ function TabPublier() {
             </h2>
             <div className="flex items-center gap-3">
               {fiches.length > 0 && (
-                <button onClick={selectAll} className="text-sm text-[#4A39C0] hover:underline">
+                <button onClick={selectAll} className="text-sm text-indigo-600 hover:underline">
                   {selected.size === fiches.length ? "Tout deselectionner" : "Tout selectionner"}
                 </button>
               )}
@@ -1285,15 +1296,15 @@ function TabPublier() {
                   type="checkbox"
                   checked={selected.has(fiche.code_rome)}
                   onChange={() => toggleSelect(fiche.code_rome)}
-                  className="w-4 h-4 rounded border-gray-300 text-[#4A39C0] focus:ring-[#4A39C0] cursor-pointer"
+                  className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                 />
-                <span className="text-xs font-bold text-[#4A39C0]">{fiche.code_rome}</span>
+                <span className="text-xs font-bold text-indigo-600">{fiche.code_rome}</span>
                 <span className="text-sm text-gray-700 flex-1 min-w-0 truncate">{fiche.nom_masculin}</span>
                 <span className="text-xs text-gray-400 shrink-0">v{fiche.version}</span>
                 <Link
                   href={`/fiches/${fiche.code_rome}`}
                   target="_blank"
-                  className="px-3 py-1.5 border border-gray-300 text-gray-600 rounded-full text-xs font-medium hover:border-[#4A39C0] hover:text-[#4A39C0] transition shrink-0"
+                  className="px-3 py-1.5 border border-gray-300 text-gray-600 rounded-full text-xs font-medium hover:border-indigo-500 hover:text-indigo-600 transition shrink-0"
                 >
                   Voir
                 </Link>
@@ -1373,7 +1384,7 @@ function TabVariantes() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-[#F9F8FF] border border-[#E4E1FF] rounded-xl p-5">
+      <div className="bg-indigo-50/50 border border-indigo-200 rounded-xl p-5">
         <p className="text-sm text-gray-600">
           Generez des <strong>variantes</strong> pour les fiches publiees : genre grammatical (M/F/epicene),
           tranche d&apos;age (11-15, 15-18, 18+), format (standard, FALC).
@@ -1396,7 +1407,7 @@ function TabVariantes() {
 
       {/* Generation panel */}
       {selectedFiche && (
-        <div className="bg-white rounded-2xl border-2 border-[#4A39C0] p-6 space-y-5 shadow-lg">
+        <div className="bg-white rounded-2xl border-2 border-indigo-600 p-6 space-y-5 shadow-lg">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-bold text-[#1A1A2E]">Generer des variantes</h3>
@@ -1423,7 +1434,7 @@ function TabVariantes() {
             <button
               onClick={handleGenerate}
               disabled={generating || genres.size * tranches.size * formats.size * langues.size === 0}
-              className="px-5 py-2 bg-[#4A39C0] text-white rounded-full text-sm font-medium hover:bg-[#3a2da0] transition disabled:opacity-40 disabled:cursor-wait"
+              className="px-5 py-2 bg-indigo-600 text-white rounded-full text-sm font-medium hover:bg-indigo-700 transition disabled:opacity-40 disabled:cursor-wait"
             >
               {generating ? (
                 <span className="flex items-center gap-2">
@@ -1466,7 +1477,7 @@ function TabVariantes() {
                 onClick={() => setSelectedFiche(fiche.code_rome)}
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <span className="text-xs font-bold text-[#4A39C0]">{fiche.code_rome}</span>
+                  <span className="text-xs font-bold text-indigo-600">{fiche.code_rome}</span>
                   <span className="text-sm text-gray-700 truncate">{fiche.nom_masculin}</span>
                 </div>
                 <div className="flex items-center gap-3 shrink-0 ml-4">
@@ -1475,7 +1486,7 @@ function TabVariantes() {
                     href={`/fiches/${fiche.code_rome}`}
                     target="_blank"
                     onClick={e => e.stopPropagation()}
-                    className="px-3 py-1.5 border border-gray-300 text-gray-600 rounded-full text-xs font-medium hover:border-[#4A39C0] hover:text-[#4A39C0] transition"
+                    className="px-3 py-1.5 border border-gray-300 text-gray-600 rounded-full text-xs font-medium hover:border-indigo-500 hover:text-indigo-600 transition"
                   >
                     Voir
                   </Link>
@@ -1525,7 +1536,7 @@ function TabExporter() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-[#F9F8FF] border border-[#E4E1FF] rounded-xl p-5">
+      <div className="bg-indigo-50/50 border border-indigo-200 rounded-xl p-5">
         <p className="text-sm text-gray-600">
           Cliquez sur une fiche pour ouvrir sa page de detail et telecharger le PDF.
           Seules les fiches <strong>publiees</strong> sont affichees.
@@ -1552,10 +1563,10 @@ function TabExporter() {
                 className="flex items-center justify-between px-6 py-3 hover:bg-gray-50 transition group"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <span className="text-xs font-bold text-[#4A39C0]">{fiche.code_rome}</span>
+                  <span className="text-xs font-bold text-indigo-600">{fiche.code_rome}</span>
                   <span className="text-sm text-gray-700 truncate">{fiche.nom_masculin}</span>
                 </div>
-                <span className="text-xs text-gray-400 group-hover:text-[#4A39C0] transition shrink-0 ml-4">
+                <span className="text-xs text-gray-400 group-hover:text-indigo-600 transition shrink-0 ml-4">
                   Voir &amp; telecharger PDF &rarr;
                 </span>
               </Link>

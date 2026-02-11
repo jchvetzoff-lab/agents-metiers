@@ -1,3 +1,7 @@
+"use client";
+
+import { FadeInView } from "@/components/motion";
+
 interface SectionHeaderProps {
   badge?: string;
   title: string;
@@ -8,15 +12,19 @@ export default function SectionHeader({ badge, title, description }: SectionHead
   return (
     <div className="section-header">
       {badge && (
-        <span className="badge badge-purple mb-6 text-base animate-scale-in">
-          {badge}
-        </span>
+        <FadeInView delay={0}>
+          <span className="badge badge-purple mb-6 text-base hover:shimmer-bg transition-all cursor-default">
+            {badge}
+          </span>
+        </FadeInView>
       )}
-      <h2 className="section-title animate-slide-up">{title}</h2>
+      <FadeInView delay={0.1}>
+        <h2 className="section-title">{title}</h2>
+      </FadeInView>
       {description && (
-        <p className="section-description animate-slide-up" style={{ animationDelay: "0.1s" }}>
-          {description}
-        </p>
+        <FadeInView delay={0.2}>
+          <p className="section-description">{description}</p>
+        </FadeInView>
       )}
     </div>
   );

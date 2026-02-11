@@ -10,7 +10,6 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const [checked, setChecked] = useState(false);
 
   useEffect(() => {
-    // Ne pas proteger la page login
     if (pathname === "/login") {
       setChecked(true);
       return;
@@ -23,16 +22,14 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     }
   }, [pathname, router]);
 
-  // Sur /login, toujours afficher
   if (pathname === "/login") {
     return <>{children}</>;
   }
 
-  // Attendre la verification avant d'afficher
   if (!checked) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="spinner" />
+        <div className="inline-block w-6 h-6 border-4 border-gray-200 border-t-indigo-600 rounded-full animate-spin" />
       </div>
     );
   }

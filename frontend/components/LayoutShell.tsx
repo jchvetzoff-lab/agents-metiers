@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import BackgroundAnimation from "@/components/BackgroundAnimation";
 import ScrollToTop from "@/components/ScrollToTop";
+import { PageTransition } from "@/components/motion";
 
 export default function LayoutShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -19,7 +20,9 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
       <div className="relative z-10">
         <ScrollToTop />
         <Navbar />
-        {children}
+        <PageTransition>
+          {children}
+        </PageTransition>
       </div>
     </>
   );

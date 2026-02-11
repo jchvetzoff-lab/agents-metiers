@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import { api } from "@/lib/api";
 import { setToken, isAuthenticated } from "@/lib/auth";
 
@@ -107,7 +108,7 @@ export default function LoginPage() {
           <div className="intro-jae">
             <span className="text-2xl md:text-3xl font-light text-gray-400 tracking-widest">
               By{" "}
-              <span className="font-bold bg-gradient-purple-pink bg-clip-text text-transparent">
+              <span className="font-bold bg-gradient-to-r from-indigo-600 to-pink-500 bg-clip-text text-transparent">
                 JAE Fondation
               </span>
             </span>
@@ -120,18 +121,22 @@ export default function LoginPage() {
   // ==================== PHASE LOGIN / SIGNUP ====================
   return (
     <div className="min-h-screen flex items-center justify-center bg-white px-4">
-      <div className="intro-form w-full max-w-sm">
+      <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
+        <div className="absolute top-1/4 -left-32 w-96 h-96 bg-indigo-200/20 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-cyan-200/20 rounded-full blur-3xl" />
+      </div>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="intro-form w-full max-w-sm">
         {/* Logo compact */}
         <div className="text-center mb-6">
-          <div className="w-12 h-12 rounded-xl bg-gradient-purple-pink flex items-center justify-center text-white text-lg font-bold mx-auto shadow-md mb-2">
+          <motion.div whileHover={{ rotate: 6, scale: 1.05 }} transition={{ type: "spring", stiffness: 300, damping: 20 }} className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-600 to-cyan-500 flex items-center justify-center text-white text-lg font-bold mx-auto shadow-md mb-2">
             AM
-          </div>
+          </motion.div>
           <h1 className="text-lg font-bold text-gray-900">Agents Metiers</h1>
           <p className="text-xs text-gray-400 mt-0.5">By JAE Fondation</p>
         </div>
 
         {/* Form Card */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-xl px-6 py-5">
+        <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-white/40 shadow-float px-6 py-5">
           <h2 className="text-base font-semibold text-gray-900 mb-4 text-center">
             {phase === "login" ? "Connexion" : "Creer un compte"}
           </h2>
@@ -197,7 +202,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 rounded-xl bg-gradient-purple-pink text-white text-sm font-semibold shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 via-violet-600 to-pink-500 text-white text-sm font-semibold shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -219,23 +224,23 @@ export default function LoginPage() {
                 setError("");
                 setSuccess("");
               }}
-              className="text-xs text-gray-500 hover:text-purple transition-colors"
+              className="text-xs text-gray-500 hover:text-indigo-600 transition-colors"
             >
               {phase === "login" ? (
                 <>
                   Pas encore de compte ?{" "}
-                  <span className="font-semibold text-purple">S&apos;inscrire</span>
+                  <span className="font-semibold text-indigo-600">S&apos;inscrire</span>
                 </>
               ) : (
                 <>
                   Deja un compte ?{" "}
-                  <span className="font-semibold text-purple">Se connecter</span>
+                  <span className="font-semibold text-indigo-600">Se connecter</span>
                 </>
               )}
             </button>
           </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

@@ -2,6 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Design Tokens ── */
+:root {
+  --color-primary: #4F46E5;
+  --color-primary-dark: #4338CA;
+  --color-accent-cyan: #06B6D4;
+  --color-accent-coral: #F97316;
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06);
+  --shadow-card-hover: 0 4px 12px rgba(79,70,229,0.08), 0 16px 40px rgba(0,0,0,0.08);
+  --radius-card: 20px;
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.4);
+}
+
 @layer base {
   html {
     overscroll-behavior-y: none;
@@ -25,36 +38,67 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+  .text-balance {
+    text-wrap: balance;
+  }
 }
 
 @layer components {
-  /* Gradient Text SOJAI */
+  /* ── Gradient Text ── */
   .gradient-text {
-    @apply bg-gradient-purple-pink bg-clip-text text-transparent;
+    background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 50%, #EC4899 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 
-  /* Glass Card Effect */
+  /* ── Glass Card ── */
   .glass-card {
-    @apply bg-white/80 backdrop-blur-lg border border-gray-200/50 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300;
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(24px) saturate(1.5);
+    -webkit-backdrop-filter: blur(24px) saturate(1.5);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+    transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   }
 
-  /* SOJAI Card - Plus spacieux */
+  .glass-card:hover {
+    box-shadow: var(--shadow-card-hover);
+    transform: translateY(-2px);
+  }
+
+  /* ── SOJAI Card ── */
   .sojai-card {
-    @apply bg-white border border-gray-100 rounded-2xl p-10 transition-all duration-300 hover:border-purple hover:shadow-xl hover:-translate-y-1;
+    @apply bg-white border border-gray-100 p-10 transition-all duration-500;
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
   }
 
-  /* Icon Box with Glow */
+  .sojai-card:hover {
+    border-color: rgba(79, 70, 229, 0.2);
+    box-shadow: var(--shadow-card-hover);
+    transform: translateY(-6px);
+  }
+
+  /* ── Icon Box ── */
   .icon-box {
-    @apply w-16 h-16 rounded-2xl bg-gradient-purple-pink flex items-center justify-center text-white text-3xl shadow-lg hover:animate-glow transition-all;
+    @apply w-16 h-16 rounded-2xl flex items-center justify-center text-white text-3xl;
+    background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 50%, #EC4899 100%);
+    box-shadow: 0 8px 24px rgba(79, 70, 229, 0.25);
   }
 
-  /* Badge SOJAI */
+  .icon-box:hover {
+    animation: glow 2s ease-in-out infinite;
+  }
+
+  /* ── Badges ── */
   .badge {
     @apply inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold;
   }
 
   .badge-purple {
-    @apply bg-purple-100 text-purple;
+    @apply bg-indigo-100 text-indigo-700;
   }
 
   .badge-pink {
@@ -69,31 +113,57 @@
     @apply bg-amber-50 text-amber-700;
   }
 
-  /* Buttons avec hover magnifique */
+  /* ── Buttons ── */
   .btn {
     @apply inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full text-base font-semibold transition-all duration-300;
   }
 
   .btn-primary {
-    @apply bg-gradient-purple-pink text-white shadow-lg hover:shadow-2xl hover:scale-105 active:scale-95;
+    background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 50%, #EC4899 100%);
+    background-size: 200% 200%;
+    @apply text-white shadow-lg;
+  }
+
+  .btn-primary:hover {
+    animation: gradientShift 8s ease infinite;
+    @apply shadow-2xl scale-105;
+  }
+
+  .btn-primary:active {
+    @apply scale-95;
   }
 
   .btn-secondary {
-    @apply bg-white text-purple border-2 border-purple hover:bg-purple hover:text-white shadow-md hover:shadow-xl;
+    @apply bg-white text-indigo-600 border-2 border-indigo-600 shadow-md;
+  }
+
+  .btn-secondary:hover {
+    @apply bg-indigo-600 text-white shadow-xl;
   }
 
   .btn-ghost {
-    @apply text-gray-600 hover:text-purple hover:bg-purple-50;
+    @apply text-gray-600;
   }
 
-  /* Input moderne */
+  .btn-ghost:hover {
+    @apply text-indigo-600 bg-indigo-50;
+  }
+
+  /* ── Inputs ── */
   input, select, textarea {
-    @apply w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple focus:border-transparent transition-all;
+    @apply w-full px-4 py-3 border border-gray-200 rounded-xl transition-all;
+    outline: none;
   }
 
-  /* Table élégante */
+  input:focus, select:focus, textarea:focus {
+    @apply ring-2 ring-indigo-500 border-transparent;
+  }
+
+  /* ── Table ── */
   .table-wrapper {
-    @apply overflow-hidden rounded-2xl border border-gray-100 shadow-sm;
+    @apply overflow-hidden border border-gray-100;
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
   }
 
   table {
@@ -109,12 +179,12 @@
   }
 
   tr:hover {
-    @apply bg-purple-50/50 transition-colors;
+    @apply bg-indigo-50/50 transition-colors;
   }
 
-  /* Section Header - Plus espacé */
+  /* ── Section Header ── */
   .section-header {
-    @apply text-center mb-20 animate-fade-in;
+    @apply text-center mb-20;
   }
 
   .section-title {
@@ -125,88 +195,103 @@
     @apply text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed;
   }
 
-  /* Stats Card avec effet */
+  /* ── Stats Card ── */
   .stat-card {
     @apply sojai-card text-center relative overflow-hidden;
   }
 
   .stat-card::before {
     content: '';
-    @apply absolute inset-0 bg-gradient-purple-pink opacity-0 group-hover:opacity-5 transition-opacity duration-300;
+    @apply absolute inset-0 opacity-0 transition-opacity duration-300;
+    background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 50%, #EC4899 100%);
+  }
+
+  .stat-card:hover::before {
+    opacity: 0.05;
   }
 
   .stat-value {
-    @apply text-5xl font-bold gradient-text mb-2;
+    @apply text-5xl font-bold mb-2;
+    background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 50%, #EC4899 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 
   .stat-label {
     @apply text-sm text-gray-600 uppercase tracking-wide;
   }
 
-  /* Feature Card magnifique */
+  /* ── Feature Card ── */
   .feature-card {
     @apply sojai-card;
   }
 
   .feature-icon {
-    @apply text-6xl mb-6 group-hover:scale-110 transition-transform duration-300;
+    @apply text-6xl mb-6 transition-transform duration-300;
   }
 
   .feature-title {
-    @apply text-2xl font-bold mb-4 text-gray-900 group-hover:text-purple transition-colors;
+    @apply text-2xl font-bold mb-4 text-gray-900 transition-colors;
   }
 
   .feature-description {
     @apply text-gray-600 leading-relaxed;
   }
 
-  /* Check List avec animation */
+  /* ── Check List ── */
   .check-list li {
     @apply flex items-start gap-3 mb-3;
   }
 
   .check-icon {
-    @apply w-6 h-6 rounded-full bg-gradient-purple-pink flex items-center justify-center text-white text-sm flex-shrink-0 shadow-md;
+    @apply w-6 h-6 rounded-full flex items-center justify-center text-white text-sm flex-shrink-0;
+    background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 50%, #EC4899 100%);
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
   }
 
-  /* Loading Spinner */
+  /* ── Spinner ── */
   .spinner {
-    @apply inline-block w-6 h-6 border-4 border-gray-200 border-t-purple rounded-full animate-spin;
+    @apply inline-block w-6 h-6 border-4 border-gray-200 border-t-indigo-600 rounded-full animate-spin;
   }
 
-  /* Navbar avec glass effect */
+  /* ── Navbar ── */
   .navbar {
-    @apply sticky top-0 z-50 bg-white/80 backdrop-blur-lg border-b border-gray-100 shadow-sm;
+    @apply sticky top-0 z-50;
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(24px) saturate(1.5);
+    -webkit-backdrop-filter: blur(24px) saturate(1.5);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   }
 
-  /* Gradient Background */
+  /* ── Backgrounds ── */
   .bg-gradient-mesh {
-    background: linear-gradient(135deg, #F9F8FF 0%, #E4E1FF 50%, #FFCCD4 100%);
+    background: linear-gradient(135deg, #EEF2FF 0%, #ECFEFF 50%, #FFF7ED 100%);
   }
 
-  /* Glow effect */
   .glow {
-    @apply shadow-lg shadow-purple/30;
+    box-shadow: 0 0 24px rgba(79, 70, 229, 0.25);
   }
 
-  /* Hero section avec parallax effect */
   .hero {
     @apply relative overflow-hidden;
   }
 
   .hero::before {
     content: '';
-    @apply absolute inset-0 bg-gradient-mesh opacity-30 -z-10;
+    @apply absolute inset-0 -z-10 opacity-30;
+    background: linear-gradient(135deg, #EEF2FF 0%, #ECFEFF 50%, #FFF7ED 100%);
+  }
+
+  /* ── Shimmer Background ── */
+  .shimmer-bg {
+    background: linear-gradient(90deg, transparent 0%, rgba(79,70,229,0.06) 50%, transparent 100%);
+    background-size: 200% 100%;
+    animation: shimmer 2s linear infinite;
   }
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
-}
-
-/* Animations des zones lumineuses - Plus rapides */
+/* ── Drift Animations for Background Orbs ── */
 @keyframes drift1 {
   0%, 100% { transform: translate(0, 0) rotate(0deg); }
   25% { transform: translate(300px, -150px) rotate(8deg); }
@@ -227,9 +312,7 @@
   66% { transform: translate(-150px, 150px) scale(0.85); }
 }
 
-/* ==================== LOGIN INTRO ANIMATIONS ==================== */
-
-/* Lettre par lettre : fondu individuel */
+/* ── Login Intro Animations ── */
 .intro-letter {
   display: inline-block;
   opacity: 0;
@@ -237,7 +320,7 @@
 }
 
 .intro-letter-gradient {
-  background: linear-gradient(135deg, #4A39C0, #FF3254);
+  background: linear-gradient(135deg, #4F46E5, #EC4899);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -256,7 +339,6 @@
   }
 }
 
-/* Texte fade out */
 .intro-text-out {
   animation: textFadeOut 0.5s ease-in forwards;
 }
@@ -269,7 +351,6 @@
   }
 }
 
-/* "By JAE Fondation" fade-in */
 .intro-jae {
   animation: introFadeIn 0.5s ease-out forwards;
 }
@@ -285,7 +366,6 @@
   }
 }
 
-/* Formulaire slide-up + fade-in */
 .intro-form {
   animation: introFormIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
@@ -301,7 +381,7 @@
   }
 }
 
-/* Login input - Override les styles globaux pour la page login */
+/* ── Login Input Override ── */
 .login-input {
   width: 100%;
   padding: 0.75rem 1rem;
@@ -314,6 +394,6 @@
 }
 
 .login-input:focus {
-  border-color: #4A39C0;
-  box-shadow: 0 0 0 3px rgba(74, 57, 192, 0.1);
+  border-color: #4F46E5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
 }

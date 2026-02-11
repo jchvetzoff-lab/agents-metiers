@@ -3,8 +3,10 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { api, FicheDetail, Variante, VarianteDetail, Region, RegionalData, RecrutementsData } from "@/lib/api";
 import { getTranslations, translateTendance } from "@/lib/translations";
+import { FadeInView } from "@/components/motion";
 import StatusBadge from "@/components/StatusBadge";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
@@ -13,11 +15,11 @@ import {
 } from "recharts";
 
 // ── Couleurs ──
-const PURPLE = "#4A39C0";
-const PINK = "#FF3254";
-const CYAN = "#00C8C8";
-const LIGHT_PURPLE = "#7C6FDB";
-const PIE_COLORS = [PURPLE, PINK, CYAN, "#F59E0B"];
+const PURPLE = "#4F46E5";
+const PINK = "#EC4899";
+const CYAN = "#06B6D4";
+const LIGHT_PURPLE = "#818CF8";
+const PIE_COLORS = ["#4F46E5", "#06B6D4", "#F97316", "#78716C"];
 
 // ══════════════════════════════════════════════
 // ── Composants réutilisables ──
@@ -28,8 +30,8 @@ function SectionAnchor({ id, title, icon, children, accentColor }: {
 }) {
   return (
     <section id={id} className="scroll-mt-24">
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-        <div className="flex items-center gap-3 px-6 md:px-8 py-5 border-b border-gray-100 bg-gray-50/50">
+      <div className="bg-white rounded-2xl border border-gray-200/60 shadow-card overflow-hidden hover:shadow-card-hover transition-shadow duration-500">
+        <div className="flex items-center gap-3 px-6 md:px-8 py-5 border-b border-gray-100 bg-gradient-to-r from-indigo-50/50 to-transparent">
           {accentColor && <span className="w-1 h-6 rounded-full shrink-0" style={{ backgroundColor: accentColor }} />}
           <span className="text-xl">{icon}</span>
           <h2 className="text-lg md:text-xl font-bold text-[#1A1A2E]">{title}</h2>
@@ -44,12 +46,14 @@ function StatCard({ label, value, sub, color = PURPLE, bgColor, icon }: {
   label: string; value: string; sub?: string; color?: string; bgColor?: string; icon?: string;
 }) {
   return (
-    <div className="rounded-xl border border-gray-200 p-5 text-center" style={{ backgroundColor: bgColor || "#fff" }}>
-      {icon && <div className="text-2xl mb-1">{icon}</div>}
-      <div className="text-3xl font-bold mb-1" style={{ color }}>{value}</div>
-      <div className="text-sm font-medium text-gray-700">{label}</div>
-      {sub && <div className="text-xs text-gray-400 mt-1">{sub}</div>}
-    </div>
+    <FadeInView direction="up" delay={0.05}>
+      <div className="rounded-xl border border-gray-200/60 p-5 text-center shadow-card hover:shadow-card-hover transition-shadow duration-500" style={{ backgroundColor: bgColor || "#fff" }}>
+        {icon && <div className="text-2xl mb-1">{icon}</div>}
+        <div className="text-3xl font-bold mb-1" style={{ color }}>{value}</div>
+        <div className="text-sm font-medium text-gray-700">{label}</div>
+        {sub && <div className="text-xs text-gray-400 mt-1">{sub}</div>}
+      </div>
+    </FadeInView>
   );
 }
 
@@ -58,14 +62,21 @@ function TensionGauge({ value, labels }: { value: number; labels: { title: strin
   const color = pct >= 70 ? "#16a34a" : pct >= 40 ? "#eab308" : "#ef4444";
   const label = pct >= 70 ? labels.high : pct >= 40 ? labels.moderate : labels.low;
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5">
+    <div className="bg-white rounded-xl border border-gray-200/60 p-5 shadow-card">
       <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">{labels.title}</div>
       <div className="flex items-center justify-between mb-2">
         <span className="text-sm font-semibold" style={{ color }}>{label}</span>
         <span className="text-lg font-bold" style={{ color }}>{pct}%</span>
       </div>
       <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
-        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: color }} />
+        <motion.div
+          className="h-full rounded-full"
+          style={{ backgroundColor: color }}
+          initial={{ width: 0 }}
+          whileInView={{ width: `${pct}%` }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+        />
       </div>
     </div>
   );
@@ -116,13 +127,13 @@ function ServiceLink({ icon, title, desc, url }: {
 }) {
   return (
     <a href={url} target="_blank" rel="noopener noreferrer"
-      className="flex gap-4 p-4 rounded-xl border border-gray-200 hover:border-[#4A39C0] hover:shadow-md transition-all bg-white group">
+      className="flex gap-4 p-4 rounded-xl border border-gray-200 hover:border-indigo-400 hover:shadow-md transition-all bg-white group">
       <span className="text-2xl shrink-0">{icon}</span>
       <div className="min-w-0">
-        <div className="font-semibold text-[#1A1A2E] group-hover:text-[#4A39C0] transition-colors text-sm">{title}</div>
+        <div className="font-semibold text-[#1A1A2E] group-hover:text-indigo-600 transition-colors text-sm">{title}</div>
         <div className="text-xs text-gray-500 mt-0.5">{desc}</div>
       </div>
-      <svg className="w-4 h-4 text-gray-300 group-hover:text-[#4A39C0] shrink-0 ml-auto mt-1 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+      <svg className="w-4 h-4 text-gray-300 group-hover:text-indigo-600 shrink-0 ml-auto mt-1 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
     </a>
   );
 }
@@ -1195,7 +1206,7 @@ export default function FicheDetailPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F8F9FA]">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 rounded-full border-4 border-[#E4E1FF] border-t-[#4A39C0] animate-spin" />
+          <div className="w-12 h-12 rounded-full border-4 border-indigo-100 border-t-indigo-600 animate-spin" />
           <p className="text-sm text-gray-400">{t.loading}</p>
         </div>
       </div>
@@ -1209,7 +1220,7 @@ export default function FicheDetailPage() {
           <div className="text-6xl mb-4">🔍</div>
           <h2 className="text-2xl font-bold mb-2">{t.notFound}</h2>
           <p className="text-gray-500 mb-6">{codeRome} {t.notFoundDesc}</p>
-          <Link href="/fiches" className="inline-flex items-center gap-2 px-6 py-3 bg-[#4A39C0] text-white rounded-full font-medium hover:bg-[#3a2da0] transition">
+          <Link href="/fiches" className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-full font-medium hover:bg-indigo-700 transition">
             {t.backToList}
           </Link>
         </div>
@@ -1300,14 +1311,14 @@ export default function FicheDetailPage() {
       {/* ── HEADER ── */}
       <div className="bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 md:px-8 py-6">
-          <Link href="/fiches" className="inline-flex items-center gap-1.5 text-sm text-[#4A39C0] hover:underline mb-4">
+          <Link href="/fiches" className="inline-flex items-center gap-1.5 text-sm text-indigo-600 hover:underline mb-4">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
             {t.backToList}
           </Link>
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
             <div>
               <div className="flex items-center gap-3 mb-2">
-                <span className="px-3 py-1 rounded-md bg-[#E4E1FF] text-[#4A39C0] text-sm font-bold">{fiche.code_rome}</span>
+                <span className="px-3 py-1 rounded-md bg-indigo-100 text-indigo-600 text-sm font-bold">{fiche.code_rome}</span>
                 <StatusBadge statut={fiche.statut} />
               </div>
               <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#1A1A2E] mb-1">{dNom}</h1>
@@ -1318,7 +1329,7 @@ export default function FicheDetailPage() {
                 <button
                   onClick={handleDownloadPdf}
                   disabled={pdfLoading}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#4A39C0] text-white rounded-full text-sm font-semibold hover:bg-[#3a2da0] transition-all disabled:opacity-50 disabled:cursor-wait shadow-sm"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-full text-sm font-semibold hover:bg-indigo-700 transition-all disabled:opacity-50 disabled:cursor-wait shadow-sm"
                 >
                   {pdfLoading ? (
                     <>
@@ -1367,7 +1378,7 @@ export default function FicheDetailPage() {
                   <label key={g.v} className="flex items-center gap-1.5 text-sm text-gray-700 cursor-pointer">
                     <input type="radio" name="filter-genre" value={g.v} checked={filterGenre === g.v}
                       onChange={() => setFilterGenre(g.v)}
-                      className="w-3.5 h-3.5 accent-[#4A39C0] focus:ring-0 focus:ring-offset-0" />
+                      className="w-3.5 h-3.5 accent-indigo-600 focus:ring-0 focus:ring-offset-0" />
                     {g.l}
                   </label>
                 ))}
@@ -1379,7 +1390,7 @@ export default function FicheDetailPage() {
                   <label key={opt.v} className="flex items-center gap-1.5 text-sm text-gray-700 cursor-pointer">
                     <input type="radio" name="filter-tranche" value={opt.v} checked={filterTranche === opt.v}
                       onChange={() => setFilterTranche(opt.v)}
-                      className="w-3.5 h-3.5 accent-[#4A39C0] focus:ring-0 focus:ring-offset-0" />
+                      className="w-3.5 h-3.5 accent-indigo-600 focus:ring-0 focus:ring-offset-0" />
                     {opt.l}
                   </label>
                 ))}
@@ -1391,7 +1402,7 @@ export default function FicheDetailPage() {
                   <label key={f.v} className="flex items-center gap-1.5 text-sm text-gray-700 cursor-pointer">
                     <input type="radio" name="filter-format" value={f.v} checked={filterFormat === f.v}
                       onChange={() => setFilterFormat(f.v)}
-                      className="w-3.5 h-3.5 accent-[#4A39C0] focus:ring-0 focus:ring-offset-0" />
+                      className="w-3.5 h-3.5 accent-indigo-600 focus:ring-0 focus:ring-offset-0" />
                     {f.l}
                   </label>
                 ))}
@@ -1403,7 +1414,7 @@ export default function FicheDetailPage() {
                   <label key={lang.v} className="flex items-center gap-1.5 text-sm text-gray-700 cursor-pointer">
                     <input type="radio" name="filter-langue" value={lang.v} checked={filterLangue === lang.v}
                       onChange={() => setFilterLangue(lang.v)}
-                      className="w-3.5 h-3.5 accent-[#4A39C0] focus:ring-0 focus:ring-offset-0" />
+                      className="w-3.5 h-3.5 accent-indigo-600 focus:ring-0 focus:ring-offset-0" />
                     {lang.l}
                   </label>
                 ))}
@@ -1421,7 +1432,7 @@ export default function FicheDetailPage() {
                 <button
                   onClick={handleApplyFilter}
                   disabled={filterLoading}
-                  className="px-5 py-1.5 bg-[#4A39C0] text-white rounded-full text-xs font-medium hover:bg-[#3a2da0] transition disabled:opacity-50 disabled:cursor-wait"
+                  className="px-5 py-1.5 bg-indigo-600 text-white rounded-full text-xs font-medium hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-wait"
                 >
                   {filterLoading ? t.loadingShort : t.apply}
                 </button>
@@ -1429,7 +1440,7 @@ export default function FicheDetailPage() {
             </div>
             {/* Variante active indicator */}
             {appliedVariante && (
-              <div className="mt-2 text-xs text-[#4A39C0] font-medium">
+              <div className="mt-2 text-xs text-indigo-600 font-medium">
                 {t.activeVariante} : {appliedVariante.langue.toUpperCase()} / {appliedVariante.genre} / {appliedVariante.tranche_age} / {appliedVariante.format_contenu}
               </div>
             )}
@@ -1448,10 +1459,18 @@ export default function FicheDetailPage() {
             <nav className="sticky top-24 space-y-1">
               {sections.map(s => (
                 <a key={s.id} href={`#${s.id}`}
-                  className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-all ${
-                    activeSection === s.id ? "bg-[#4A39C0] text-white font-medium shadow-sm" : "text-gray-600 hover:bg-gray-100"
+                  className={`relative flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-all ${
+                    activeSection === s.id ? "text-white font-medium" : "text-gray-600 hover:bg-gray-100"
                   }`}>
-                  <span className="text-base">{s.icon}</span>{s.label}
+                  {activeSection === s.id && (
+                    <motion.div
+                      layoutId="sidebar-active"
+                      className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-indigo-500 rounded-lg shadow-sm"
+                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                    />
+                  )}
+                  <span className="relative z-10 text-base">{s.icon}</span>
+                  <span className="relative z-10">{s.label}</span>
                 </a>
               ))}
             </nav>
@@ -1461,7 +1480,7 @@ export default function FicheDetailPage() {
           <div className="flex-1 min-w-0 space-y-6">
 
             {/* ═══ INFORMATIONS CLÉS ═══ */}
-            <SectionAnchor id="infos" title={t.secKeyInfo} icon="📋" accentColor="#4A39C0">
+            <SectionAnchor id="infos" title={t.secKeyInfo} icon="📋" accentColor="#4F46E5">
               {dDescription && (
                 <div className="mb-6">
                   <p className="text-gray-700 leading-relaxed text-[16px]">{dDescription}</p>
@@ -1474,7 +1493,7 @@ export default function FicheDetailPage() {
                 </div>
               )}
               {fiche.acces_metier && (
-                <div className="mb-6 p-5 bg-[#F9F8FF] rounded-xl border border-[#E4E1FF]/60">
+                <div className="mb-6 p-5 bg-[#F9F8FF] rounded-xl border border-indigo-200/60">
                   <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-2">{t.howToAccess}</h3>
                   <p className="text-[15px] text-gray-600 leading-relaxed">{fiche.acces_metier}</p>
                 </div>
@@ -1508,10 +1527,10 @@ export default function FicheDetailPage() {
 
             {/* ═══ DOMAINE PROFESSIONNEL ═══ */}
             {hasDomain && (
-              <SectionAnchor id="domaine" title={t.professionalDomain} icon="🏷️" accentColor="#FF3254">
+              <SectionAnchor id="domaine" title={t.professionalDomain} icon="🏷️" accentColor="#06B6D4">
                 {fiche.domaine_professionnel?.domaine && (
                   <div className="flex flex-wrap gap-3 mb-5">
-                    <span className="px-4 py-2 rounded-full bg-[#4A39C0] text-white text-sm font-semibold">
+                    <span className="px-4 py-2 rounded-full bg-indigo-600 text-white text-sm font-semibold">
                       {fiche.domaine_professionnel.code_domaine} — {fiche.domaine_professionnel.domaine}
                     </span>
                     {fiche.domaine_professionnel.sous_domaine && (
@@ -1523,17 +1542,17 @@ export default function FicheDetailPage() {
                 )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   {fiche.niveau_formation && (
-                    <div className="p-4 bg-[#F9F8FF] rounded-xl border border-[#E4E1FF]/60">
+                    <div className="p-4 bg-[#F9F8FF] rounded-xl border border-indigo-200/60">
                       <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t.formationLevel}</span>
                       <p className="text-lg font-bold text-[#1A1A2E] mt-1">{fiche.niveau_formation}</p>
                     </div>
                   )}
                   {fiche.statuts_professionnels && fiche.statuts_professionnels.length > 0 && (
-                    <div className="p-4 bg-[#F9F8FF] rounded-xl border border-[#E4E1FF]/60">
+                    <div className="p-4 bg-[#F9F8FF] rounded-xl border border-indigo-200/60">
                       <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t.professionalStatuses}</span>
                       <div className="flex flex-wrap gap-2 mt-2">
                         {fiche.statuts_professionnels.map((s, i) => (
-                          <span key={i} className="px-3 py-1 rounded-full bg-[#E4E1FF] text-[#4A39C0] text-sm font-medium">{s}</span>
+                          <span key={i} className="px-3 py-1 rounded-full bg-indigo-100 text-indigo-600 text-sm font-medium">{s}</span>
                         ))}
                       </div>
                     </div>
@@ -1558,12 +1577,12 @@ export default function FicheDetailPage() {
               <SectionAnchor id="stats" title={t.statsTitle} icon="📊" accentColor="#00C8C8">
                 {/* ── Region selector ── */}
                 {regions.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-3 mb-6 p-4 bg-[#F9F8FF] rounded-xl border border-[#E4E1FF]">
-                    <label className="text-sm font-semibold text-[#4A39C0]">{t.filterByRegion || "Filtrer par région"} :</label>
+                  <div className="flex flex-wrap items-center gap-3 mb-6 p-4 bg-[#F9F8FF] rounded-xl border border-indigo-200">
+                    <label className="text-sm font-semibold text-indigo-600">{t.filterByRegion || "Filtrer par région"} :</label>
                     <select
                       value={selectedRegion}
                       onChange={(e) => setSelectedRegion(e.target.value)}
-                      className="px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#4A39C0] focus:border-transparent"
+                      className="px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                     >
                       <option value="">{t.allFrance || "France entière"}</option>
                       {regions.filter(r => parseInt(r.code) >= 11).map(r => (
@@ -1576,7 +1595,7 @@ export default function FicheDetailPage() {
                       </optgroup>
                     </select>
                     {regionalLoading && (
-                      <div className="w-5 h-5 border-2 border-[#E4E1FF] border-t-[#4A39C0] rounded-full animate-spin" />
+                      <div className="w-5 h-5 border-2 border-indigo-100 border-t-indigo-600 rounded-full animate-spin" />
                     )}
                     {selectedRegion && regionalData && !regionalLoading && (
                       <span className="text-sm text-gray-500">
@@ -1589,7 +1608,7 @@ export default function FicheDetailPage() {
                 {/* ── Regional badge indicator ── */}
                 {isRegional && (
                   <div className="flex items-center gap-2 mb-4">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#E4E1FF] text-[#4A39C0] text-xs font-semibold">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-100 text-indigo-600 text-xs font-semibold">
                       <span>📍</span> {regionalData!.region_name} — {t.regionalLive} France Travail
                     </span>
                     {regionalData!.nb_offres === 0 && (
@@ -1637,7 +1656,7 @@ export default function FicheDetailPage() {
                       <div className="flex items-center gap-2 mb-2">
                         <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">{t.grossSalaries}</h3>
                         {useSalRegional && (
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#E4E1FF] text-[#4A39C0] font-semibold">{t.regionalLive}</span>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-600 font-semibold">{t.regionalLive}</span>
                         )}
                         {!useSalRegional && (
                           <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-semibold">{t.estimationIaNationale}</span>
@@ -1651,7 +1670,7 @@ export default function FicheDetailPage() {
                           <XAxis dataKey="niveau" tick={{ fontSize: 12, fill: "#6B7280" }} axisLine={false} tickLine={false} />
                           <YAxis tick={{ fontSize: 11, fill: "#9CA3AF" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k€`} />
                           <Tooltip content={<ChartTooltip locale={t.locale} />} />
-                          <Bar dataKey="min" name={t.min} fill="#E4E1FF" radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="min" name={t.min} fill="#C7D2FE" radius={[4, 4, 0, 0]} />
                           <Bar dataKey="median" name={t.median} fill={PURPLE} radius={[4, 4, 0, 0]} />
                           <Bar dataKey="max" name={t.max} fill={LIGHT_PURPLE} radius={[4, 4, 0, 0]} />
                         </BarChart>
@@ -1685,7 +1704,7 @@ export default function FicheDetailPage() {
                       <div className="flex items-center gap-2 mb-4">
                         <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">{t.hiringBreakdown}</h3>
                         {useContratRegional && (
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#E4E1FF] text-[#4A39C0] font-semibold">{t.regionalLive}</span>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-600 font-semibold">{t.regionalLive}</span>
                         )}
                         {!useContratRegional && (
                           <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-semibold">{t.estimationIaNationale}</span>
@@ -1747,11 +1766,11 @@ export default function FicheDetailPage() {
             )}
 
             {/* ═══ RECRUTEMENTS PAR MOIS ═══ */}
-            <SectionAnchor id="recrutements" title={t.recruitmentsPerYear} icon="📅" accentColor="#4A39C0">
+            <SectionAnchor id="recrutements" title={t.recruitmentsPerYear} icon="📅" accentColor="#4F46E5">
               <p className="text-sm text-gray-500 mb-4">{t.recruitmentsDesc}</p>
               {selectedRegion && recrutements?.region_name && (
                 <div className="flex items-center gap-2 mb-4">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#E4E1FF] text-[#4A39C0] text-xs font-semibold">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-100 text-indigo-600 text-xs font-semibold">
                     <span>📍</span> {recrutements.region_name} — {t.regionalLive}
                   </span>
                 </div>
@@ -1759,7 +1778,7 @@ export default function FicheDetailPage() {
               {recrutementsLoading ? (
                 <div className="flex items-center justify-center py-12">
                   <div className="flex flex-col items-center gap-3">
-                    <div className="w-8 h-8 rounded-full border-3 border-[#E4E1FF] border-t-[#4A39C0] animate-spin" />
+                    <div className="w-8 h-8 rounded-full border-3 border-indigo-100 border-t-indigo-600 animate-spin" />
                     <span className="text-sm text-gray-400">{t.recruitmentsLoading}</span>
                   </div>
                 </div>
@@ -1776,7 +1795,7 @@ export default function FicheDetailPage() {
                           onClick={() => setSelectedMonth(r.mois)}
                           className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
                             selectedMonth === r.mois
-                              ? "bg-[#4A39C0] text-white shadow-sm"
+                              ? "bg-indigo-600 text-white shadow-sm"
                               : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                           }`}
                         >
@@ -1806,7 +1825,7 @@ export default function FicheDetailPage() {
                       />
                       <Bar dataKey="offres" radius={[6, 6, 0, 0]}>
                         {recrutements.recrutements.map((r) => (
-                          <Cell key={r.mois} fill={r.mois === selectedMonth ? PURPLE : "#E4E1FF"} cursor="pointer" onClick={() => setSelectedMonth(r.mois)} />
+                          <Cell key={r.mois} fill={r.mois === selectedMonth ? PURPLE : "#C7D2FE"} cursor="pointer" onClick={() => setSelectedMonth(r.mois)} />
                         ))}
                       </Bar>
                     </BarChart>
@@ -1819,11 +1838,11 @@ export default function FicheDetailPage() {
                     const [y, m] = sel.mois.split("-");
                     const monthLabel = new Date(Number(y), Number(m) - 1).toLocaleDateString(t.locale, { month: "long", year: "numeric" });
                     return (
-                      <div className="mt-4 p-5 bg-[#F9F8FF] rounded-xl border border-[#E4E1FF]">
+                      <div className="mt-4 p-5 bg-[#F9F8FF] rounded-xl border border-indigo-200">
                         <div className="flex items-center justify-between">
                           <div>
                             <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">{monthLabel}</div>
-                            <div className="text-3xl font-bold text-[#4A39C0]">{sel.nb_offres.toLocaleString(t.locale)}</div>
+                            <div className="text-3xl font-bold text-indigo-600">{sel.nb_offres.toLocaleString(t.locale)}</div>
                             <div className="text-sm text-gray-500 mt-0.5">{t.offers}</div>
                           </div>
                           {(() => {
@@ -1855,12 +1874,12 @@ export default function FicheDetailPage() {
             </SectionAnchor>
 
             {/* ═══ OFFRES D'EMPLOI ═══ */}
-            <SectionAnchor id="offres" title={t.liveOffers} icon="💼" accentColor="#FF3254">
+            <SectionAnchor id="offres" title={t.liveOffers} icon="💼" accentColor="#06B6D4">
               <p className="text-sm text-gray-500 mb-4">{t.liveOffersDesc}</p>
 
               {offresLoading ? (
                 <div className="text-center py-8">
-                  <div className="inline-block w-6 h-6 border-2 border-[#4A39C0]/30 border-t-[#4A39C0] rounded-full animate-spin mb-2" />
+                  <div className="inline-block w-6 h-6 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-2" />
                   <p className="text-sm text-gray-400">{t.liveOffersLoading}</p>
                 </div>
               ) : offres && offres.offres.length > 0 ? (
@@ -1882,7 +1901,7 @@ export default function FicheDetailPage() {
                           onClick={() => setOffresContractFilter(opt.value)}
                           className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
                             offresContractFilter === opt.value
-                              ? "bg-[#4A39C0] text-white shadow-sm"
+                              ? "bg-indigo-600 text-white shadow-sm"
                               : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                           }`}
                         >
@@ -1903,10 +1922,10 @@ export default function FicheDetailPage() {
                           : null;
                         const dateLabel = daysAgo === null ? "" : daysAgo === 0 ? t.liveOfferToday : t.liveOfferDaysAgo.replace("{n}", String(daysAgo));
                         return (
-                          <div key={offre.offre_id || idx} className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md hover:border-[#4A39C0]/20 transition-all group">
+                          <div key={offre.offre_id || idx} className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md hover:border-indigo-400/20 transition-all group">
                             <div className="flex items-start justify-between gap-3">
                               <div className="flex-1 min-w-0">
-                                <h4 className="font-semibold text-gray-900 text-sm leading-tight truncate group-hover:text-[#4A39C0] transition-colors">
+                                <h4 className="font-semibold text-gray-900 text-sm leading-tight truncate group-hover:text-indigo-600 transition-colors">
                                   {offre.titre}
                                 </h4>
                                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-xs text-gray-500">
@@ -1917,7 +1936,7 @@ export default function FicheDetailPage() {
                                     <span className="flex items-center gap-1">📍 {offre.lieu}</span>
                                   )}
                                   {offre.type_contrat && (
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-[#4A39C0]/10 text-[#4A39C0] font-medium">
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-indigo-600/10 text-indigo-600 font-medium">
                                       {offre.type_contrat}
                                     </span>
                                   )}
@@ -1939,7 +1958,7 @@ export default function FicheDetailPage() {
                                   href={offre.url}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="shrink-0 px-3 py-1.5 rounded-lg bg-[#4A39C0] text-white text-xs font-medium hover:bg-[#3a2da0] transition-colors"
+                                  className="shrink-0 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 transition-colors"
                                 >
                                   {t.liveOffersViewMore} →
                                 </a>
@@ -1972,8 +1991,8 @@ export default function FicheDetailPage() {
                 {/* ── Traits de personnalité ── */}
                 {fiche.traits_personnalite && fiche.traits_personnalite.length > 0 && (() => {
                   const traitColors = [
-                    { bg: "#F5F3FF", border: "#E4E1FF", badge: "#4A39C0" },
-                    { bg: "#FFF5F7", border: "#FFE0E6", badge: "#FF3254" },
+                    { bg: "#EEF2FF", border: "#C7D2FE", badge: "#4F46E5" },
+                    { bg: "#ECFEFF", border: "#A5F3FC", badge: "#06B6D4" },
                     { bg: "#F0FDFA", border: "#CCFBF1", badge: "#00C8C8" },
                     { bg: "#FFF7ED", border: "#FED7AA", badge: "#F59E0B" },
                   ];
@@ -2006,9 +2025,9 @@ export default function FicheDetailPage() {
                         <div key={i} className="flex items-center gap-4">
                           <span className="text-sm text-gray-700 font-medium w-48 shrink-0 truncate">{apt.nom}</span>
                           <div className="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden">
-                            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${(apt.niveau / 5) * 100}%`, background: "linear-gradient(90deg, #4A39C0, #FF3254)" }} />
+                            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${(apt.niveau / 5) * 100}%`, background: "linear-gradient(90deg, #4F46E5, #EC4899)" }} />
                           </div>
-                          <span className="text-xs font-bold text-[#4A39C0] w-8 text-right">{apt.niveau}/5</span>
+                          <span className="text-xs font-bold text-indigo-600 w-8 text-right">{apt.niveau}/5</span>
                         </div>
                       ))}
                     </div>
@@ -2084,8 +2103,8 @@ export default function FicheDetailPage() {
                             { subject: t.riasecE, value: fiche.profil_riasec.entreprenant },
                             { subject: t.riasecC, value: fiche.profil_riasec.conventionnel },
                           ]}>
-                            <PolarGrid stroke="#E4E1FF" />
-                            <PolarAngleAxis dataKey="subject" tick={{ fontSize: 12, fill: "#4A39C0", fontWeight: 600 }} />
+                            <PolarGrid stroke="#C7D2FE" />
+                            <PolarAngleAxis dataKey="subject" tick={{ fontSize: 12, fill: "#4F46E5", fontWeight: 600 }} />
                             <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 9 }} />
                             <Radar name="RIASEC" dataKey="value" stroke={PURPLE} fill={PURPLE} fillOpacity={0.25} strokeWidth={2} />
                             <Tooltip formatter={(val: number) => `${val}/100`} />
@@ -2100,10 +2119,10 @@ export default function FicheDetailPage() {
                 {fiche.preferences_interets && fiche.preferences_interets.domaine_interet && (
                   <div>
                     <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-1">{t.interests}</h3>
-                    <div className="p-4 bg-[#F9F8FF] rounded-xl border border-[#E4E1FF]/60">
+                    <div className="p-4 bg-[#F9F8FF] rounded-xl border border-indigo-200/60">
                       <div className="flex items-center gap-2 mb-3">
                         <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t.interestDomain}</span>
-                        <span className="px-3 py-1 rounded-full bg-[#4A39C0] text-white text-sm font-semibold">{fiche.preferences_interets.domaine_interet}</span>
+                        <span className="px-3 py-1 rounded-full bg-indigo-600 text-white text-sm font-semibold">{fiche.preferences_interets.domaine_interet}</span>
                       </div>
                       {fiche.preferences_interets.familles && fiche.preferences_interets.familles.length > 0 && (
                         <div>
@@ -2111,7 +2130,7 @@ export default function FicheDetailPage() {
                           <div className="mt-2 space-y-2">
                             {fiche.preferences_interets.familles.map((f, i) => (
                               <div key={i} className="flex items-start gap-3 p-2 rounded-lg bg-white">
-                                <span className="w-2 h-2 rounded-full bg-[#4A39C0] shrink-0 mt-1.5" />
+                                <span className="w-2 h-2 rounded-full bg-indigo-600 shrink-0 mt-1.5" />
                                 <div>
                                   <span className="text-sm font-semibold text-[#1A1A2E]">{f.nom}</span>
                                   {f.description && <p className="text-xs text-gray-500 mt-0.5">{f.description}</p>}
@@ -2130,7 +2149,7 @@ export default function FicheDetailPage() {
 
             {/* ═══ COMPÉTENCES ═══ */}
             {(hasCompetences || hasSavoirEtre || hasSavoirs) && (
-              <SectionAnchor id="competences" title={t.secSkills} icon="⚡" accentColor="#4A39C0">
+              <SectionAnchor id="competences" title={t.secSkills} icon="⚡" accentColor="#4F46E5">
                 <div className="border-b border-gray-200 mb-6 overflow-x-auto scrollbar-hide">
                   <div className="flex gap-0 -mb-px min-w-0">
                     {[
@@ -2139,11 +2158,18 @@ export default function FicheDetailPage() {
                       { id: "sa" as const, label: t.knowledge, count: fiche.savoirs?.length ?? 0, show: hasSavoirs },
                     ].filter(item => item.show).map(tab => (
                       <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                        className={`px-3 md:px-4 py-3 text-xs md:text-sm font-medium border-b-2 transition-all whitespace-nowrap ${
-                          activeTab === tab.id ? "border-[#4A39C0] text-[#4A39C0]" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                        className={`relative px-3 md:px-4 py-3 text-xs md:text-sm font-medium transition-all whitespace-nowrap ${
+                          activeTab === tab.id ? "text-indigo-600" : "text-gray-500 hover:text-gray-700"
                         }`}>
+                        {activeTab === tab.id && (
+                          <motion.div
+                            layoutId="comp-tab-underline"
+                            className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-indigo-600 to-pink-500"
+                            transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                          />
+                        )}
                         {tab.label}
-                        <span className={`ml-1 md:ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${activeTab === tab.id ? "bg-[#E4E1FF] text-[#4A39C0]" : "bg-gray-100 text-gray-500"}`}>
+                        <span className={`ml-1 md:ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${activeTab === tab.id ? "bg-indigo-100 text-indigo-600" : "bg-gray-100 text-gray-500"}`}>
                           {tab.count}
                         </span>
                       </button>
@@ -2160,7 +2186,7 @@ export default function FicheDetailPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {dCompetencesTransversales.map((c, i) => (
                       <div key={i} className="flex items-center gap-3 p-3.5 rounded-xl bg-[#FFF5F7] border border-[#FFE0E6]/60">
-                        <span className="w-8 h-8 rounded-full bg-[#FF3254] text-white flex items-center justify-center text-xs font-bold shrink-0">✓</span>
+                        <span className="w-8 h-8 rounded-full bg-pink-500 text-white flex items-center justify-center text-xs font-bold shrink-0">✓</span>
                         <span className="text-[15px] text-gray-700">{c}</span>
                       </div>
                     ))}
@@ -2182,7 +2208,7 @@ export default function FicheDetailPage() {
 
             {/* ═══ CONTEXTES DE TRAVAIL ═══ */}
             {hasContextes && (
-              <SectionAnchor id="contextes" title={t.secWorkContexts} icon="🏢" accentColor="#FF3254">
+              <SectionAnchor id="contextes" title={t.secWorkContexts} icon="🏢" accentColor="#06B6D4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   {dConditions && dConditions.length > 0 && (
                     <div>
@@ -2204,19 +2230,19 @@ export default function FicheDetailPage() {
                     <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">{t.detailedConditions}</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {fiche.conditions_travail_detaillees.horaires && (
-                        <div className="p-4 bg-[#F9F8FF] rounded-xl border border-[#E4E1FF]/60">
+                        <div className="p-4 bg-[#F9F8FF] rounded-xl border border-indigo-200/60">
                           <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t.schedule}</span>
                           <p className="text-sm text-gray-700 mt-1">{fiche.conditions_travail_detaillees.horaires}</p>
                         </div>
                       )}
                       {fiche.conditions_travail_detaillees.deplacements && (
-                        <div className="p-4 bg-[#F9F8FF] rounded-xl border border-[#E4E1FF]/60">
+                        <div className="p-4 bg-[#F9F8FF] rounded-xl border border-indigo-200/60">
                           <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t.travel}</span>
                           <p className="text-sm text-gray-700 mt-1">{fiche.conditions_travail_detaillees.deplacements}</p>
                         </div>
                       )}
                       {fiche.conditions_travail_detaillees.environnement && (
-                        <div className="p-4 bg-[#F9F8FF] rounded-xl border border-[#E4E1FF]/60">
+                        <div className="p-4 bg-[#F9F8FF] rounded-xl border border-indigo-200/60">
                           <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t.workEnvironment}</span>
                           <p className="text-sm text-gray-700 mt-1">{fiche.conditions_travail_detaillees.environnement}</p>
                         </div>
@@ -2251,10 +2277,10 @@ export default function FicheDetailPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {fiche.sites_utiles.map((site, i) => (
                     <a key={i} href={site.url} target="_blank" rel="noopener noreferrer"
-                      className="group flex items-start gap-3 p-4 rounded-xl border border-gray-200 hover:border-[#4A39C0]/30 hover:bg-[#F9F8FF] transition">
-                      <span className="w-10 h-10 rounded-xl bg-[#E4E1FF] flex items-center justify-center shrink-0 text-lg group-hover:bg-[#4A39C0] group-hover:text-white transition">🔗</span>
+                      className="group flex items-start gap-3 p-4 rounded-xl border border-gray-200 hover:border-indigo-400/30 hover:bg-[#F9F8FF] transition">
+                      <span className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center shrink-0 text-lg group-hover:bg-indigo-600 group-hover:text-white transition">🔗</span>
                       <div className="min-w-0">
-                        <span className="text-sm font-semibold text-[#4A39C0] group-hover:underline">{site.nom}</span>
+                        <span className="text-sm font-semibold text-indigo-600 group-hover:underline">{site.nom}</span>
                         <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{site.description}</p>
                       </div>
                     </a>
@@ -2264,7 +2290,7 @@ export default function FicheDetailPage() {
             )}
 
             {/* ═══ SERVICES & OFFRES ═══ */}
-            <SectionAnchor id="services" title={t.secServices} icon="🔗" accentColor="#4A39C0">
+            <SectionAnchor id="services" title={t.secServices} icon="🔗" accentColor="#4F46E5">
               <p className="text-sm text-gray-500 mb-4">{t.servicesIntro}</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <ServiceLink icon="🎓" title={t.findTraining} desc={t.findTrainingDesc} url="https://candidat.francetravail.fr/formations/recherche" />
@@ -2280,7 +2306,7 @@ export default function FicheDetailPage() {
 
             {/* ═══ MÉTIERS PROCHES ═══ */}
             {hasMobilite && (
-              <SectionAnchor id="mobilite" title={t.secRelatedJobs} icon="🔄" accentColor="#FF3254">
+              <SectionAnchor id="mobilite" title={t.secRelatedJobs} icon="🔄" accentColor="#06B6D4">
                 <p className="text-sm text-gray-500 mb-5">{t.relatedJobsIntro}</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   {fiche.mobilite!.metiers_proches?.length > 0 && (
@@ -2288,7 +2314,7 @@ export default function FicheDetailPage() {
                       <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">{t.commonSkillsJobs}</h3>
                       <div className="space-y-3">
                         {fiche.mobilite!.metiers_proches.map((m, i) => (
-                          <div key={i} className="p-4 rounded-xl border border-gray-200 bg-white hover:border-[#4A39C0] hover:shadow-sm transition-all">
+                          <div key={i} className="p-4 rounded-xl border border-gray-200 bg-white hover:border-indigo-400 hover:shadow-sm transition-all">
                             <div className="font-semibold text-[#1A1A2E] text-[15px]">{m.nom}</div>
                             <div className="text-xs text-gray-500 mt-1">{m.contexte}</div>
                           </div>
