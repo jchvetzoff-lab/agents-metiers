@@ -1315,13 +1315,14 @@ export default function FicheDetailPage() {
 
   const sections = [
     { id: "infos", label: t.secKeyInfo, icon: "📋", show: true },
+    { id: "video", label: t.secVideo, icon: "🎬", show: true },
+    { id: "profil", label: t.secProfile, icon: "🧠", show: hasProfile },
+    { id: "competences", label: t.secSkills, icon: "⚡", show: hasCompetences || hasSavoirEtre || hasSavoirs },
     { id: "domaine", label: t.secDomain, icon: "🏷️", show: hasDomain },
+    { id: "contextes", label: t.secWorkContexts, icon: "🏢", show: hasContextes },
     { id: "stats", label: t.secStatistics, icon: "📊", show: hasStats },
     { id: "recrutements", label: t.recruitmentsPerYear, icon: "📅", show: true },
     { id: "offres", label: t.liveOffers, icon: "💼", show: true },
-    { id: "profil", label: t.secProfile, icon: "🧠", show: hasProfile },
-    { id: "competences", label: t.secSkills, icon: "⚡", show: hasCompetences || hasSavoirEtre || hasSavoirs },
-    { id: "contextes", label: t.secWorkContexts, icon: "🏢", show: hasContextes },
     { id: "sites", label: t.secUsefulLinks, icon: "🌐", show: hasSitesUtiles },
     { id: "services", label: t.secServices, icon: "🔗", show: true },
     { id: "mobilite", label: t.secRelatedJobs, icon: "🔄", show: hasMobilite },
@@ -1561,6 +1562,258 @@ export default function FicheDetailPage() {
               <SourceTag>{t.sourceRomeIa}</SourceTag>
             </SectionAnchor>
 
+            {/* ═══ VIDÉO DU MÉTIER ═══ */}
+            <SectionAnchor id="video" title={t.secVideo} icon="🎬" accentColor="#8B5CF6">
+              <p className="text-sm text-gray-500 mb-5">{t.videoDesc}</p>
+              <div className="relative w-full rounded-2xl overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-indigo-900 shadow-xl" style={{ aspectRatio: "16/9" }}>
+                {/* Subtle grid pattern overlay */}
+                <div className="absolute inset-0 opacity-10" style={{
+                  backgroundImage: "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.15) 1px, transparent 0)",
+                  backgroundSize: "24px 24px",
+                }} />
+                {/* Center content */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-5">
+                  {/* Play button */}
+                  <div className="relative group cursor-pointer">
+                    <div className="absolute inset-0 bg-indigo-500/30 rounded-full blur-xl group-hover:bg-indigo-500/50 transition-all duration-500 scale-150" />
+                    <div className="relative w-20 h-20 rounded-full bg-white/10 backdrop-blur-sm border-2 border-white/30 flex items-center justify-center group-hover:bg-white/20 group-hover:scale-110 transition-all duration-300 shadow-2xl">
+                      <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                    </div>
+                  </div>
+                  {/* Text */}
+                  <div className="text-center">
+                    <p className="text-white/90 font-semibold text-lg">{t.videoTitle}</p>
+                    <p className="text-white/40 text-sm mt-1">{t.videoComingSoon}</p>
+                  </div>
+                </div>
+                {/* Bottom gradient */}
+                <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-black/30 to-transparent" />
+              </div>
+            </SectionAnchor>
+
+            {/* ═══ PROFIL & PERSONNALITÉ ═══ */}
+            {hasProfile && (
+              <SectionAnchor id="profil" title={t.secProfile} icon="🧠" accentColor="#00C8C8">
+                {/* ── Traits de personnalité ── */}
+                {dTraitsPersonnalite && dTraitsPersonnalite.length > 0 && (() => {
+                  const traitColors = [
+                    { bg: "#EEF2FF", border: "#C7D2FE", badge: "#4F46E5" },
+                    { bg: "#ECFEFF", border: "#A5F3FC", badge: "#06B6D4" },
+                    { bg: "#F0FDFA", border: "#CCFBF1", badge: "#00C8C8" },
+                    { bg: "#FFF7ED", border: "#FED7AA", badge: "#F59E0B" },
+                  ];
+                  return (
+                  <div className="mb-8">
+                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-1">{t.personalityTraits}</h3>
+                    <p className="text-xs text-gray-400 mb-4">{t.personalityTraitsDesc}</p>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {dTraitsPersonnalite.map((trait, i) => {
+                        const c = traitColors[i % traitColors.length];
+                        return (
+                        <div key={i} className="flex items-center gap-3 p-3 rounded-xl" style={{ backgroundColor: c.bg, border: `1px solid ${c.border}` }}>
+                          <span className="w-7 h-7 rounded-full text-white flex items-center justify-center text-xs font-bold shrink-0" style={{ backgroundColor: c.badge }}>{i + 1}</span>
+                          <span className="text-sm text-gray-700 font-medium">{trait}</span>
+                        </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  );
+                })()}
+
+                {/* ── Aptitudes ── */}
+                {fiche.aptitudes && fiche.aptitudes.length > 0 && (
+                  <div className="mb-8">
+                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-1">{t.aptitudes}</h3>
+                    <p className="text-xs text-gray-400 mb-4">{t.aptitudesDesc}</p>
+                    <div className="space-y-3">
+                      {fiche.aptitudes.map((apt, i) => (
+                        <div key={i} className="flex items-center gap-4">
+                          <span className="text-sm text-gray-700 font-medium w-48 shrink-0 truncate">{apt.nom}</span>
+                          <div className="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${(apt.niveau / 5) * 100}%`, background: "linear-gradient(90deg, #4F46E5, #EC4899)" }} />
+                          </div>
+                          <span className="text-xs font-bold text-indigo-600 w-8 text-right">{apt.niveau}/5</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Compétences par dimension (Donut) ── */}
+                {fiche.competences_dimensions && Object.values(fiche.competences_dimensions).some(v => v > 0) && (
+                  <div className="mb-8">
+                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-1">{t.skillsDimensions}</h3>
+                    <p className="text-xs text-gray-400 mb-4">{t.skillsDimensionsDesc}</p>
+                    <div className="flex flex-col md:flex-row items-center gap-6">
+                      <div className="w-full md:w-1/2 h-[260px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={[
+                                { name: t.dimRelational, value: fiche.competences_dimensions.relationnel },
+                                { name: t.dimIntellectual, value: fiche.competences_dimensions.intellectuel },
+                                { name: t.dimCommunication, value: fiche.competences_dimensions.communication },
+                                { name: t.dimManagement, value: fiche.competences_dimensions.management },
+                                { name: t.dimRealization, value: fiche.competences_dimensions.realisation },
+                                { name: t.dimExpression, value: fiche.competences_dimensions.expression },
+                                { name: t.dimPhysical, value: fiche.competences_dimensions.physique_sensoriel },
+                              ].filter(d => d.value > 0)}
+                              cx="50%" cy="50%"
+                              innerRadius={50} outerRadius={90}
+                              paddingAngle={3} dataKey="value"
+                              label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                            >
+                              {[PURPLE, PINK, CYAN, "#F59E0B", "#8B5CF6", "#10B981", "#6366F1"].map((color, idx) => (
+                                <Cell key={idx} fill={color} />
+                              ))}
+                            </Pie>
+                            <Tooltip formatter={(val: number) => `${val}%`} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div className="w-full md:w-1/2 space-y-2">
+                        {[
+                          { label: t.dimRelational, value: fiche.competences_dimensions.relationnel, color: PURPLE },
+                          { label: t.dimIntellectual, value: fiche.competences_dimensions.intellectuel, color: PINK },
+                          { label: t.dimCommunication, value: fiche.competences_dimensions.communication, color: CYAN },
+                          { label: t.dimManagement, value: fiche.competences_dimensions.management, color: "#F59E0B" },
+                          { label: t.dimRealization, value: fiche.competences_dimensions.realisation, color: "#8B5CF6" },
+                          { label: t.dimExpression, value: fiche.competences_dimensions.expression, color: "#10B981" },
+                          { label: t.dimPhysical, value: fiche.competences_dimensions.physique_sensoriel, color: "#6366F1" },
+                        ].filter(d => d.value > 0).map((dim, i) => (
+                          <div key={i} className="flex items-center gap-3">
+                            <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: dim.color }} />
+                            <span className="text-sm text-gray-700 flex-1">{dim.label}</span>
+                            <span className="text-sm font-bold" style={{ color: dim.color }}>{dim.value}%</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Profil RIASEC (Radar) ── */}
+                {fiche.profil_riasec && Object.values(fiche.profil_riasec).some(v => v > 0) && (
+                  <div className="mb-8">
+                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-1">{t.riasecProfile}</h3>
+                    <p className="text-xs text-gray-400 mb-4">{t.riasecDesc}</p>
+                    <div className="flex justify-center">
+                      <div className="w-full max-w-md h-[300px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <RadarChart data={[
+                            { subject: t.riasecR, value: fiche.profil_riasec.realiste },
+                            { subject: t.riasecI, value: fiche.profil_riasec.investigateur },
+                            { subject: t.riasecA, value: fiche.profil_riasec.artistique },
+                            { subject: t.riasecS, value: fiche.profil_riasec.social },
+                            { subject: t.riasecE, value: fiche.profil_riasec.entreprenant },
+                            { subject: t.riasecC, value: fiche.profil_riasec.conventionnel },
+                          ]}>
+                            <PolarGrid stroke="#C7D2FE" />
+                            <PolarAngleAxis dataKey="subject" tick={{ fontSize: 12, fill: "#4F46E5", fontWeight: 600 }} />
+                            <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 9 }} />
+                            <Radar name="RIASEC" dataKey="value" stroke={PURPLE} fill={PURPLE} fillOpacity={0.25} strokeWidth={2} />
+                            <Tooltip formatter={(val: number) => `${val}/100`} />
+                          </RadarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Préférences & Intérêts ── */}
+                {fiche.preferences_interets && fiche.preferences_interets.domaine_interet && (
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-1">{t.interests}</h3>
+                    <div className="p-4 bg-[#F9F8FF] rounded-xl border border-indigo-200/60">
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t.interestDomain}</span>
+                        <span className="px-3 py-1 rounded-full bg-indigo-600 text-white text-sm font-semibold">{fiche.preferences_interets.domaine_interet}</span>
+                      </div>
+                      {fiche.preferences_interets.familles && fiche.preferences_interets.familles.length > 0 && (
+                        <div>
+                          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t.interestFamilies}</span>
+                          <div className="mt-2 space-y-2">
+                            {fiche.preferences_interets.familles.map((f, i) => (
+                              <div key={i} className="flex items-start gap-3 p-2 rounded-lg bg-white">
+                                <span className="w-2 h-2 rounded-full bg-indigo-600 shrink-0 mt-1.5" />
+                                <div>
+                                  <span className="text-sm font-semibold text-[#1A1A2E]">{f.nom}</span>
+                                  {f.description && <p className="text-xs text-gray-500 mt-0.5">{f.description}</p>}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                <SourceTag>{t.sourceIaClaude}</SourceTag>
+              </SectionAnchor>
+            )}
+
+            {/* ═══ COMPÉTENCES ═══ */}
+            {(hasCompetences || hasSavoirEtre || hasSavoirs) && (
+              <SectionAnchor id="competences" title={t.secSkills} icon="⚡" accentColor="#4F46E5">
+                <div className="border-b border-gray-200 mb-6 overflow-x-auto scrollbar-hide">
+                  <div className="flex gap-0 -mb-px min-w-0">
+                    {[
+                      { id: "sf" as const, label: t.knowHow, count: dCompetences?.length ?? 0, show: hasCompetences },
+                      { id: "se" as const, label: t.softSkills, count: dCompetencesTransversales?.length ?? 0, show: hasSavoirEtre },
+                      { id: "sa" as const, label: t.knowledge, count: dSavoirs?.length ?? 0, show: hasSavoirs },
+                    ].filter(item => item.show).map(tab => (
+                      <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                        className={`relative px-3 md:px-4 py-3 text-xs md:text-sm font-medium transition-all whitespace-nowrap ${
+                          activeTab === tab.id ? "text-indigo-600" : "text-gray-500 hover:text-gray-700"
+                        }`}>
+                        {activeTab === tab.id && (
+                          <motion.div
+                            layoutId="comp-tab-underline"
+                            className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-indigo-600 to-pink-500"
+                            transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                          />
+                        )}
+                        {tab.label}
+                        <span className={`ml-1 md:ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${activeTab === tab.id ? "bg-indigo-100 text-indigo-600" : "bg-gray-100 text-gray-500"}`}>
+                          {tab.count}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <p className="text-sm text-gray-500 mb-4 italic">
+                  {activeTab === "sf" && t.knowHowDesc}
+                  {activeTab === "se" && t.softSkillsDesc}
+                  {activeTab === "sa" && t.knowledgeDesc}
+                </p>
+                {activeTab === "sf" && dCompetences && <NumberedList items={dCompetences} color={PURPLE} />}
+                {activeTab === "se" && dCompetencesTransversales && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {dCompetencesTransversales.map((c, i) => (
+                      <div key={i} className="flex items-center gap-3 p-3.5 rounded-xl bg-[#FFF5F7] border border-[#FFE0E6]/60">
+                        <span className="w-8 h-8 rounded-full bg-pink-500 text-white flex items-center justify-center text-xs font-bold shrink-0">✓</span>
+                        <span className="text-[15px] text-gray-700">{c}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {activeTab === "sa" && dSavoirs && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {dSavoirs.map((s, i) => (
+                      <div key={i} className="flex items-center gap-3 p-3.5 rounded-xl bg-[#F0FDFA] border border-[#CCFBF1]/60">
+                        <span className="w-8 h-8 rounded-full bg-[#00C8C8] text-white flex items-center justify-center text-xs font-bold shrink-0">◆</span>
+                        <span className="text-[15px] text-gray-700">{s}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <SourceTag>{t.sourceRomeIa}</SourceTag>
+              </SectionAnchor>
+            )}
+
             {/* ═══ DOMAINE PROFESSIONNEL ═══ */}
             {hasDomain && (
               <SectionAnchor id="domaine" title={t.professionalDomain} icon="🏷️" accentColor="#06B6D4">
@@ -1602,6 +1855,82 @@ export default function FicheDetailPage() {
                         <span key={i} className="px-3 py-1.5 rounded-full bg-gray-100 text-sm text-gray-700">{a}</span>
                       ))}
                     </div>
+                  </div>
+                )}
+                <SourceTag>{t.sourceRome}</SourceTag>
+              </SectionAnchor>
+            )}
+
+            {/* ═══ CONTEXTES DE TRAVAIL ═══ */}
+            {hasContextes && (
+              <SectionAnchor id="contextes" title={t.secWorkContexts} icon="🏢" accentColor="#06B6D4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {dConditions && dConditions.length > 0 && (
+                    <div className="p-4 bg-amber-50/40 rounded-xl border border-amber-100/60">
+                      <h3 className="text-sm font-bold text-amber-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <span className="w-1.5 h-4 rounded-full bg-amber-500" />
+                        {t.workConditions}
+                      </h3>
+                      <BulletList items={dConditions} color="#D97706" />
+                    </div>
+                  )}
+                  {dEnvironnements && dEnvironnements.length > 0 && (
+                    <div className="p-4 bg-cyan-50/40 rounded-xl border border-cyan-100/60">
+                      <h3 className="text-sm font-bold text-cyan-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <span className="w-1.5 h-4 rounded-full bg-cyan-500" />
+                        {t.structuresEnv}
+                      </h3>
+                      <BulletList items={dEnvironnements} color={CYAN} />
+                    </div>
+                  )}
+                </div>
+
+                {/* ── Conditions détaillées ── */}
+                {fiche.conditions_travail_detaillees && (
+                  <div className="mt-6 pt-6 border-t border-gray-100">
+                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">{t.detailedConditions}</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {fiche.conditions_travail_detaillees.horaires && (
+                        <div className="p-4 bg-blue-50/60 rounded-xl border border-blue-100">
+                          <span className="text-xs font-semibold text-blue-500 uppercase tracking-wider flex items-center gap-1.5">
+                            <span>🕐</span> {t.schedule}
+                          </span>
+                          <p className="text-sm text-gray-700 mt-1">{fiche.conditions_travail_detaillees.horaires}</p>
+                        </div>
+                      )}
+                      {fiche.conditions_travail_detaillees.deplacements && (
+                        <div className="p-4 bg-emerald-50/60 rounded-xl border border-emerald-100">
+                          <span className="text-xs font-semibold text-emerald-500 uppercase tracking-wider flex items-center gap-1.5">
+                            <span>🚗</span> {t.travel}
+                          </span>
+                          <p className="text-sm text-gray-700 mt-1">{fiche.conditions_travail_detaillees.deplacements}</p>
+                        </div>
+                      )}
+                      {fiche.conditions_travail_detaillees.environnement && (
+                        <div className="p-4 bg-violet-50/60 rounded-xl border border-violet-100">
+                          <span className="text-xs font-semibold text-violet-500 uppercase tracking-wider flex items-center gap-1.5">
+                            <span>🏢</span> {t.workEnvironment}
+                          </span>
+                          <p className="text-sm text-gray-700 mt-1">{fiche.conditions_travail_detaillees.environnement}</p>
+                        </div>
+                      )}
+                    </div>
+                    {fiche.conditions_travail_detaillees.exigences_physiques && fiche.conditions_travail_detaillees.exigences_physiques.length > 0 && (
+                      <div className="mt-4">
+                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t.physicalDemands}</span>
+                        <div className="mt-2">
+                          <BulletList items={fiche.conditions_travail_detaillees.exigences_physiques} color={PURPLE} />
+                        </div>
+                      </div>
+                    )}
+                    {fiche.conditions_travail_detaillees.risques && fiche.conditions_travail_detaillees.risques.length > 0 && (
+                      <div className="mt-4">
+                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t.specificRisks}</span>
+                        <div className="mt-2">
+                          <BulletList items={fiche.conditions_travail_detaillees.risques} color={PINK} />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
                 <SourceTag>{t.sourceRome}</SourceTag>
@@ -2165,303 +2494,6 @@ export default function FicheDetailPage() {
               )}
               <SourceTag>{t.sourceFtOffers}</SourceTag>
             </SectionAnchor>
-
-            {/* ═══ PROFIL & PERSONNALITÉ ═══ */}
-            {hasProfile && (
-              <SectionAnchor id="profil" title={t.secProfile} icon="🧠" accentColor="#00C8C8">
-                {/* ── Traits de personnalité ── */}
-                {dTraitsPersonnalite && dTraitsPersonnalite.length > 0 && (() => {
-                  const traitColors = [
-                    { bg: "#EEF2FF", border: "#C7D2FE", badge: "#4F46E5" },
-                    { bg: "#ECFEFF", border: "#A5F3FC", badge: "#06B6D4" },
-                    { bg: "#F0FDFA", border: "#CCFBF1", badge: "#00C8C8" },
-                    { bg: "#FFF7ED", border: "#FED7AA", badge: "#F59E0B" },
-                  ];
-                  return (
-                  <div className="mb-8">
-                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-1">{t.personalityTraits}</h3>
-                    <p className="text-xs text-gray-400 mb-4">{t.personalityTraitsDesc}</p>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      {dTraitsPersonnalite.map((trait, i) => {
-                        const c = traitColors[i % traitColors.length];
-                        return (
-                        <div key={i} className="flex items-center gap-3 p-3 rounded-xl" style={{ backgroundColor: c.bg, border: `1px solid ${c.border}` }}>
-                          <span className="w-7 h-7 rounded-full text-white flex items-center justify-center text-xs font-bold shrink-0" style={{ backgroundColor: c.badge }}>{i + 1}</span>
-                          <span className="text-sm text-gray-700 font-medium">{trait}</span>
-                        </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  );
-                })()}
-
-                {/* ── Aptitudes ── */}
-                {fiche.aptitudes && fiche.aptitudes.length > 0 && (
-                  <div className="mb-8">
-                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-1">{t.aptitudes}</h3>
-                    <p className="text-xs text-gray-400 mb-4">{t.aptitudesDesc}</p>
-                    <div className="space-y-3">
-                      {fiche.aptitudes.map((apt, i) => (
-                        <div key={i} className="flex items-center gap-4">
-                          <span className="text-sm text-gray-700 font-medium w-48 shrink-0 truncate">{apt.nom}</span>
-                          <div className="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden">
-                            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${(apt.niveau / 5) * 100}%`, background: "linear-gradient(90deg, #4F46E5, #EC4899)" }} />
-                          </div>
-                          <span className="text-xs font-bold text-indigo-600 w-8 text-right">{apt.niveau}/5</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* ── Compétences par dimension (Donut) ── */}
-                {fiche.competences_dimensions && Object.values(fiche.competences_dimensions).some(v => v > 0) && (
-                  <div className="mb-8">
-                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-1">{t.skillsDimensions}</h3>
-                    <p className="text-xs text-gray-400 mb-4">{t.skillsDimensionsDesc}</p>
-                    <div className="flex flex-col md:flex-row items-center gap-6">
-                      <div className="w-full md:w-1/2 h-[260px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Pie
-                              data={[
-                                { name: t.dimRelational, value: fiche.competences_dimensions.relationnel },
-                                { name: t.dimIntellectual, value: fiche.competences_dimensions.intellectuel },
-                                { name: t.dimCommunication, value: fiche.competences_dimensions.communication },
-                                { name: t.dimManagement, value: fiche.competences_dimensions.management },
-                                { name: t.dimRealization, value: fiche.competences_dimensions.realisation },
-                                { name: t.dimExpression, value: fiche.competences_dimensions.expression },
-                                { name: t.dimPhysical, value: fiche.competences_dimensions.physique_sensoriel },
-                              ].filter(d => d.value > 0)}
-                              cx="50%" cy="50%"
-                              innerRadius={50} outerRadius={90}
-                              paddingAngle={3} dataKey="value"
-                              label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                            >
-                              {[PURPLE, PINK, CYAN, "#F59E0B", "#8B5CF6", "#10B981", "#6366F1"].map((color, idx) => (
-                                <Cell key={idx} fill={color} />
-                              ))}
-                            </Pie>
-                            <Tooltip formatter={(val: number) => `${val}%`} />
-                          </PieChart>
-                        </ResponsiveContainer>
-                      </div>
-                      <div className="w-full md:w-1/2 space-y-2">
-                        {[
-                          { label: t.dimRelational, value: fiche.competences_dimensions.relationnel, color: PURPLE },
-                          { label: t.dimIntellectual, value: fiche.competences_dimensions.intellectuel, color: PINK },
-                          { label: t.dimCommunication, value: fiche.competences_dimensions.communication, color: CYAN },
-                          { label: t.dimManagement, value: fiche.competences_dimensions.management, color: "#F59E0B" },
-                          { label: t.dimRealization, value: fiche.competences_dimensions.realisation, color: "#8B5CF6" },
-                          { label: t.dimExpression, value: fiche.competences_dimensions.expression, color: "#10B981" },
-                          { label: t.dimPhysical, value: fiche.competences_dimensions.physique_sensoriel, color: "#6366F1" },
-                        ].filter(d => d.value > 0).map((dim, i) => (
-                          <div key={i} className="flex items-center gap-3">
-                            <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: dim.color }} />
-                            <span className="text-sm text-gray-700 flex-1">{dim.label}</span>
-                            <span className="text-sm font-bold" style={{ color: dim.color }}>{dim.value}%</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* ── Profil RIASEC (Radar) ── */}
-                {fiche.profil_riasec && Object.values(fiche.profil_riasec).some(v => v > 0) && (
-                  <div className="mb-8">
-                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-1">{t.riasecProfile}</h3>
-                    <p className="text-xs text-gray-400 mb-4">{t.riasecDesc}</p>
-                    <div className="flex justify-center">
-                      <div className="w-full max-w-md h-[300px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <RadarChart data={[
-                            { subject: t.riasecR, value: fiche.profil_riasec.realiste },
-                            { subject: t.riasecI, value: fiche.profil_riasec.investigateur },
-                            { subject: t.riasecA, value: fiche.profil_riasec.artistique },
-                            { subject: t.riasecS, value: fiche.profil_riasec.social },
-                            { subject: t.riasecE, value: fiche.profil_riasec.entreprenant },
-                            { subject: t.riasecC, value: fiche.profil_riasec.conventionnel },
-                          ]}>
-                            <PolarGrid stroke="#C7D2FE" />
-                            <PolarAngleAxis dataKey="subject" tick={{ fontSize: 12, fill: "#4F46E5", fontWeight: 600 }} />
-                            <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 9 }} />
-                            <Radar name="RIASEC" dataKey="value" stroke={PURPLE} fill={PURPLE} fillOpacity={0.25} strokeWidth={2} />
-                            <Tooltip formatter={(val: number) => `${val}/100`} />
-                          </RadarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* ── Préférences & Intérêts ── */}
-                {fiche.preferences_interets && fiche.preferences_interets.domaine_interet && (
-                  <div>
-                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-1">{t.interests}</h3>
-                    <div className="p-4 bg-[#F9F8FF] rounded-xl border border-indigo-200/60">
-                      <div className="flex items-center gap-2 mb-3">
-                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t.interestDomain}</span>
-                        <span className="px-3 py-1 rounded-full bg-indigo-600 text-white text-sm font-semibold">{fiche.preferences_interets.domaine_interet}</span>
-                      </div>
-                      {fiche.preferences_interets.familles && fiche.preferences_interets.familles.length > 0 && (
-                        <div>
-                          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t.interestFamilies}</span>
-                          <div className="mt-2 space-y-2">
-                            {fiche.preferences_interets.familles.map((f, i) => (
-                              <div key={i} className="flex items-start gap-3 p-2 rounded-lg bg-white">
-                                <span className="w-2 h-2 rounded-full bg-indigo-600 shrink-0 mt-1.5" />
-                                <div>
-                                  <span className="text-sm font-semibold text-[#1A1A2E]">{f.nom}</span>
-                                  {f.description && <p className="text-xs text-gray-500 mt-0.5">{f.description}</p>}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-                <SourceTag>{t.sourceIaClaude}</SourceTag>
-              </SectionAnchor>
-            )}
-
-            {/* ═══ COMPÉTENCES ═══ */}
-            {(hasCompetences || hasSavoirEtre || hasSavoirs) && (
-              <SectionAnchor id="competences" title={t.secSkills} icon="⚡" accentColor="#4F46E5">
-                <div className="border-b border-gray-200 mb-6 overflow-x-auto scrollbar-hide">
-                  <div className="flex gap-0 -mb-px min-w-0">
-                    {[
-                      { id: "sf" as const, label: t.knowHow, count: dCompetences?.length ?? 0, show: hasCompetences },
-                      { id: "se" as const, label: t.softSkills, count: dCompetencesTransversales?.length ?? 0, show: hasSavoirEtre },
-                      { id: "sa" as const, label: t.knowledge, count: dSavoirs?.length ?? 0, show: hasSavoirs },
-                    ].filter(item => item.show).map(tab => (
-                      <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                        className={`relative px-3 md:px-4 py-3 text-xs md:text-sm font-medium transition-all whitespace-nowrap ${
-                          activeTab === tab.id ? "text-indigo-600" : "text-gray-500 hover:text-gray-700"
-                        }`}>
-                        {activeTab === tab.id && (
-                          <motion.div
-                            layoutId="comp-tab-underline"
-                            className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-indigo-600 to-pink-500"
-                            transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                          />
-                        )}
-                        {tab.label}
-                        <span className={`ml-1 md:ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${activeTab === tab.id ? "bg-indigo-100 text-indigo-600" : "bg-gray-100 text-gray-500"}`}>
-                          {tab.count}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <p className="text-sm text-gray-500 mb-4 italic">
-                  {activeTab === "sf" && t.knowHowDesc}
-                  {activeTab === "se" && t.softSkillsDesc}
-                  {activeTab === "sa" && t.knowledgeDesc}
-                </p>
-                {activeTab === "sf" && dCompetences && <NumberedList items={dCompetences} color={PURPLE} />}
-                {activeTab === "se" && dCompetencesTransversales && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {dCompetencesTransversales.map((c, i) => (
-                      <div key={i} className="flex items-center gap-3 p-3.5 rounded-xl bg-[#FFF5F7] border border-[#FFE0E6]/60">
-                        <span className="w-8 h-8 rounded-full bg-pink-500 text-white flex items-center justify-center text-xs font-bold shrink-0">✓</span>
-                        <span className="text-[15px] text-gray-700">{c}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {activeTab === "sa" && dSavoirs && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {dSavoirs.map((s, i) => (
-                      <div key={i} className="flex items-center gap-3 p-3.5 rounded-xl bg-[#F0FDFA] border border-[#CCFBF1]/60">
-                        <span className="w-8 h-8 rounded-full bg-[#00C8C8] text-white flex items-center justify-center text-xs font-bold shrink-0">◆</span>
-                        <span className="text-[15px] text-gray-700">{s}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <SourceTag>{t.sourceRomeIa}</SourceTag>
-              </SectionAnchor>
-            )}
-
-            {/* ═══ CONTEXTES DE TRAVAIL ═══ */}
-            {hasContextes && (
-              <SectionAnchor id="contextes" title={t.secWorkContexts} icon="🏢" accentColor="#06B6D4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {dConditions && dConditions.length > 0 && (
-                    <div className="p-4 bg-amber-50/40 rounded-xl border border-amber-100/60">
-                      <h3 className="text-sm font-bold text-amber-700 uppercase tracking-wider mb-3 flex items-center gap-2">
-                        <span className="w-1.5 h-4 rounded-full bg-amber-500" />
-                        {t.workConditions}
-                      </h3>
-                      <BulletList items={dConditions} color="#D97706" />
-                    </div>
-                  )}
-                  {dEnvironnements && dEnvironnements.length > 0 && (
-                    <div className="p-4 bg-cyan-50/40 rounded-xl border border-cyan-100/60">
-                      <h3 className="text-sm font-bold text-cyan-700 uppercase tracking-wider mb-3 flex items-center gap-2">
-                        <span className="w-1.5 h-4 rounded-full bg-cyan-500" />
-                        {t.structuresEnv}
-                      </h3>
-                      <BulletList items={dEnvironnements} color={CYAN} />
-                    </div>
-                  )}
-                </div>
-
-                {/* ── Conditions détaillées ── */}
-                {fiche.conditions_travail_detaillees && (
-                  <div className="mt-6 pt-6 border-t border-gray-100">
-                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">{t.detailedConditions}</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {fiche.conditions_travail_detaillees.horaires && (
-                        <div className="p-4 bg-blue-50/60 rounded-xl border border-blue-100">
-                          <span className="text-xs font-semibold text-blue-500 uppercase tracking-wider flex items-center gap-1.5">
-                            <span>🕐</span> {t.schedule}
-                          </span>
-                          <p className="text-sm text-gray-700 mt-1">{fiche.conditions_travail_detaillees.horaires}</p>
-                        </div>
-                      )}
-                      {fiche.conditions_travail_detaillees.deplacements && (
-                        <div className="p-4 bg-emerald-50/60 rounded-xl border border-emerald-100">
-                          <span className="text-xs font-semibold text-emerald-500 uppercase tracking-wider flex items-center gap-1.5">
-                            <span>🚗</span> {t.travel}
-                          </span>
-                          <p className="text-sm text-gray-700 mt-1">{fiche.conditions_travail_detaillees.deplacements}</p>
-                        </div>
-                      )}
-                      {fiche.conditions_travail_detaillees.environnement && (
-                        <div className="p-4 bg-violet-50/60 rounded-xl border border-violet-100">
-                          <span className="text-xs font-semibold text-violet-500 uppercase tracking-wider flex items-center gap-1.5">
-                            <span>🏢</span> {t.workEnvironment}
-                          </span>
-                          <p className="text-sm text-gray-700 mt-1">{fiche.conditions_travail_detaillees.environnement}</p>
-                        </div>
-                      )}
-                    </div>
-                    {fiche.conditions_travail_detaillees.exigences_physiques && fiche.conditions_travail_detaillees.exigences_physiques.length > 0 && (
-                      <div className="mt-4">
-                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t.physicalDemands}</span>
-                        <div className="mt-2">
-                          <BulletList items={fiche.conditions_travail_detaillees.exigences_physiques} color={PURPLE} />
-                        </div>
-                      </div>
-                    )}
-                    {fiche.conditions_travail_detaillees.risques && fiche.conditions_travail_detaillees.risques.length > 0 && (
-                      <div className="mt-4">
-                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t.specificRisks}</span>
-                        <div className="mt-2">
-                          <BulletList items={fiche.conditions_travail_detaillees.risques} color={PINK} />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-                <SourceTag>{t.sourceRome}</SourceTag>
-              </SectionAnchor>
-            )}
 
             {/* ═══ SITES UTILES ═══ */}
             {hasSitesUtiles && (

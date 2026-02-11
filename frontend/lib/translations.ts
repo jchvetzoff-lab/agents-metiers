@@ -208,6 +208,10 @@ const translations: Record<FicheLang, Record<string, string>> = {
     estimatedOffers: "Offres estimees",
     projectionEstimated: "Projection estimee",
     sourceProjection: "Source : Projection estimee basee sur la tendance du marche",
+    secVideo: "Video du metier",
+    videoTitle: "Decouvrez ce metier en video",
+    videoDesc: "Une presentation complete du metier, de ses missions et de son environnement professionnel.",
+    videoComingSoon: "Video bientot disponible",
   },
 
   en: {
@@ -397,6 +401,10 @@ const translations: Record<FicheLang, Record<string, string>> = {
     estimatedOffers: "Estimated offers",
     projectionEstimated: "Estimated projection",
     sourceProjection: "Source: Estimated projection based on market trend",
+    secVideo: "Job Video",
+    videoTitle: "Discover this job in video",
+    videoDesc: "A complete presentation of the job, its missions and professional environment.",
+    videoComingSoon: "Video coming soon",
   },
 
   es: {
@@ -586,6 +594,10 @@ const translations: Record<FicheLang, Record<string, string>> = {
     estimatedOffers: "Ofertas estimadas",
     projectionEstimated: "Proyeccion estimada",
     sourceProjection: "Fuente: Proyeccion estimada basada en la tendencia del mercado",
+    secVideo: "Video del oficio",
+    videoTitle: "Descubre este oficio en video",
+    videoDesc: "Una presentacion completa del oficio, sus misiones y su entorno profesional.",
+    videoComingSoon: "Video disponible proximamente",
   },
 
   de: {
@@ -775,6 +787,10 @@ const translations: Record<FicheLang, Record<string, string>> = {
     estimatedOffers: "Geschatzte Angebote",
     projectionEstimated: "Geschatzte Projektion",
     sourceProjection: "Quelle: Geschatzte Projektion basierend auf Markttrend",
+    secVideo: "Berufsvideo",
+    videoTitle: "Entdecken Sie diesen Beruf im Video",
+    videoDesc: "Eine vollstandige Prasentation des Berufs, seiner Aufgaben und seines beruflichen Umfelds.",
+    videoComingSoon: "Video bald verfugbar",
   },
 
   it: {
@@ -964,6 +980,10 @@ const translations: Record<FicheLang, Record<string, string>> = {
     estimatedOffers: "Offerte stimate",
     projectionEstimated: "Proiezione stimata",
     sourceProjection: "Fonte: Proiezione stimata basata sulla tendenza del mercato",
+    secVideo: "Video del mestiere",
+    videoTitle: "Scopri questo mestiere in video",
+    videoDesc: "Una presentazione completa del mestiere, delle sue missioni e del suo ambiente professionale.",
+    videoComingSoon: "Video disponibile a breve",
   },
 
   pt: {
@@ -1153,6 +1173,10 @@ const translations: Record<FicheLang, Record<string, string>> = {
     estimatedOffers: "Ofertas estimadas",
     projectionEstimated: "Projecao estimada",
     sourceProjection: "Fonte: Projecao estimada baseada na tendencia do mercado",
+    secVideo: "Video da profissao",
+    videoTitle: "Descubra esta profissao em video",
+    videoDesc: "Uma apresentacao completa da profissao, das suas missoes e do seu ambiente profissional.",
+    videoComingSoon: "Video disponivel em breve",
   },
 
   ar: {
@@ -1342,6 +1366,10 @@ const translations: Record<FicheLang, Record<string, string>> = {
     estimatedOffers: "عروض مقدرة",
     projectionEstimated: "إسقاط تقديري",
     sourceProjection: "المصدر: إسقاط تقديري استنادًا إلى اتجاه السوق",
+    secVideo: "فيديو المهنة",
+    videoTitle: "اكتشف هذه المهنة عبر الفيديو",
+    videoDesc: "عرض كامل للمهنة ومهامها وبيئتها المهنية.",
+    videoComingSoon: "الفيديو قريبا",
   },
 };
 
