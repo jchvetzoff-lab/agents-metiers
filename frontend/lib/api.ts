@@ -43,6 +43,22 @@ export interface MobiliteItem {
   contexte: string;
 }
 
+export interface AptitudeItem {
+  nom: string;
+  niveau: number;
+}
+
+export interface InteretFamille {
+  nom: string;
+  description: string;
+}
+
+export interface SiteUtile {
+  nom: string;
+  url: string;
+  description: string;
+}
+
 export interface FicheDetail extends FicheMetier {
   missions_principales: string[];
   acces_metier?: string;
@@ -76,6 +92,46 @@ export interface FicheDetail extends FicheMetier {
     metiers_proches: MobiliteItem[];
     evolutions: MobiliteItem[];
   };
+  // Parcoureo-level fields
+  traits_personnalite: string[];
+  aptitudes: AptitudeItem[];
+  competences_dimensions: {
+    relationnel: number;
+    intellectuel: number;
+    communication: number;
+    management: number;
+    realisation: number;
+    expression: number;
+    physique_sensoriel: number;
+  } | null;
+  profil_riasec: {
+    realiste: number;
+    investigateur: number;
+    artistique: number;
+    social: number;
+    entreprenant: number;
+    conventionnel: number;
+  } | null;
+  autres_appellations: string[];
+  statuts_professionnels: string[];
+  niveau_formation: string | null;
+  domaine_professionnel: {
+    domaine: string;
+    sous_domaine: string;
+    code_domaine: string;
+  } | null;
+  preferences_interets: {
+    domaine_interet: string;
+    familles: InteretFamille[];
+  } | null;
+  sites_utiles: SiteUtile[];
+  conditions_travail_detaillees: {
+    exigences_physiques: string[];
+    horaires: string;
+    deplacements: string;
+    environnement: string;
+    risques: string[];
+  } | null;
 }
 
 export interface Variante {

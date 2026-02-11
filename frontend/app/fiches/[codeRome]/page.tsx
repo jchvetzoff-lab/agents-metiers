@@ -9,6 +9,7 @@ import StatusBadge from "@/components/StatusBadge";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
   PieChart, Pie, Legend,
+  RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
 } from "recharts";
 
 // ── Couleurs ──
@@ -873,6 +874,133 @@ export default function FicheDetailPage() {
       }
 
       // ══════════════════════════════════════════════
+      // DOMAINE PROFESSIONNEL
+      // ══════════════════════════════════════════════
+      const hasDom = !!d.domaine_professionnel?.domaine || (d.autres_appellations?.length ?? 0) > 0;
+      if (hasDom) {
+        sectionTitle("Domaine professionnel");
+
+        if (d.domaine_professionnel?.domaine) {
+          ensureSpace(12);
+          // Domain badge
+          fill(C.purple);
+          const domTxt = `${d.domaine_professionnel.code_domaine || ""} - ${d.domaine_professionnel.domaine}`;
+          const domW = pdf.getTextWidth(domTxt) * 1.15 + 14;
+          pdf.roundedRect(ML + 2, y - 4, Math.min(domW, CW - 4), 9, 4, 4, "F");
+          pdf.setFontSize(9);
+          pdf.setFont("helvetica", "bold");
+          txt(C.white);
+          pdf.text(domTxt, ML + 9, y + 1);
+          y += 10;
+          if (d.domaine_professionnel.sous_domaine) {
+            fill(C.gray100);
+            const sdW = pdf.getTextWidth(d.domaine_professionnel.sous_domaine) * 1.15 + 14;
+            pdf.roundedRect(ML + 2, y - 4, Math.min(sdW, CW - 4), 9, 4, 4, "F");
+            pdf.setFontSize(9);
+            txt(C.gray700);
+            pdf.text(d.domaine_professionnel.sous_domaine, ML + 9, y + 1);
+            y += 10;
+          }
+        }
+
+        if (d.niveau_formation) {
+          ensureSpace(16);
+          subTitle("Niveau de formation");
+          pdf.setFontSize(11);
+          pdf.setFont("helvetica", "bold");
+          txt(C.dark);
+          pdf.text(d.niveau_formation, ML + 2, y);
+          y += 10;
+        }
+
+        if (d.statuts_professionnels?.length) {
+          subTitle("Statuts professionnels");
+          tags(d.statuts_professionnels);
+        }
+
+        if (d.autres_appellations?.length) {
+          subTitle("Autres appellations");
+          tags(d.autres_appellations);
+        }
+      }
+
+      // ══════════════════════════════════════════════
+      // PROFIL & PERSONNALITE
+      // ══════════════════════════════════════════════
+      const hasProf = (d.traits_personnalite?.length ?? 0) > 0 || (d.aptitudes?.length ?? 0) > 0;
+      if (hasProf) {
+        sectionTitle("Profil & Personnalite");
+
+        if (d.traits_personnalite?.length) {
+          subTitle("Traits de personnalite");
+          tags(d.traits_personnalite);
+        }
+
+        if (d.aptitudes?.length) {
+          subTitle("Aptitudes");
+          for (const apt of d.aptitudes) {
+            ensureSpace(10);
+            const aptName = typeof apt === "object" ? apt.nom : String(apt);
+            const aptLevel = typeof apt === "object" ? apt.niveau : 3;
+            // Label
+            pdf.setFontSize(9);
+            pdf.setFont("helvetica", "normal");
+            txt(C.gray700);
+            pdf.text(aptName, ML + 2, y + 1);
+            // Bar background
+            const barX = ML + 70;
+            const barW = CW - 90;
+            fill(C.gray100);
+            pdf.roundedRect(barX, y - 2.5, barW, 6, 3, 3, "F");
+            // Bar filled
+            fill(C.purple);
+            const filledW = Math.max((aptLevel / 5) * barW, 6);
+            pdf.roundedRect(barX, y - 2.5, filledW, 6, 3, 3, "F");
+            // Score
+            pdf.setFontSize(8);
+            pdf.setFont("helvetica", "bold");
+            txt(C.purple);
+            pdf.text(`${aptLevel}/5`, barX + barW + 4, y + 1);
+            y += 9;
+          }
+          y += 4;
+        }
+
+        // RIASEC textual summary
+        if (d.profil_riasec && Object.values(d.profil_riasec).some((v: any) => v > 0)) {
+          subTitle("Profil RIASEC");
+          const riasecLabels: Record<string, string> = {
+            realiste: "Realiste", investigateur: "Investigateur", artistique: "Artistique",
+            social: "Social", entreprenant: "Entreprenant", conventionnel: "Conventionnel"
+          };
+          for (const [key, label] of Object.entries(riasecLabels)) {
+            const val = (d.profil_riasec as any)[key] ?? 0;
+            if (val > 0) {
+              ensureSpace(10);
+              pdf.setFontSize(9);
+              pdf.setFont("helvetica", "normal");
+              txt(C.gray700);
+              pdf.text(label, ML + 2, y + 1);
+              // Bar
+              const barX = ML + 45;
+              const barW = CW - 65;
+              fill(C.gray100);
+              pdf.roundedRect(barX, y - 2.5, barW, 6, 3, 3, "F");
+              fill(C.purple);
+              const filledW = Math.max((val / 100) * barW, 6);
+              pdf.roundedRect(barX, y - 2.5, filledW, 6, 3, 3, "F");
+              pdf.setFontSize(8);
+              pdf.setFont("helvetica", "bold");
+              txt(C.purple);
+              pdf.text(`${val}`, barX + barW + 4, y + 1);
+              y += 9;
+            }
+          }
+          y += 4;
+        }
+      }
+
+      // ══════════════════════════════════════════════
       // CONTEXTES DE TRAVAIL
       // ══════════════════════════════════════════════
       const hasCond = (d.conditions_travail?.length ?? 0) > 0;
@@ -887,6 +1015,58 @@ export default function FicheDetailPage() {
         if (hasEnv) {
           subTitle("Structures & environnements");
           bulletList(d.environnements!, C.cyan);
+        }
+
+        // Detailed conditions
+        if (d.conditions_travail_detaillees) {
+          const cd = d.conditions_travail_detaillees;
+          if (cd.horaires || cd.deplacements || cd.environnement) {
+            subTitle("Conditions detaillees");
+            if (cd.horaires) { bodyText(`Horaires : ${cd.horaires}`); }
+            if (cd.deplacements) { bodyText(`Deplacements : ${cd.deplacements}`); }
+            if (cd.environnement) { bodyText(`Environnement : ${cd.environnement}`); }
+          }
+          if (cd.exigences_physiques?.length) {
+            subTitle("Exigences physiques");
+            bulletList(cd.exigences_physiques, C.purple);
+          }
+          if (cd.risques?.length) {
+            subTitle("Risques specifiques");
+            bulletList(cd.risques, C.pink);
+          }
+        }
+      }
+
+      // ══════════════════════════════════════════════
+      // SITES UTILES
+      // ══════════════════════════════════════════════
+      if (d.sites_utiles?.length) {
+        sectionTitle("Sites utiles");
+        for (const site of d.sites_utiles) {
+          ensureSpace(14);
+          pdf.setFontSize(10);
+          pdf.setFont("helvetica", "bold");
+          txt(C.purple);
+          pdf.text(site.nom, ML + 2, y);
+          if (site.url) {
+            pdf.setFontSize(7.5);
+            pdf.setFont("helvetica", "normal");
+            txt(C.gray400);
+            pdf.text(site.url, ML + 2 + pdf.getTextWidth(site.nom) + 4, y);
+          }
+          y += 5;
+          if (site.description) {
+            pdf.setFontSize(9);
+            pdf.setFont("helvetica", "normal");
+            txt(C.gray700);
+            const sLines = pdf.splitTextToSize(site.description, CW - 8);
+            for (const sl of sLines) {
+              ensureSpace(5);
+              pdf.text(sl, ML + 2, y);
+              y += 4.5;
+            }
+          }
+          y += 5;
         }
       }
 
@@ -1051,17 +1231,23 @@ export default function FicheDetailPage() {
   const hasCompetences = (dCompetences?.length ?? 0) > 0;
   const hasSavoirEtre = (dCompetencesTransversales?.length ?? 0) > 0;
   const hasSavoirs = (fiche.savoirs?.length ?? 0) > 0;
-  const hasContextes = (dConditions?.length ?? 0) > 0 || (dEnvironnements?.length ?? 0) > 0;
+  const hasContextes = (dConditions?.length ?? 0) > 0 || (dEnvironnements?.length ?? 0) > 0 || !!fiche.conditions_travail_detaillees;
   const hasMobilite = fiche.mobilite && ((fiche.mobilite.metiers_proches?.length ?? 0) > 0 || (fiche.mobilite.evolutions?.length ?? 0) > 0);
   const hasStats = salaryData || contractData || fiche.perspectives;
+  const hasDomain = !!fiche.domaine_professionnel?.domaine || (fiche.autres_appellations?.length ?? 0) > 0;
+  const hasProfile = (fiche.traits_personnalite?.length ?? 0) > 0 || (fiche.aptitudes?.length ?? 0) > 0 || !!fiche.profil_riasec?.realiste;
+  const hasSitesUtiles = (fiche.sites_utiles?.length ?? 0) > 0;
 
   const sections = [
     { id: "infos", label: t.secKeyInfo, icon: "📋", show: true },
+    { id: "domaine", label: t.secDomain, icon: "🏷️", show: hasDomain },
     { id: "stats", label: t.secStatistics, icon: "📊", show: hasStats },
     { id: "recrutements", label: t.recruitmentsPerYear, icon: "📅", show: true },
     { id: "offres", label: t.liveOffers, icon: "💼", show: true },
+    { id: "profil", label: t.secProfile, icon: "🧠", show: hasProfile },
     { id: "competences", label: t.secSkills, icon: "⚡", show: hasCompetences || hasSavoirEtre || hasSavoirs },
     { id: "contextes", label: t.secWorkContexts, icon: "🏢", show: hasContextes },
+    { id: "sites", label: t.secUsefulLinks, icon: "🌐", show: hasSitesUtiles },
     { id: "services", label: t.secServices, icon: "🔗", show: true },
     { id: "mobilite", label: t.secRelatedJobs, icon: "🔄", show: hasMobilite },
   ].filter(s => s.show);
@@ -1275,6 +1461,52 @@ export default function FicheDetailPage() {
                 </div>
               )}
             </SectionAnchor>
+
+            {/* ═══ DOMAINE PROFESSIONNEL ═══ */}
+            {hasDomain && (
+              <SectionAnchor id="domaine" title={t.professionalDomain} icon="🏷️">
+                {fiche.domaine_professionnel?.domaine && (
+                  <div className="flex flex-wrap gap-3 mb-5">
+                    <span className="px-4 py-2 rounded-full bg-[#4A39C0] text-white text-sm font-semibold">
+                      {fiche.domaine_professionnel.code_domaine} — {fiche.domaine_professionnel.domaine}
+                    </span>
+                    {fiche.domaine_professionnel.sous_domaine && (
+                      <span className="px-4 py-2 rounded-full bg-gray-100 text-gray-700 text-sm font-medium">
+                        {fiche.domaine_professionnel.sous_domaine}
+                      </span>
+                    )}
+                  </div>
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  {fiche.niveau_formation && (
+                    <div className="p-4 bg-[#F9F8FF] rounded-xl border border-[#E4E1FF]/60">
+                      <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t.formationLevel}</span>
+                      <p className="text-lg font-bold text-[#1A1A2E] mt-1">{fiche.niveau_formation}</p>
+                    </div>
+                  )}
+                  {fiche.statuts_professionnels && fiche.statuts_professionnels.length > 0 && (
+                    <div className="p-4 bg-[#F9F8FF] rounded-xl border border-[#E4E1FF]/60">
+                      <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t.professionalStatuses}</span>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {fiche.statuts_professionnels.map((s, i) => (
+                          <span key={i} className="px-3 py-1 rounded-full bg-[#E4E1FF] text-[#4A39C0] text-sm font-medium">{s}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {fiche.autres_appellations && fiche.autres_appellations.length > 0 && (
+                  <div className="mt-5 pt-5 border-t border-gray-100">
+                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t.otherTitles}</span>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {fiche.autres_appellations.map((a, i) => (
+                        <span key={i} className="px-3 py-1.5 rounded-full bg-gray-100 text-sm text-gray-700">{a}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </SectionAnchor>
+            )}
 
             {/* ═══ STATISTIQUES ═══ */}
             {hasStats && (
@@ -1664,6 +1896,156 @@ export default function FicheDetailPage() {
               )}
             </SectionAnchor>
 
+            {/* ═══ PROFIL & PERSONNALITÉ ═══ */}
+            {hasProfile && (
+              <SectionAnchor id="profil" title={t.secProfile} icon="🧠">
+                {/* ── Traits de personnalité ── */}
+                {fiche.traits_personnalite && fiche.traits_personnalite.length > 0 && (
+                  <div className="mb-8">
+                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-1">{t.personalityTraits}</h3>
+                    <p className="text-xs text-gray-400 mb-4">{t.personalityTraitsDesc}</p>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {fiche.traits_personnalite.map((trait, i) => (
+                        <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-[#F9F8FF] border border-[#E4E1FF]/60">
+                          <span className="w-7 h-7 rounded-full bg-[#4A39C0] text-white flex items-center justify-center text-xs font-bold shrink-0">{i + 1}</span>
+                          <span className="text-sm text-gray-700 font-medium">{trait}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Aptitudes ── */}
+                {fiche.aptitudes && fiche.aptitudes.length > 0 && (
+                  <div className="mb-8">
+                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-1">{t.aptitudes}</h3>
+                    <p className="text-xs text-gray-400 mb-4">{t.aptitudesDesc}</p>
+                    <div className="space-y-3">
+                      {fiche.aptitudes.map((apt, i) => (
+                        <div key={i} className="flex items-center gap-4">
+                          <span className="text-sm text-gray-700 font-medium w-48 shrink-0 truncate">{apt.nom}</span>
+                          <div className="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full bg-[#4A39C0] transition-all duration-500" style={{ width: `${(apt.niveau / 5) * 100}%` }} />
+                          </div>
+                          <span className="text-xs font-bold text-[#4A39C0] w-8 text-right">{apt.niveau}/5</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Compétences par dimension (Donut) ── */}
+                {fiche.competences_dimensions && Object.values(fiche.competences_dimensions).some(v => v > 0) && (
+                  <div className="mb-8">
+                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-1">{t.skillsDimensions}</h3>
+                    <p className="text-xs text-gray-400 mb-4">{t.skillsDimensionsDesc}</p>
+                    <div className="flex flex-col md:flex-row items-center gap-6">
+                      <div className="w-full md:w-1/2 h-[260px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={[
+                                { name: t.dimRelational, value: fiche.competences_dimensions.relationnel },
+                                { name: t.dimIntellectual, value: fiche.competences_dimensions.intellectuel },
+                                { name: t.dimCommunication, value: fiche.competences_dimensions.communication },
+                                { name: t.dimManagement, value: fiche.competences_dimensions.management },
+                                { name: t.dimRealization, value: fiche.competences_dimensions.realisation },
+                                { name: t.dimExpression, value: fiche.competences_dimensions.expression },
+                                { name: t.dimPhysical, value: fiche.competences_dimensions.physique_sensoriel },
+                              ].filter(d => d.value > 0)}
+                              cx="50%" cy="50%"
+                              innerRadius={50} outerRadius={90}
+                              paddingAngle={3} dataKey="value"
+                              label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                            >
+                              {[PURPLE, PINK, CYAN, "#F59E0B", "#8B5CF6", "#10B981", "#6366F1"].map((color, idx) => (
+                                <Cell key={idx} fill={color} />
+                              ))}
+                            </Pie>
+                            <Tooltip formatter={(val: number) => `${val}%`} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div className="w-full md:w-1/2 space-y-2">
+                        {[
+                          { label: t.dimRelational, value: fiche.competences_dimensions.relationnel, color: PURPLE },
+                          { label: t.dimIntellectual, value: fiche.competences_dimensions.intellectuel, color: PINK },
+                          { label: t.dimCommunication, value: fiche.competences_dimensions.communication, color: CYAN },
+                          { label: t.dimManagement, value: fiche.competences_dimensions.management, color: "#F59E0B" },
+                          { label: t.dimRealization, value: fiche.competences_dimensions.realisation, color: "#8B5CF6" },
+                          { label: t.dimExpression, value: fiche.competences_dimensions.expression, color: "#10B981" },
+                          { label: t.dimPhysical, value: fiche.competences_dimensions.physique_sensoriel, color: "#6366F1" },
+                        ].filter(d => d.value > 0).map((dim, i) => (
+                          <div key={i} className="flex items-center gap-3">
+                            <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: dim.color }} />
+                            <span className="text-sm text-gray-700 flex-1">{dim.label}</span>
+                            <span className="text-sm font-bold" style={{ color: dim.color }}>{dim.value}%</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Profil RIASEC (Radar) ── */}
+                {fiche.profil_riasec && Object.values(fiche.profil_riasec).some(v => v > 0) && (
+                  <div className="mb-8">
+                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-1">{t.riasecProfile}</h3>
+                    <p className="text-xs text-gray-400 mb-4">{t.riasecDesc}</p>
+                    <div className="flex justify-center">
+                      <div className="w-full max-w-md h-[300px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <RadarChart data={[
+                            { subject: t.riasecR, value: fiche.profil_riasec.realiste },
+                            { subject: t.riasecI, value: fiche.profil_riasec.investigateur },
+                            { subject: t.riasecA, value: fiche.profil_riasec.artistique },
+                            { subject: t.riasecS, value: fiche.profil_riasec.social },
+                            { subject: t.riasecE, value: fiche.profil_riasec.entreprenant },
+                            { subject: t.riasecC, value: fiche.profil_riasec.conventionnel },
+                          ]}>
+                            <PolarGrid stroke="#E4E1FF" />
+                            <PolarAngleAxis dataKey="subject" tick={{ fontSize: 12, fill: "#4A39C0", fontWeight: 600 }} />
+                            <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 9 }} />
+                            <Radar name="RIASEC" dataKey="value" stroke={PURPLE} fill={PURPLE} fillOpacity={0.25} strokeWidth={2} />
+                            <Tooltip formatter={(val: number) => `${val}/100`} />
+                          </RadarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Préférences & Intérêts ── */}
+                {fiche.preferences_interets && fiche.preferences_interets.domaine_interet && (
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-1">{t.interests}</h3>
+                    <div className="p-4 bg-[#F9F8FF] rounded-xl border border-[#E4E1FF]/60">
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t.interestDomain}</span>
+                        <span className="px-3 py-1 rounded-full bg-[#4A39C0] text-white text-sm font-semibold">{fiche.preferences_interets.domaine_interet}</span>
+                      </div>
+                      {fiche.preferences_interets.familles && fiche.preferences_interets.familles.length > 0 && (
+                        <div>
+                          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t.interestFamilies}</span>
+                          <div className="mt-2 space-y-2">
+                            {fiche.preferences_interets.familles.map((f, i) => (
+                              <div key={i} className="flex items-start gap-3 p-2 rounded-lg bg-white">
+                                <span className="w-2 h-2 rounded-full bg-[#4A39C0] shrink-0 mt-1.5" />
+                                <div>
+                                  <span className="text-sm font-semibold text-[#1A1A2E]">{f.nom}</span>
+                                  {f.description && <p className="text-xs text-gray-500 mt-0.5">{f.description}</p>}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </SectionAnchor>
+            )}
+
             {/* ═══ COMPÉTENCES ═══ */}
             {(hasCompetences || hasSavoirEtre || hasSavoirs) && (
               <SectionAnchor id="competences" title={t.secSkills} icon="⚡">
@@ -1731,6 +2113,68 @@ export default function FicheDetailPage() {
                       <BulletList items={dEnvironnements} color={CYAN} />
                     </div>
                   )}
+                </div>
+
+                {/* ── Conditions détaillées ── */}
+                {fiche.conditions_travail_detaillees && (
+                  <div className="mt-6 pt-6 border-t border-gray-100">
+                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">{t.detailedConditions}</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {fiche.conditions_travail_detaillees.horaires && (
+                        <div className="p-4 bg-[#F9F8FF] rounded-xl border border-[#E4E1FF]/60">
+                          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t.schedule}</span>
+                          <p className="text-sm text-gray-700 mt-1">{fiche.conditions_travail_detaillees.horaires}</p>
+                        </div>
+                      )}
+                      {fiche.conditions_travail_detaillees.deplacements && (
+                        <div className="p-4 bg-[#F9F8FF] rounded-xl border border-[#E4E1FF]/60">
+                          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t.travel}</span>
+                          <p className="text-sm text-gray-700 mt-1">{fiche.conditions_travail_detaillees.deplacements}</p>
+                        </div>
+                      )}
+                      {fiche.conditions_travail_detaillees.environnement && (
+                        <div className="p-4 bg-[#F9F8FF] rounded-xl border border-[#E4E1FF]/60">
+                          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t.workEnvironment}</span>
+                          <p className="text-sm text-gray-700 mt-1">{fiche.conditions_travail_detaillees.environnement}</p>
+                        </div>
+                      )}
+                    </div>
+                    {fiche.conditions_travail_detaillees.exigences_physiques && fiche.conditions_travail_detaillees.exigences_physiques.length > 0 && (
+                      <div className="mt-4">
+                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t.physicalDemands}</span>
+                        <div className="mt-2">
+                          <BulletList items={fiche.conditions_travail_detaillees.exigences_physiques} color={PURPLE} />
+                        </div>
+                      </div>
+                    )}
+                    {fiche.conditions_travail_detaillees.risques && fiche.conditions_travail_detaillees.risques.length > 0 && (
+                      <div className="mt-4">
+                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t.specificRisks}</span>
+                        <div className="mt-2">
+                          <BulletList items={fiche.conditions_travail_detaillees.risques} color={PINK} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </SectionAnchor>
+            )}
+
+            {/* ═══ SITES UTILES ═══ */}
+            {hasSitesUtiles && (
+              <SectionAnchor id="sites" title={t.secUsefulLinks} icon="🌐">
+                <p className="text-sm text-gray-500 mb-4">{t.usefulSitesDesc}</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {fiche.sites_utiles.map((site, i) => (
+                    <a key={i} href={site.url} target="_blank" rel="noopener noreferrer"
+                      className="group flex items-start gap-3 p-4 rounded-xl border border-gray-200 hover:border-[#4A39C0]/30 hover:bg-[#F9F8FF] transition">
+                      <span className="w-10 h-10 rounded-xl bg-[#E4E1FF] flex items-center justify-center shrink-0 text-lg group-hover:bg-[#4A39C0] group-hover:text-white transition">🔗</span>
+                      <div className="min-w-0">
+                        <span className="text-sm font-semibold text-[#4A39C0] group-hover:underline">{site.nom}</span>
+                        <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{site.description}</p>
+                      </div>
+                    </a>
+                  ))}
                 </div>
               </SectionAnchor>
             )}
