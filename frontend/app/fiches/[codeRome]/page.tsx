@@ -955,23 +955,36 @@ export default function FicheDetailPage() {
     );
   }
 
-  // ── Données dérivées ──
-  const salaryData = fiche.salaires && (fiche.salaires.junior?.median || fiche.salaires.confirme?.median || fiche.salaires.senior?.median)
+  // ── Données dérivées (region-aware) ──
+  const isRegional = !!(selectedRegion && regionalData && !regionalLoading);
+
+  // Salary data: prefer regional salaires_par_niveau when available
+  const regSal = isRegional ? regionalData?.salaires_par_niveau : null;
+  const salarySource = regSal || fiche.salaires;
+  const salaryData = salarySource && (salarySource.junior?.median || salarySource.confirme?.median || salarySource.senior?.median)
     ? [
-        { niveau: t.junior, min: fiche.salaires.junior?.min ?? 0, median: fiche.salaires.junior?.median ?? 0, max: fiche.salaires.junior?.max ?? 0 },
-        { niveau: t.confirmed, min: fiche.salaires.confirme?.min ?? 0, median: fiche.salaires.confirme?.median ?? 0, max: fiche.salaires.confirme?.max ?? 0 },
-        { niveau: t.senior, min: fiche.salaires.senior?.min ?? 0, median: fiche.salaires.senior?.median ?? 0, max: fiche.salaires.senior?.max ?? 0 },
+        { niveau: t.junior, min: salarySource.junior?.min ?? 0, median: salarySource.junior?.median ?? 0, max: salarySource.junior?.max ?? 0 },
+        { niveau: t.confirmed, min: salarySource.confirme?.min ?? 0, median: salarySource.confirme?.median ?? 0, max: salarySource.confirme?.max ?? 0 },
+        { niveau: t.senior, min: salarySource.senior?.min ?? 0, median: salarySource.senior?.median ?? 0, max: salarySource.senior?.max ?? 0 },
       ]
     : null;
 
-  const contractData = fiche.types_contrats && (fiche.types_contrats.cdi > 0 || fiche.types_contrats.cdd > 0)
+  // Contract data: prefer regional when available
+  const regContrats = isRegional ? regionalData?.types_contrats : null;
+  const contratSource = regContrats || fiche.types_contrats;
+  const contractData = contratSource && (contratSource.cdi > 0 || contratSource.cdd > 0)
     ? [
-        { name: t.cdi, value: fiche.types_contrats.cdi },
-        { name: t.cdd, value: fiche.types_contrats.cdd },
-        { name: t.interim, value: fiche.types_contrats.interim },
-        ...(fiche.types_contrats.autre > 0 ? [{ name: t.other, value: fiche.types_contrats.autre }] : []),
+        { name: t.cdi, value: contratSource.cdi },
+        { name: t.cdd, value: contratSource.cdd },
+        { name: t.interim, value: contratSource.interim },
+        ...(contratSource.autre > 0 ? [{ name: t.other, value: contratSource.autre }] : []),
       ]
     : null;
+
+  // Tension: prefer regional when available
+  const tensionValue = isRegional && regionalData?.tension_regionale != null
+    ? regionalData.tension_regionale
+    : (fiche.perspectives?.tension ?? 0.5);
 
   // Display data: use variante content when applied, fallback to fiche
   const v = appliedVariante;
@@ -1245,59 +1258,30 @@ export default function FicheDetailPage() {
                   </div>
                 )}
 
-                {/* ── Regional data banner ── */}
-                {selectedRegion && regionalData && !regionalLoading && (
-                  <div className="mb-6">
-                    <div className="flex items-center gap-2 mb-4">
-                      <span className="text-lg">📍</span>
-                      <h3 className="text-base font-bold text-[#4A39C0]">{regionalData.region_name}</h3>
-                      <span className="px-2 py-0.5 rounded-full bg-[#E4E1FF] text-[#4A39C0] text-xs font-semibold">
-                        {t.liveData || "Données temps réel"} — France Travail
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                      <StatCard label={t.activeOffers || "Offres actives"} value={regionalData.nb_offres.toLocaleString(t.locale)} color={PURPLE} />
-                      {regionalData.salaires && (
-                        <>
-                          <StatCard label={t.medianSalary || "Salaire médian"} value={`${(regionalData.salaires.median / 1000).toFixed(0)}k€`} sub={t.grossAnnual || "brut annuel"} color={CYAN} />
-                          <StatCard label={t.min || "Min"} value={`${(regionalData.salaires.min / 1000).toFixed(0)}k€`} sub={`${regionalData.salaires.nb_offres_avec_salaire} ${t.offersWithSalary || "offres avec salaire"}`} color="#6B7280" />
-                          <StatCard label={t.max || "Max"} value={`${(regionalData.salaires.max / 1000).toFixed(0)}k€`} color={PINK} />
-                        </>
-                      )}
-                      {!regionalData.salaires && regionalData.nb_offres === 0 && (
-                        <div className="col-span-3 text-sm text-gray-400 italic p-4">{t.noOffersRegion || "Aucune offre dans cette région pour ce métier."}</div>
-                      )}
-                    </div>
-
-                    {/* Regional contract breakdown */}
-                    {regionalData.types_contrats && (
-                      <div className="mb-6">
-                        <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">{t.regionalContracts || "Répartition des contrats"} — {regionalData.region_name}</h3>
-                        <div className="flex gap-2 flex-wrap">
-                          {[
-                            { name: t.cdi, value: regionalData.types_contrats.cdi, color: PURPLE },
-                            { name: t.cdd, value: regionalData.types_contrats.cdd, color: PINK },
-                            { name: t.interim, value: regionalData.types_contrats.interim, color: CYAN },
-                            ...(regionalData.types_contrats.autre > 0 ? [{ name: t.other, value: regionalData.types_contrats.autre, color: "#F59E0B" }] : []),
-                          ].map((c, i) => (
-                            <div key={i} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-gray-200">
-                              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: c.color }} />
-                              <span className="text-sm font-semibold text-gray-700">{c.name}</span>
-                              <span className="text-sm font-bold" style={{ color: c.color }}>{c.value}%</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
+                {/* ── Regional badge indicator ── */}
+                {isRegional && (
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#E4E1FF] text-[#4A39C0] text-xs font-semibold">
+                      <span>📍</span> {regionalData!.region_name} — {t.regionalLive} France Travail
+                    </span>
+                    {regionalData!.nb_offres === 0 && (
+                      <span className="text-sm text-gray-400 italic">{t.noOffersRegion}</span>
                     )}
-
-                    <div className="border-t border-gray-200 pt-4">
-                      <p className="text-xs text-gray-400 italic">{t.nationalDataBelow || "Données nationales (enrichies par IA) ci-dessous"} ↓</p>
-                    </div>
                   </div>
                 )}
 
-                {fiche.perspectives && (fiche.perspectives.nombre_offres != null || fiche.perspectives.taux_insertion != null) && (
+                {/* ── Stat cards (region-aware) ── */}
+                {isRegional ? (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                    <StatCard label={t.activeOffers} value={regionalData!.nb_offres.toLocaleString(t.locale)} color={PURPLE} />
+                    {regionalData!.salaires && (
+                      <StatCard label={t.medianSalary} value={`${(regionalData!.salaires.median / 1000).toFixed(0)}k€`} sub={t.grossAnnual} color={CYAN} />
+                    )}
+                    <div className="col-span-2 md:col-span-1">
+                      <TensionGauge value={tensionValue} labels={{ title: t.marketTension, high: t.highDemand, moderate: t.moderateDemand, low: t.lowDemand }} />
+                    </div>
+                  </div>
+                ) : fiche.perspectives && (fiche.perspectives.nombre_offres != null || fiche.perspectives.taux_insertion != null) ? (
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
                     {fiche.perspectives.nombre_offres != null && (
                       <StatCard label={t.offersPerYear} value={fiche.perspectives.nombre_offres.toLocaleString(t.locale)} sub={t.nationalEstimate} color={PURPLE} />
@@ -1306,14 +1290,24 @@ export default function FicheDetailPage() {
                       <StatCard label={t.insertionRate} value={`${(fiche.perspectives.taux_insertion * 100).toFixed(0)}%`} sub={t.afterTraining} color={CYAN} />
                     )}
                     <div className="col-span-2 md:col-span-1">
-                      <TensionGauge value={fiche.perspectives.tension ?? 0.5} labels={{ title: t.marketTension, high: t.highDemand, moderate: t.moderateDemand, low: t.lowDemand }} />
+                      <TensionGauge value={tensionValue} labels={{ title: t.marketTension, high: t.highDemand, moderate: t.moderateDemand, low: t.lowDemand }} />
                     </div>
                   </div>
-                )}
+                ) : null}
+
+                {/* ── Salary chart + Contract chart (region-aware) ── */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {salaryData && (
                     <div>
-                      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">{t.grossSalaries}</h3>
+                      <div className="flex items-center gap-2 mb-4">
+                        <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">{t.grossSalaries}</h3>
+                        {isRegional && regSal && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#E4E1FF] text-[#4A39C0] font-semibold">{t.regionalLive}</span>
+                        )}
+                        {(!isRegional || !regSal) && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-semibold">{t.nationalData}</span>
+                        )}
+                      </div>
                       <ResponsiveContainer width="100%" height={240}>
                         <BarChart data={salaryData} barCategoryGap="20%">
                           <XAxis dataKey="niveau" tick={{ fontSize: 12, fill: "#6B7280" }} axisLine={false} tickLine={false} />
@@ -1324,11 +1318,41 @@ export default function FicheDetailPage() {
                           <Bar dataKey="max" name={t.max} fill={LIGHT_PURPLE} radius={[4, 4, 0, 0]} />
                         </BarChart>
                       </ResponsiveContainer>
+                      {/* Experience distribution bars (regional only) */}
+                      {isRegional && regionalData?.experience_distribution && (
+                        <div className="mt-4 pt-4 border-t border-gray-100">
+                          <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">{t.experienceBreakdown}</h4>
+                          <div className="space-y-2">
+                            {[
+                              { label: t.junior, pct: regionalData.experience_distribution.junior_pct, count: regionalData.experience_distribution.junior, color: PURPLE },
+                              { label: t.confirmed, pct: regionalData.experience_distribution.confirme_pct, count: regionalData.experience_distribution.confirme, color: LIGHT_PURPLE },
+                              { label: t.senior, pct: regionalData.experience_distribution.senior_pct, count: regionalData.experience_distribution.senior, color: PINK },
+                            ].map((level, i) => (
+                              <div key={i} className="flex items-center gap-3">
+                                <span className="text-xs font-medium text-gray-600 w-20">{level.label}</span>
+                                <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                                  <div className="h-full rounded-full transition-all duration-500" style={{ width: `${level.pct}%`, backgroundColor: level.color }} />
+                                </div>
+                                <span className="text-xs font-bold w-12 text-right" style={{ color: level.color }}>{level.pct}%</span>
+                                <span className="text-[10px] text-gray-400 w-14 text-right">({level.count})</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                   {contractData && (
                     <div>
-                      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">{t.hiringBreakdown}</h3>
+                      <div className="flex items-center gap-2 mb-4">
+                        <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">{t.hiringBreakdown}</h3>
+                        {isRegional && regContrats && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#E4E1FF] text-[#4A39C0] font-semibold">{t.regionalLive}</span>
+                        )}
+                        {(!isRegional || !regContrats) && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-semibold">{t.nationalData}</span>
+                        )}
+                      </div>
                       <ResponsiveContainer width="100%" height={240}>
                         <PieChart>
                           <Pie data={contractData} cx="50%" cy="50%" innerRadius={50} outerRadius={85} paddingAngle={3} dataKey="value"

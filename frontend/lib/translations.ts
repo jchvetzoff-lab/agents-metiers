@@ -124,6 +124,10 @@ const translations: Record<FicheLang, Record<string, string>> = {
     cdd: "CDD",
     interim: "Interim",
     other: "Autre",
+    experienceBreakdown: "Repartition par experience",
+    basedOnOffers: "offres analysees",
+    nationalData: "Donnees nationales (IA)",
+    regionalLive: "Donnees temps reel",
   },
 
   en: {
@@ -231,6 +235,10 @@ const translations: Record<FicheLang, Record<string, string>> = {
     cdd: "Fixed-term",
     interim: "Temporary",
     other: "Other",
+    experienceBreakdown: "Experience breakdown",
+    basedOnOffers: "offers analysed",
+    nationalData: "National data (AI)",
+    regionalLive: "Live data",
   },
 
   es: {
@@ -338,6 +346,10 @@ const translations: Record<FicheLang, Record<string, string>> = {
     cdd: "Temporal",
     interim: "Interino",
     other: "Otro",
+    experienceBreakdown: "Distribucion por experiencia",
+    basedOnOffers: "ofertas analizadas",
+    nationalData: "Datos nacionales (IA)",
+    regionalLive: "Datos en tiempo real",
   },
 
   de: {
@@ -445,6 +457,10 @@ const translations: Record<FicheLang, Record<string, string>> = {
     cdd: "Befristet",
     interim: "Zeitarbeit",
     other: "Sonstige",
+    experienceBreakdown: "Verteilung nach Erfahrung",
+    basedOnOffers: "analysierte Angebote",
+    nationalData: "Nationale Daten (KI)",
+    regionalLive: "Echtzeitdaten",
   },
 
   it: {
@@ -552,6 +568,10 @@ const translations: Record<FicheLang, Record<string, string>> = {
     cdd: "Determinato",
     interim: "Interinale",
     other: "Altro",
+    experienceBreakdown: "Distribuzione per esperienza",
+    basedOnOffers: "offerte analizzate",
+    nationalData: "Dati nazionali (IA)",
+    regionalLive: "Dati in tempo reale",
   },
 
   pt: {
@@ -659,6 +679,10 @@ const translations: Record<FicheLang, Record<string, string>> = {
     cdd: "A prazo",
     interim: "Temporario",
     other: "Outro",
+    experienceBreakdown: "Distribuicao por experiencia",
+    basedOnOffers: "ofertas analisadas",
+    nationalData: "Dados nacionais (IA)",
+    regionalLive: "Dados em tempo real",
   },
 
   ar: {
@@ -766,6 +790,10 @@ const translations: Record<FicheLang, Record<string, string>> = {
     cdd: "محدد المدة",
     interim: "مؤقت",
     other: "اخرى",
+    experienceBreakdown: "التوزيع حسب الخبرة",
+    basedOnOffers: "عروض محللة",
+    nationalData: "بيانات وطنية (ذكاء اصطناعي)",
+    regionalLive: "بيانات حية",
   },
 };
 

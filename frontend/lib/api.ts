@@ -106,6 +106,13 @@ export interface Region {
   libelle: string;
 }
 
+export interface SalaireNiveauRegional {
+  min: number;
+  max: number;
+  median: number;
+  nb_offres: number;
+}
+
 export interface RegionalData {
   region: string;
   region_name: string;
@@ -124,6 +131,20 @@ export interface RegionalData {
     interim: number;
     autre: number;
   } | null;
+  salaires_par_niveau: {
+    junior: SalaireNiveauRegional | null;
+    confirme: SalaireNiveauRegional | null;
+    senior: SalaireNiveauRegional | null;
+  } | null;
+  experience_distribution: {
+    junior: number;
+    confirme: number;
+    senior: number;
+    junior_pct: number;
+    confirme_pct: number;
+    senior_pct: number;
+  } | null;
+  tension_regionale: number | null;
 }
 
 export interface AuditLog {
