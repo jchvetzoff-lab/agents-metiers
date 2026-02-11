@@ -148,8 +148,11 @@ export interface Variante {
 export interface VarianteDetail extends Variante {
   code_rome: string;
   description?: string;
+  missions_principales: string[];
+  acces_metier?: string;
   competences: string[];
   competences_transversales: string[];
+  savoirs: string[];
   formations: string[];
   certifications: string[];
   conditions_travail: string[];

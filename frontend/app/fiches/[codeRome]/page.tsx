@@ -323,8 +323,11 @@ export default function FicheDetailPage() {
       nom_epicene: av?.nom || fiche.nom_epicene,
       description: av?.description || fiche.description,
       description_courte: av?.description_courte || fiche.description_courte,
+      missions_principales: av?.missions_principales?.length ? av.missions_principales : fiche.missions_principales,
+      acces_metier: av?.acces_metier || fiche.acces_metier,
       competences: av?.competences?.length ? av.competences : fiche.competences,
       competences_transversales: av?.competences_transversales?.length ? av.competences_transversales : fiche.competences_transversales,
+      savoirs: av?.savoirs?.length ? av.savoirs : fiche.savoirs,
       formations: av?.formations?.length ? av.formations : fiche.formations,
       certifications: av?.certifications?.length ? av.certifications : fiche.certifications,
       conditions_travail: av?.conditions_travail?.length ? av.conditions_travail : fiche.conditions_travail,
@@ -1276,15 +1279,18 @@ export default function FicheDetailPage() {
   const dDescriptionCourte = v?.description_courte || fiche.description_courte;
   const dCompetences = v?.competences?.length ? v.competences : fiche.competences;
   const dCompetencesTransversales = v?.competences_transversales?.length ? v.competences_transversales : fiche.competences_transversales;
+  const dMissions = v?.missions_principales?.length ? v.missions_principales : fiche.missions_principales;
+  const dAcces = v?.acces_metier || fiche.acces_metier;
+  const dSavoirs = v?.savoirs?.length ? v.savoirs : fiche.savoirs;
   const dFormations = v?.formations?.length ? v.formations : fiche.formations;
   const dCertifications = v?.certifications?.length ? v.certifications : fiche.certifications;
   const dConditions = v?.conditions_travail?.length ? v.conditions_travail : fiche.conditions_travail;
   const dEnvironnements = v?.environnements?.length ? v.environnements : fiche.environnements;
 
-  const hasMissions = (fiche.missions_principales?.length ?? 0) > 0;
+  const hasMissions = (dMissions?.length ?? 0) > 0;
   const hasCompetences = (dCompetences?.length ?? 0) > 0;
   const hasSavoirEtre = (dCompetencesTransversales?.length ?? 0) > 0;
-  const hasSavoirs = (fiche.savoirs?.length ?? 0) > 0;
+  const hasSavoirs = (dSavoirs?.length ?? 0) > 0;
   const hasContextes = (dConditions?.length ?? 0) > 0 || (dEnvironnements?.length ?? 0) > 0 || !!fiche.conditions_travail_detaillees;
   const hasMobilite = fiche.mobilite && ((fiche.mobilite.metiers_proches?.length ?? 0) > 0 || (fiche.mobilite.evolutions?.length ?? 0) > 0);
   const hasStats = salaryData || contractData || fiche.perspectives;
@@ -1489,13 +1495,13 @@ export default function FicheDetailPage() {
               {hasMissions && (
                 <div className="mb-6">
                   <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">{t.mainMissions}</h3>
-                  <NumberedList items={fiche.missions_principales} color={PURPLE} />
+                  <NumberedList items={dMissions} color={PURPLE} />
                 </div>
               )}
-              {fiche.acces_metier && (
+              {dAcces && (
                 <div className="mb-6 p-5 bg-[#F9F8FF] rounded-xl border border-indigo-200/60">
                   <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-2">{t.howToAccess}</h3>
-                  <p className="text-[15px] text-gray-600 leading-relaxed">{fiche.acces_metier}</p>
+                  <p className="text-[15px] text-gray-600 leading-relaxed">{dAcces}</p>
                 </div>
               )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -2155,7 +2161,7 @@ export default function FicheDetailPage() {
                     {[
                       { id: "sf" as const, label: t.knowHow, count: dCompetences?.length ?? 0, show: hasCompetences },
                       { id: "se" as const, label: t.softSkills, count: dCompetencesTransversales?.length ?? 0, show: hasSavoirEtre },
-                      { id: "sa" as const, label: t.knowledge, count: fiche.savoirs?.length ?? 0, show: hasSavoirs },
+                      { id: "sa" as const, label: t.knowledge, count: dSavoirs?.length ?? 0, show: hasSavoirs },
                     ].filter(item => item.show).map(tab => (
                       <button key={tab.id} onClick={() => setActiveTab(tab.id)}
                         className={`relative px-3 md:px-4 py-3 text-xs md:text-sm font-medium transition-all whitespace-nowrap ${
@@ -2192,9 +2198,9 @@ export default function FicheDetailPage() {
                     ))}
                   </div>
                 )}
-                {activeTab === "sa" && fiche.savoirs && (
+                {activeTab === "sa" && dSavoirs && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {fiche.savoirs.map((s, i) => (
+                    {dSavoirs.map((s, i) => (
                       <div key={i} className="flex items-center gap-3 p-3.5 rounded-xl bg-[#F0FDFA] border border-[#CCFBF1]/60">
                         <span className="w-8 h-8 rounded-full bg-[#00C8C8] text-white flex items-center justify-center text-xs font-bold shrink-0">◆</span>
                         <span className="text-[15px] text-gray-700">{s}</span>
