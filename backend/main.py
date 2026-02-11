@@ -1863,6 +1863,86 @@ async def get_regional_data(
         raise HTTPException(status_code=500, detail=f"Erreur données régionales: {str(e)}")
 
 
+@app.get("/api/fiches/{code_rome}/recrutements")
+async def get_recrutements_par_annee(
+    code_rome: str,
+    region: str = Query(None, description="Code région (optionnel, ex: 11 pour Île-de-France)"),
+):
+    """Récupère le nombre de recrutements par année (2022-2026) via l'API Offres France Travail."""
+    import httpx as _httpx
+    import asyncio
+
+    token = _get_ft_token()
+    if not token:
+        raise HTTPException(
+            status_code=503,
+            detail="Credentials France Travail non configurés (FT_CLIENT_ID / FT_CLIENT_SECRET)"
+        )
+
+    region_name = None
+    if region:
+        region_name = next((r["libelle"] for r in FRANCE_REGIONS if r["code"] == region), None)
+        if not region_name:
+            raise HTTPException(status_code=400, detail=f"Région inconnue: {region}")
+
+    current_year = 2026
+    years = list(range(current_year - 4, current_year + 1))  # 2022-2026
+
+    async def fetch_year_count(client: _httpx.AsyncClient, year: int) -> dict:
+        params = {
+            "codeROME": code_rome,
+            "minCreationDate": f"{year}-01-01T00:00:00Z",
+            "maxCreationDate": f"{year}-12-31T23:59:59Z",
+            "range": "0-0",
+        }
+        if region:
+            params["region"] = region
+        try:
+            resp = await client.get(
+                "https://api.francetravail.io/partenaire/offresdemploi/v2/offres/search",
+                params=params,
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            if resp.status_code in (200, 206):
+                # Parse Content-Range: offres 0-0/TOTAL
+                content_range = resp.headers.get("Content-Range", "")
+                total = 0
+                if "/" in content_range:
+                    try:
+                        total = int(content_range.split("/")[1])
+                    except (ValueError, IndexError):
+                        total = 0
+                return {"annee": year, "nb_offres": total}
+            elif resp.status_code == 204:
+                return {"annee": year, "nb_offres": 0}
+            else:
+                return {"annee": year, "nb_offres": 0}
+        except Exception:
+            return {"annee": year, "nb_offres": 0}
+
+    try:
+        async with _httpx.AsyncClient(timeout=30.0) as client:
+            recrutements = []
+            # Batch of 3 calls with 400ms delay to respect rate limit (3 req/s)
+            for i in range(0, len(years), 3):
+                batch = years[i:i+3]
+                results = await asyncio.gather(*[fetch_year_count(client, y) for y in batch])
+                recrutements.extend(results)
+                if i + 3 < len(years):
+                    await asyncio.sleep(0.4)
+
+        return {
+            "code_rome": code_rome,
+            "region": region,
+            "region_name": region_name,
+            "recrutements": sorted(recrutements, key=lambda x: x["annee"]),
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur recrutements: {str(e)}")
+
+
 # ==================== AUTH ENDPOINTS ====================
 
 @app.post("/api/auth/register")
