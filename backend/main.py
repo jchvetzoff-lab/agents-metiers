@@ -76,7 +76,8 @@ except Exception as e:
 # Migration auth : créer la table users
 from backend.auth import (
     create_users_table, UserCreate, UserLogin, UserResponse, UserDB,
-    hash_password, verify_password, create_token, decode_token, get_current_user
+    hash_password, verify_password, create_token, decode_token, get_current_user,
+    JWT_SECRET_KEY
 )
 try:
     create_users_table(repo.engine)
@@ -1929,6 +1930,47 @@ async def login(user_data: UserLogin):
 async def get_me(current_user: dict = Depends(get_current_user)):
     """Retourne les informations de l'utilisateur connecte."""
     return current_user
+
+
+class ResetPasswordRequest(BaseModel):
+    email: str
+    new_password: str
+    admin_key: str
+
+
+@app.post("/api/admin/reset-password")
+async def admin_reset_password(data: ResetPasswordRequest):
+    """Reset un mot de passe utilisateur (protege par admin_key = JWT_SECRET_KEY)."""
+    if data.admin_key != JWT_SECRET_KEY:
+        raise HTTPException(status_code=403, detail="Cle admin invalide")
+
+    from sqlalchemy.orm import Session
+    session = Session(repo.engine)
+    try:
+        user = session.execute(
+            sa_text("SELECT id, email FROM users WHERE email = :email"),
+            {"email": data.email}
+        ).fetchone()
+
+        if not user:
+            raise HTTPException(status_code=404, detail=f"Utilisateur {data.email} non trouve")
+
+        new_hash = hash_password(data.new_password)
+        session.execute(
+            sa_text("UPDATE users SET hashed_password = :pwd WHERE email = :email"),
+            {"pwd": new_hash, "email": data.email}
+        )
+        session.commit()
+
+        return {"message": "Mot de passe mis a jour", "email": data.email}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(status_code=500, detail=f"Erreur reset: {str(e)}")
+    finally:
+        session.close()
 
 
 if __name__ == "__main__":
