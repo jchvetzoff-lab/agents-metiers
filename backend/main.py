@@ -1648,6 +1648,15 @@ def _get_ft_token():
     return resp.json().get("access_token")
 
 
+def _compute_salary_stats(values: list) -> dict | None:
+    """Calcule min/max/median/nb_offres depuis une liste de salaires."""
+    if not values:
+        return None
+    values.sort()
+    n = len(values)
+    return {"min": round(values[0]), "max": round(values[-1]), "median": round(values[n // 2]), "nb_offres": n}
+
+
 def _parse_salary_annual(libelle: str) -> float | None:
     """Extrait un salaire annuel brut approximatif depuis le libellé France Travail."""
     if not libelle:
@@ -1712,6 +1721,9 @@ async def get_regional_data(
                 "nb_offres": 0,
                 "salaires": None,
                 "types_contrats": None,
+                "salaires_par_niveau": None,
+                "experience_distribution": None,
+                "tension_regionale": None,
             }
 
         if resp.status_code not in (200, 206):
@@ -1730,24 +1742,48 @@ async def get_regional_data(
         if nb_offres == 0:
             nb_offres = len(resultats)
 
-        # Agréger les salaires
-        salaires_annuels = []
+        # Agréger les salaires (global + par niveau d'expérience)
+        import re as _re_sal
+        salaires_tous = []
+        salaires_par_exp = {"junior": [], "confirme": [], "senior": []}
+
         for r in resultats:
             sal = _parse_salary_annual(r.get("salaire", {}).get("libelle", ""))
-            if sal and 15000 < sal < 200000:  # filtre aberrants
-                salaires_annuels.append(sal)
+            if sal and 15000 < sal < 200000:
+                salaires_tous.append(sal)
+                exp = r.get("experienceExige", "")
+                exp_lib = r.get("experienceLibelle", "")
+                if exp == "D":
+                    salaires_par_exp["junior"].append(sal)
+                elif exp == "E":
+                    years_match = _re_sal.search(r'(\d+)\s*An', exp_lib)
+                    years = int(years_match.group(1)) if years_match else 3
+                    if years <= 3:
+                        salaires_par_exp["confirme"].append(sal)
+                    else:
+                        salaires_par_exp["senior"].append(sal)
+                elif exp == "S":
+                    salaires_par_exp["confirme"].append(sal)
 
-        salaires_annuels.sort()
+        salaires_tous.sort()
         salaires_result = None
-        if salaires_annuels:
-            n = len(salaires_annuels)
+        if salaires_tous:
+            n = len(salaires_tous)
             salaires_result = {
                 "nb_offres_avec_salaire": n,
-                "min": round(salaires_annuels[0]),
-                "max": round(salaires_annuels[-1]),
-                "median": round(salaires_annuels[n // 2]),
-                "moyenne": round(sum(salaires_annuels) / n),
+                "min": round(salaires_tous[0]),
+                "max": round(salaires_tous[-1]),
+                "median": round(salaires_tous[n // 2]),
+                "moyenne": round(sum(salaires_tous) / n),
             }
+
+        # Salaires par niveau d'expérience
+        salaires_par_niveau = None
+        j = _compute_salary_stats(salaires_par_exp["junior"])
+        c = _compute_salary_stats(salaires_par_exp["confirme"])
+        s = _compute_salary_stats(salaires_par_exp["senior"])
+        if j or c or s:
+            salaires_par_niveau = {"junior": j, "confirme": c, "senior": s}
 
         # Agréger les types de contrats
         contrats_result = None
@@ -1775,6 +1811,39 @@ async def get_regional_data(
                     }
                 break
 
+        # Distribution d'expérience depuis filtresPossibles
+        experience_dist = None
+        for f in filtres:
+            if f["filtre"] == "experience":
+                junior_count = confirme_count = senior_count = 0
+                for a in f["agregation"]:
+                    v, nb = a["valeurPossible"], a["nbResultats"]
+                    if v in ("0", "4"):
+                        junior_count += nb
+                    elif v == "2":
+                        confirme_count += nb
+                    elif v == "3":
+                        senior_count += nb
+                total_exp = junior_count + confirme_count + senior_count
+                if total_exp > 0:
+                    experience_dist = {
+                        "junior": junior_count, "confirme": confirme_count, "senior": senior_count,
+                        "junior_pct": round(junior_count / total_exp * 100),
+                        "confirme_pct": round(confirme_count / total_exp * 100),
+                        "senior_pct": round(senior_count / total_exp * 100),
+                    }
+                break
+
+        # Tension régionale (proxy basé sur CDI ratio, salaire moyen, densité d'offres)
+        tension_regionale = None
+        if nb_offres > 0:
+            cdi_ratio = contrats_result["cdi"] / 100.0 if contrats_result else 0.5
+            salary_score = 0.5
+            if salaires_tous:
+                salary_score = max(0.0, min(1.0, (sum(salaires_tous) / len(salaires_tous) - 25000) / 30000))
+            density_score = min(1.0, nb_offres / 150.0)
+            tension_regionale = round(cdi_ratio * 0.4 + salary_score * 0.3 + density_score * 0.3, 2)
+
         return {
             "region": region,
             "region_name": region_name,
@@ -1782,6 +1851,9 @@ async def get_regional_data(
             "nb_offres": nb_offres,
             "salaires": salaires_result,
             "types_contrats": contrats_result,
+            "salaires_par_niveau": salaires_par_niveau,
+            "experience_distribution": experience_dist,
+            "tension_regionale": tension_regionale,
         }
 
     except HTTPException:
