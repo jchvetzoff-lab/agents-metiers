@@ -206,6 +206,12 @@ export default function FicheDetailPage() {
   const t = getTranslations(lang);
 
   async function handleApplyFilter() {
+    // If filters match the original fiche defaults, just show the original fiche
+    if (filterLangue === "fr" && filterTranche === "18+" && filterFormat === "standard" && filterGenre === "masculin") {
+      setAppliedVariante(null);
+      setFilterError(null);
+      return;
+    }
     setFilterLoading(true);
     setFilterError(null);
     const match = variantes.find(
