@@ -103,6 +103,54 @@ Réponds UNIQUEMENT avec un objet JSON valide (sans texte avant/après) :
             {{"nom": "Évolution 2", "contexte": "Avec obtention du diplôme/certification [lequel]"}},
             {{"nom": "Évolution 3", "contexte": "Par spécialisation en [domaine]"}}
         ]
+    }},
+    "traits_personnalite": ["9 traits de personnalité idéaux pour ce métier (adjectifs ou noms courts, ex: Patient, Rigoureux, Créatif)"],
+    "aptitudes": [
+        {{"nom": "Capacité d'analyse", "niveau": 4}},
+        {{"nom": "Dextérité manuelle", "niveau": 3}}
+    ],
+    "competences_dimensions": {{
+        "relationnel": 25,
+        "intellectuel": 20,
+        "communication": 15,
+        "management": 10,
+        "realisation": 15,
+        "expression": 10,
+        "physique_sensoriel": 5
+    }},
+    "profil_riasec": {{
+        "realiste": 30,
+        "investigateur": 80,
+        "artistique": 20,
+        "social": 60,
+        "entreprenant": 40,
+        "conventionnel": 50
+    }},
+    "autres_appellations": ["3 à 8 appellations alternatives du métier (synonymes, variantes courantes)"],
+    "statuts_professionnels": ["Salarié"],
+    "niveau_formation": "Bac+5 / Master",
+    "domaine_professionnel": {{
+        "domaine": "Nom du grand domaine",
+        "sous_domaine": "Nom du sous-domaine",
+        "code_domaine": "X"
+    }},
+    "preferences_interets": {{
+        "domaine_interet": "Nom du domaine d'intérêt principal",
+        "familles": [
+            {{"nom": "Famille d'intérêt 1", "description": "Description courte"}},
+            {{"nom": "Famille d'intérêt 2", "description": "Description courte"}}
+        ]
+    }},
+    "sites_utiles": [
+        {{"nom": "ONISEP", "url": "https://www.onisep.fr", "description": "Orientation scolaire et professionnelle"}},
+        {{"nom": "France Travail", "url": "https://www.francetravail.fr", "description": "Offres d'emploi et services"}}
+    ],
+    "conditions_travail_detaillees": {{
+        "exigences_physiques": ["Liste des exigences physiques du métier"],
+        "horaires": "Description des horaires typiques",
+        "deplacements": "Fréquence et nature des déplacements",
+        "environnement": "Description de l'environnement de travail",
+        "risques": ["Liste des risques professionnels spécifiques"]
     }}
 }}
 
@@ -114,6 +162,14 @@ RÈGLES STRICTES :
 - nombre_offres : estimation réaliste du nombre d'offres/an en France.
 - taux_insertion : float 0-1, taux d'insertion à 6 mois.
 - missions_principales : phrases complètes, concrètes, variées.
+- traits_personnalite : exactement 9 traits (adjectifs ou noms courts).
+- aptitudes : exactement 11 aptitudes avec niveau 1 (faible) à 5 (excellent).
+- competences_dimensions : 7 dimensions totalisant exactement 100.
+- profil_riasec : 6 scores entre 0 et 100 (Réaliste, Investigateur, Artistique, Social, Entreprenant, Conventionnel).
+- sites_utiles : 2 à 4 sites réels et pertinents pour ce métier (URLs valides).
+- statuts_professionnels : parmi "Salarié", "Fonctionnaire", "Indépendant" (1 à 3 items).
+- niveau_formation : niveau minimum typique (ex: "CAP/BEP", "Bac", "Bac+2", "Bac+3", "Bac+5").
+- code_domaine : une lettre majuscule correspondant au domaine ROME (A à N, etc.).
 - Sois FACTUEL, PRÉCIS et PROFESSIONNEL. Pas de formulations vagues ou génériques."""
 
 
@@ -150,7 +206,7 @@ async def enrich_with_claude(client: anthropic.AsyncAnthropic, fiche: dict) -> d
 
     response = await client.messages.create(
         model=CLAUDE_MODEL,
-        max_tokens=4096,
+        max_tokens=6144,
         messages=[{"role": "user", "content": prompt}]
     )
 
@@ -185,6 +241,18 @@ async def update_fiche(code_rome: str, enrichment: dict) -> bool:
                 "perspectives": enrichment.get("perspectives"),
                 "types_contrats": enrichment.get("types_contrats"),
                 "mobilite": enrichment.get("mobilite"),
+                # Parcoureo-level fields
+                "traits_personnalite": enrichment.get("traits_personnalite"),
+                "aptitudes": enrichment.get("aptitudes"),
+                "competences_dimensions": enrichment.get("competences_dimensions"),
+                "profil_riasec": enrichment.get("profil_riasec"),
+                "autres_appellations": enrichment.get("autres_appellations"),
+                "statuts_professionnels": enrichment.get("statuts_professionnels"),
+                "niveau_formation": enrichment.get("niveau_formation"),
+                "domaine_professionnel": enrichment.get("domaine_professionnel"),
+                "preferences_interets": enrichment.get("preferences_interets"),
+                "sites_utiles": enrichment.get("sites_utiles"),
+                "conditions_travail_detaillees": enrichment.get("conditions_travail_detaillees"),
                 "statut": "en_validation"
             }
         )

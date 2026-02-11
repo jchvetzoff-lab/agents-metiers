@@ -205,6 +205,19 @@ class FicheMetier(BaseModel):
     )
     secteurs_activite: List[str] = Field(default_factory=list)
 
+    # Parcoureo-level fields
+    traits_personnalite: List[str] = Field(default_factory=list)
+    aptitudes: List[Dict[str, Any]] = Field(default_factory=list)
+    competences_dimensions: Dict[str, Any] = Field(default_factory=dict)
+    profil_riasec: Dict[str, Any] = Field(default_factory=dict)
+    autres_appellations: List[str] = Field(default_factory=list)
+    statuts_professionnels: List[str] = Field(default_factory=list)
+    niveau_formation: Optional[str] = Field(None)
+    domaine_professionnel: Dict[str, Any] = Field(default_factory=dict)
+    preferences_interets: Dict[str, Any] = Field(default_factory=dict)
+    sites_utiles: List[Dict[str, Any]] = Field(default_factory=list)
+    conditions_travail_detaillees: Dict[str, Any] = Field(default_factory=dict)
+
     # Métadonnées
     metadata: MetadataFiche = Field(default_factory=MetadataFiche)
 
@@ -352,6 +365,19 @@ class FicheMetierDB(Base):
     # Mobilité professionnelle (JSON)
     mobilite = Column(JSON, default=dict)
 
+    # Parcoureo-level fields (JSON)
+    traits_personnalite = Column(JSON, default=list)
+    aptitudes = Column(JSON, default=list)
+    competences_dimensions = Column(JSON, default=dict)
+    profil_riasec = Column(JSON, default=dict)
+    autres_appellations = Column(JSON, default=list)
+    statuts_professionnels = Column(JSON, default=list)
+    niveau_formation = Column(Text, nullable=True)
+    domaine_professionnel = Column(JSON, default=dict)
+    preferences_interets = Column(JSON, default=dict)
+    sites_utiles = Column(JSON, default=list)
+    conditions_travail_detaillees = Column(JSON, default=dict)
+
     # Métadonnées
     statut = Column(String(20), default="brouillon")
     version = Column(Integer, default=1)
@@ -394,6 +420,17 @@ class FicheMetierDB(Base):
             perspectives=PerspectivesMetier(**self.perspectives) if self.perspectives else PerspectivesMetier(),
             types_contrats=TypesContrats(**self.types_contrats) if self.types_contrats else TypesContrats(),
             mobilite=MobiliteMetier(**self.mobilite) if self.mobilite else MobiliteMetier(),
+            traits_personnalite=self.traits_personnalite or [],
+            aptitudes=self.aptitudes or [],
+            competences_dimensions=self.competences_dimensions or {},
+            profil_riasec=self.profil_riasec or {},
+            autres_appellations=self.autres_appellations or [],
+            statuts_professionnels=self.statuts_professionnels or [],
+            niveau_formation=self.niveau_formation,
+            domaine_professionnel=self.domaine_professionnel or {},
+            preferences_interets=self.preferences_interets or {},
+            sites_utiles=self.sites_utiles or [],
+            conditions_travail_detaillees=self.conditions_travail_detaillees or {},
             metadata=MetadataFiche(
                 date_creation=self.date_creation,
                 date_maj=self.date_maj,
@@ -431,6 +468,17 @@ class FicheMetierDB(Base):
             perspectives=fiche.perspectives.model_dump(mode="json"),
             types_contrats=fiche.types_contrats.model_dump(mode="json"),
             mobilite=fiche.mobilite.model_dump(mode="json"),
+            traits_personnalite=fiche.traits_personnalite,
+            aptitudes=fiche.aptitudes,
+            competences_dimensions=fiche.competences_dimensions,
+            profil_riasec=fiche.profil_riasec,
+            autres_appellations=fiche.autres_appellations,
+            statuts_professionnels=fiche.statuts_professionnels,
+            niveau_formation=fiche.niveau_formation,
+            domaine_professionnel=fiche.domaine_professionnel,
+            preferences_interets=fiche.preferences_interets,
+            sites_utiles=fiche.sites_utiles,
+            conditions_travail_detaillees=fiche.conditions_travail_detaillees,
             statut=fiche.metadata.statut.value,
             version=fiche.metadata.version,
             source=fiche.metadata.source,

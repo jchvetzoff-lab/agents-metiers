@@ -75,6 +75,18 @@ def run_migrations():
         "missions_principales": "JSON DEFAULT '[]'",
         "types_contrats": "JSON DEFAULT '{}'",
         "mobilite": "JSON DEFAULT '{}'",
+        # Parcoureo-level fields (11 fev. 2026)
+        "traits_personnalite": "JSON DEFAULT '[]'",
+        "aptitudes": "JSON DEFAULT '[]'",
+        "competences_dimensions": "JSON DEFAULT '{}'",
+        "profil_riasec": "JSON DEFAULT '{}'",
+        "autres_appellations": "JSON DEFAULT '[]'",
+        "statuts_professionnels": "JSON DEFAULT '[]'",
+        "niveau_formation": "TEXT",
+        "domaine_professionnel": "JSON DEFAULT '{}'",
+        "preferences_interets": "JSON DEFAULT '{}'",
+        "sites_utiles": "JSON DEFAULT '[]'",
+        "conditions_travail_detaillees": "JSON DEFAULT '{}'",
     }
     with engine.begin() as conn:
         for col_name, col_type in new_columns.items():
@@ -409,6 +421,18 @@ async def get_fiche_detail(code_rome: str):
             "types_contrats": fiche.types_contrats.model_dump() if fiche.types_contrats else None,
             "mobilite": fiche.mobilite.model_dump() if fiche.mobilite else None,
             "secteurs_activite": fiche.secteurs_activite,
+            # Parcoureo-level fields
+            "traits_personnalite": getattr(fiche, 'traits_personnalite', None) or [],
+            "aptitudes": getattr(fiche, 'aptitudes', None) or [],
+            "competences_dimensions": getattr(fiche, 'competences_dimensions', None) or {},
+            "profil_riasec": getattr(fiche, 'profil_riasec', None) or {},
+            "autres_appellations": getattr(fiche, 'autres_appellations', None) or [],
+            "statuts_professionnels": getattr(fiche, 'statuts_professionnels', None) or [],
+            "niveau_formation": getattr(fiche, 'niveau_formation', None),
+            "domaine_professionnel": getattr(fiche, 'domaine_professionnel', None) or {},
+            "preferences_interets": getattr(fiche, 'preferences_interets', None) or {},
+            "sites_utiles": getattr(fiche, 'sites_utiles', None) or [],
+            "conditions_travail_detaillees": getattr(fiche, 'conditions_travail_detaillees', None) or {},
             "date_creation": fiche.metadata.date_creation,
             "date_maj": fiche.metadata.date_maj,
             "version": fiche.metadata.version,
@@ -438,6 +462,18 @@ class FicheMetierUpdate(BaseModel):
     perspectives: Optional[dict] = None
     types_contrats: Optional[dict] = None
     mobilite: Optional[dict] = None
+    # Parcoureo-level fields
+    traits_personnalite: Optional[List[str]] = None
+    aptitudes: Optional[List[dict]] = None
+    competences_dimensions: Optional[dict] = None
+    profil_riasec: Optional[dict] = None
+    autres_appellations: Optional[List[str]] = None
+    statuts_professionnels: Optional[List[str]] = None
+    niveau_formation: Optional[str] = None
+    domaine_professionnel: Optional[dict] = None
+    preferences_interets: Optional[dict] = None
+    sites_utiles: Optional[List[dict]] = None
+    conditions_travail_detaillees: Optional[dict] = None
     statut: Optional[str] = None
 
 
@@ -456,7 +492,9 @@ async def update_fiche(code_rome: str, update_data: FicheMetierUpdate, user=Depe
         for key, value in update_dict.items():
             if key == "statut":
                 fiche_dict["metadata"]["statut"] = value
-            elif key in ("salaires", "perspectives", "types_contrats", "mobilite") and value:
+            elif key in ("salaires", "perspectives", "types_contrats", "mobilite",
+                        "competences_dimensions", "profil_riasec", "domaine_professionnel",
+                        "preferences_interets", "conditions_travail_detaillees") and value:
                 fiche_dict[key] = value
             else:
                 fiche_dict[key] = value
@@ -626,6 +664,54 @@ Réponds UNIQUEMENT avec un objet JSON valide (sans texte avant ou après) conte
             {{"nom": "Évolution possible 1", "contexte": "Après expérience en..."}},
             {{"nom": "Évolution possible 2", "contexte": "Avec formation complémentaire en..."}}
         ]
+    }},
+    "traits_personnalite": ["9 traits de personnalité idéaux pour ce métier (adjectifs ou noms courts, ex: Patient, Rigoureux, Créatif)"],
+    "aptitudes": [
+        {{"nom": "Capacité d'analyse", "niveau": 4}},
+        {{"nom": "Dextérité manuelle", "niveau": 3}}
+    ],
+    "competences_dimensions": {{
+        "relationnel": 25,
+        "intellectuel": 20,
+        "communication": 15,
+        "management": 10,
+        "realisation": 15,
+        "expression": 10,
+        "physique_sensoriel": 5
+    }},
+    "profil_riasec": {{
+        "realiste": 30,
+        "investigateur": 80,
+        "artistique": 20,
+        "social": 60,
+        "entreprenant": 40,
+        "conventionnel": 50
+    }},
+    "autres_appellations": ["3 à 8 appellations alternatives du métier (synonymes, variantes courantes)"],
+    "statuts_professionnels": ["Salarié"],
+    "niveau_formation": "Bac+5 / Master",
+    "domaine_professionnel": {{
+        "domaine": "Nom du grand domaine",
+        "sous_domaine": "Nom du sous-domaine",
+        "code_domaine": "X"
+    }},
+    "preferences_interets": {{
+        "domaine_interet": "Nom du domaine d'intérêt principal",
+        "familles": [
+            {{"nom": "Famille d'intérêt 1", "description": "Description courte de cet intérêt"}},
+            {{"nom": "Famille d'intérêt 2", "description": "Description courte de cet intérêt"}}
+        ]
+    }},
+    "sites_utiles": [
+        {{"nom": "ONISEP", "url": "https://www.onisep.fr", "description": "Orientation scolaire et professionnelle"}},
+        {{"nom": "France Travail", "url": "https://www.francetravail.fr", "description": "Offres d'emploi et services"}}
+    ],
+    "conditions_travail_detaillees": {{
+        "exigences_physiques": ["Liste des exigences physiques du métier"],
+        "horaires": "Description des horaires typiques",
+        "deplacements": "Fréquence et nature des déplacements",
+        "environnement": "Description de l'environnement de travail",
+        "risques": ["Liste des risques professionnels spécifiques"]
     }}
 }}
 
@@ -636,6 +722,14 @@ Notes :
 - "nombre_offres" est une estimation du nombre d'offres d'emploi par an en France.
 - "taux_insertion" est un float entre 0 et 1.
 - "types_contrats" : les pourcentages doivent totaliser 100.
+- "traits_personnalite" : exactement 9 traits (adjectifs ou noms courts).
+- "aptitudes" : exactement 11 aptitudes avec niveau 1 (faible) à 5 (excellent).
+- "competences_dimensions" : 7 dimensions totalisant exactement 100.
+- "profil_riasec" : 6 scores entre 0 et 100 (Réaliste, Investigateur, Artistique, Social, Entreprenant, Conventionnel).
+- "sites_utiles" : 2 à 4 sites réels et pertinents pour ce métier (URLs valides).
+- "statuts_professionnels" : parmi "Salarié", "Fonctionnaire", "Indépendant" (1 à 3 items).
+- "niveau_formation" : niveau minimum typique (ex: "CAP/BEP", "Bac", "Bac+2", "Bac+3", "Bac+5").
+- "code_domaine" : une lettre majuscule correspondant au domaine ROME (A à N, etc.).
 - Sois factuel et précis. Pas de formulations vagues."""
 
 
@@ -668,7 +762,7 @@ def enrich_fiche(code_rome: str, current_user: dict = Depends(get_current_user))
         response = claude_call_with_retry(
             client,
             model=CLAUDE_MODEL,
-            max_tokens=4096,
+            max_tokens=6144,
             messages=[{"role": "user", "content": prompt}],
         )
 
@@ -686,18 +780,22 @@ def enrich_fiche(code_rome: str, current_user: dict = Depends(get_current_user))
             "acces_metier", "competences", "competences_transversales",
             "savoirs", "formations", "certifications", "conditions_travail",
             "environnements", "secteurs_activite",
+            # Parcoureo-level list/string fields
+            "traits_personnalite", "autres_appellations",
+            "statuts_professionnels", "niveau_formation",
         ]:
             if key in data:
                 fiche_dict[key] = data[key]
 
-        if "salaires" in data:
-            fiche_dict["salaires"] = data["salaires"]
-        if "perspectives" in data:
-            fiche_dict["perspectives"] = data["perspectives"]
-        if "types_contrats" in data:
-            fiche_dict["types_contrats"] = data["types_contrats"]
-        if "mobilite" in data:
-            fiche_dict["mobilite"] = data["mobilite"]
+        # Dict fields (need special handling for Pydantic models)
+        for key in [
+            "salaires", "perspectives", "types_contrats", "mobilite",
+            "aptitudes", "competences_dimensions", "profil_riasec",
+            "domaine_professionnel", "preferences_interets",
+            "sites_utiles", "conditions_travail_detaillees",
+        ]:
+            if key in data:
+                fiche_dict[key] = data[key]
 
         fiche_dict["metadata"]["statut"] = "en_validation"
         fiche_dict["metadata"]["date_maj"] = datetime.now()
