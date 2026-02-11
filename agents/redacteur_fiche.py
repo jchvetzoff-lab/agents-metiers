@@ -469,8 +469,11 @@ Notes :
                         nom=var_data["nom"],
                         description=var_data["description"],
                         description_courte=var_data.get("description_courte"),
+                        missions_principales=var_data.get("missions_principales", []),
+                        acces_metier=var_data.get("acces_metier"),
                         competences=var_data.get("competences", []),
                         competences_transversales=var_data.get("competences_transversales", []),
+                        savoirs=var_data.get("savoirs", []),
                         formations=var_data.get("formations", []),
                         certifications=var_data.get("certifications", []),
                         conditions_travail=var_data.get("conditions_travail", []),
@@ -507,14 +510,28 @@ Notes :
         formats_str = ", ".join([f.value for f in formats])
         genres_str = ", ".join([g.value for g in genres])
 
+        # Préparer les données source
+        competences_src = ', '.join(fiche.competences[:5]) if fiche.competences else 'Non renseigné'
+        formations_src = ', '.join(fiche.formations[:3]) if fiche.formations else 'Non renseigné'
+        conditions_src = ', '.join(fiche.conditions_travail[:3]) if fiche.conditions_travail else 'Non renseigné'
+        missions_src = ', '.join(fiche.missions_principales[:3]) if hasattr(fiche, 'missions_principales') and fiche.missions_principales else 'Non renseigné'
+        acces_src = fiche.acces_metier[:300] if hasattr(fiche, 'acces_metier') and fiche.acces_metier else 'Non renseigné'
+        savoirs_src = ', '.join(fiche.savoirs[:5]) if hasattr(fiche, 'savoirs') and fiche.savoirs else 'Non renseigné'
+
         return f"""Tu es un expert en adaptation de contenus pédagogiques et multilingues.
 
 FICHE SOURCE :
 - Code ROME : {fiche.code_rome}
-- Nom : {fiche.nom_masculin}
+- Nom masculin : {fiche.nom_masculin}
+- Nom féminin : {fiche.nom_feminin}
+- Nom épicène : {fiche.nom_epicene}
 - Description : {fiche.description}
-- Compétences : {', '.join(fiche.competences[:5])}...
-- Formations : {', '.join(fiche.formations[:3])}...
+- Missions principales : {missions_src}
+- Accès métier : {acces_src}
+- Compétences : {competences_src}
+- Savoirs : {savoirs_src}
+- Formations : {formations_src}
+- Conditions de travail : {conditions_src}
 
 TÂCHE : Générer {nb_variantes} variantes de cette fiche selon les axes suivants :
 - Langues : {langues_str}
@@ -522,31 +539,84 @@ TÂCHE : Générer {nb_variantes} variantes de cette fiche selon les axes suivan
 - Formats : {formats_str}
 - Genres : {genres_str}
 
-RÈGLES PAR AXE :
+=====================================================================
+RÈGLES PAR AXE — AVEC EXEMPLES CONCRETS
+=====================================================================
 
 1. LANGUES
    - FR : Français standard
-   - EN : Anglais britannique
-   - ES : Espagnol européen
-   - DE : Allemand
-   - IT : Italien
-   - Adapter les formations au système éducatif du pays (ex: "Bac +3" → "Bachelor's degree")
+   - EN : Anglais britannique. Adapter les diplômes : "Bac+3" → "Bachelor's degree", "CAP" → "Vocational qualification (NVQ Level 2)", "BTS" → "Higher National Diploma (HND)", "Bac+5/Master" → "Master's degree"
+   - ES : Espagnol européen. Adapter : "Bac+3" → "Grado universitario", "CAP" → "Formación Profesional de Grado Medio"
+   - DE : Allemand. Adapter : "CAP" → "Berufsausbildung", "Bac+3" → "Bachelorabschluss", "BTS" → "Fachhochschulabschluss"
+   - IT : Italien. Adapter : "CAP" → "Qualifica professionale", "Bac+3" → "Laurea triennale"
+   - IMPORTANT : Ne pas traduire littéralement les diplômes. Utiliser les VRAIS équivalents du système éducatif de chaque pays.
 
-2. TRANCHES D'ÂGE
-   - "11-15" : Langage simple, exemples concrets, ton encourageant, phrases courtes (<20 mots)
-   - "15-18" : Vocabulaire jeune, orientation études, exemples inspirants, phrases moyennes (<25 mots)
-   - "18+" : Langage professionnel, exhaustif, technique si nécessaire
+2. TRANCHES D'ÂGE — Le contenu doit être RADICALEMENT différent selon l'âge.
 
-3. FORMATS
-   - "standard" : Rédaction classique
-   - "falc" (Facile À Lire et à Comprendre) : Phrases <15 mots, vocabulaire simple (niveau primaire), 1 idée par phrase, pas de jargon
+   "11-15" (collégiens) :
+   - Tutoyer ("tu"), ton chaleureux et encourageant
+   - Vocabulaire niveau 6ème-3ème, expliquer TOUS les termes techniques
+   - Phrases courtes (<20 mots), exemples du quotidien
+   - Description : expliquer le métier comme à un enfant curieux
+   - Missions : "Tu aides les gens à..." au lieu de "Assurer la gestion de..."
+   - Accès métier : parler du parcours scolaire depuis le collège
+   EXEMPLE description 11-15 ans : "Tu sais quand tu vas chez le dentiste et qu'il regarde tes dents sur un écran ? L'informaticien médical, c'est la personne qui crée ces logiciels. Il aide les médecins à mieux soigner les patients grâce aux ordinateurs."
+   EXEMPLE accès 11-15 ans : "Après le collège, tu peux aller en bac général ou technologique. Ensuite, tu fais des études en informatique à l'université pendant 3 à 5 ans."
 
-4. GENRES
-   - "masculin" : Utiliser le masculin partout
-   - "feminin" : Utiliser le féminin partout
-   - "epicene" : Langage neutre (éviter les accords genrés)
+   "15-18" (lycéens) :
+   - Vouvoyer ("vous"), ton motivant orienté choix d'études
+   - Vocabulaire courant, termes techniques expliqués à la première utilisation
+   - Insister sur les parcours d'études, les débouchés, les salaires
+   - Description : mettre en avant ce qui rend le métier attractif
+   EXEMPLE description 15-18 ans : "Le développeur informatique conçoit et programme des logiciels, des applications ou des sites web. C'est un métier très recherché qui offre de nombreuses possibilités d'évolution. Les entreprises de tous les secteurs recrutent des développeurs, avec des salaires attractifs dès le début de carrière."
+   EXEMPLE accès 15-18 ans : "Après le bac (général ou STI2D), vous pouvez suivre un BTS SIO (2 ans), une licence informatique (3 ans) ou une école d'ingénieurs (5 ans). Des formations courtes type bootcamp existent aussi pour se reconvertir."
 
-STRUCTURE DE SORTIE :
+   "18+" (adultes) :
+   - Vouvoyer, ton professionnel et exhaustif
+   - Vocabulaire technique autorisé
+   - Contenu complet et détaillé
+
+3. FORMATS — La différence entre standard et FALC doit être MASSIVE.
+
+   "standard" :
+   - Rédaction professionnelle classique
+   - Phrases complexes autorisées
+   - Jargon métier accepté
+
+   "falc" (Facile À Lire et à Comprendre) :
+   - CHAQUE phrase fait MAXIMUM 15 mots. C'est la règle la plus importante.
+   - 1 seule idée par phrase. Jamais 2.
+   - Mots simples du quotidien. Niveau CM1-CM2.
+   - Voix active obligatoire. "Vous réparez les machines." PAS "Les machines sont réparées par le technicien."
+   - Pas de jargon : "horaires atypiques" → "Vous travaillez parfois le soir ou le week-end."
+   - Pas de mots abstraits : "dynamique" → interdit, "concurrence accrue" → interdit
+   - Expliquer les sigles : "Le CACES (un permis pour conduire des engins)"
+   - Listes numérotées pour les étapes
+   EXEMPLE description FALC : "Ce professionnel répare les ordinateurs. Il installe aussi des logiciels. Il aide les gens quand leur ordinateur ne marche pas. Il travaille dans un bureau ou chez les clients."
+   EXEMPLE accès métier FALC : "1. Vous n'avez pas besoin de diplôme. 2. Vous devez passer un examen. L'examen a une partie écrite et une partie pratique. 3. Si vous réussissez, vous recevez une carte professionnelle. 4. Vous devez aussi prendre une assurance."
+   EXEMPLE conditions FALC : "Vous travaillez souvent assis devant un écran." (PAS "Travail sédentaire en environnement de bureau")
+   EXEMPLE missions FALC : "Vous installez des logiciels sur les ordinateurs." (PAS "Assurer le déploiement des solutions informatiques")
+
+4. GENRES — Adapter TOUS les accords et noms de métier.
+
+   "masculin" :
+   - "Le développeur informatique conçoit..."
+   - "Il est responsable de..."
+
+   "feminin" :
+   - "La développeuse informatique conçoit..."
+   - "Elle est responsable de..."
+   - Utiliser le nom féminin du métier fourni dans la fiche source
+
+   "epicene" :
+   - "La personne qui exerce ce métier conçoit..."
+   - "On est responsable de..."
+   - Jamais de "il/elle", utiliser "on", "la personne", "ce professionnel ou cette professionnelle"
+   - Utiliser le nom épicène du métier fourni dans la fiche source
+
+=====================================================================
+STRUCTURE DE SORTIE
+=====================================================================
 Réponds UNIQUEMENT avec un objet JSON valide (sans texte avant ou après) :
 
 {{
@@ -556,26 +626,31 @@ Réponds UNIQUEMENT avec un objet JSON valide (sans texte avant ou après) :
             "tranche_age": "18+",
             "format_contenu": "standard",
             "genre": "masculin",
-            "nom": "Nom du métier adapté",
-            "description": "Description complète (3-5 phrases selon le format)",
-            "description_courte": "Description courte (1 phrase max 200 car)",
-            "competences": ["Compétence 1", "Compétence 2", ...],
-            "competences_transversales": ["Soft skill 1", "Soft skill 2", ...],
-            "formations": ["Formation 1", "Formation 2", ...],
-            "certifications": ["Certification 1", ...],
-            "conditions_travail": ["Condition 1", ...],
-            "environnements": ["Environnement 1", ...]
+            "nom": "Nom du métier adapté (selon genre et langue)",
+            "description": "Description complète adaptée (3-5 phrases). DOIT être radicalement différente entre standard/FALC et entre les âges.",
+            "description_courte": "1 phrase résumé (max 200 car)",
+            "missions_principales": ["6-8 missions adaptées au format et à l'âge. En FALC : phrases courtes commençant par Vous/Tu."],
+            "acces_metier": "Texte adapté décrivant comment accéder au métier. En FALC : phrases numérotées courtes. Pour 11-15 : parcours depuis le collège. Pour EN/ES/DE/IT : diplômes du pays.",
+            "competences": ["Compétence 1", "Compétence 2"],
+            "competences_transversales": ["Soft skill 1", "Soft skill 2"],
+            "savoirs": ["Savoir 1", "Savoir 2"],
+            "formations": ["Formation 1 (adaptée au pays pour les langues étrangères)", "Formation 2"],
+            "certifications": ["Certification 1"],
+            "conditions_travail": ["En FALC : 'Vous travaillez souvent debout.' PAS 'Station debout prolongée'"],
+            "environnements": ["Type de structure 1"]
         }},
-        ... (répéter pour chaque combinaison)
+        ... (répéter pour CHAQUE combinaison)
     ]
 }}
 
-IMPORTANT :
-- Génère EXACTEMENT {nb_variantes} variantes (toutes les combinaisons)
-- Pour FALC : PHRASES <15 MOTS, vocabulaire niveau CM1-CM2
-- Pour 11-15 ans : Éviter jargon, expliquer concepts
-- Pour traductions : Adapter noms de diplômes au système éducatif local
-- Pour genre épicène : Utiliser des tournures neutres (ex: "La personne qui exerce ce métier...")"""
+VÉRIFICATION FINALE OBLIGATOIRE :
+- Génère EXACTEMENT {nb_variantes} variantes (toutes les combinaisons possibles)
+- Pour FALC : RELIS chaque phrase. Si une phrase dépasse 15 mots, COUPE-LA en deux.
+- Pour 11-15 ans : RELIS chaque phrase. Si un mot est trop compliqué pour un collégien, REMPLACE-LE.
+- Pour les langues étrangères : VÉRIFIE que les diplômes sont ceux du pays, PAS une traduction littérale du français.
+- Pour le genre féminin : VÉRIFIE que TOUS les accords sont au féminin.
+- Pour l'épicène : VÉRIFIE qu'aucun "il" ou "elle" n'apparaît seul.
+- Chaque variante DOIT avoir TOUS les champs : nom, description, description_courte, missions_principales, acces_metier, competences, competences_transversales, savoirs, formations, certifications, conditions_travail, environnements."""
 
     def _generer_variantes_simulation(
         self,
@@ -599,10 +674,20 @@ IMPORTANT :
                             nom = fiche.nom_epicene
 
                         desc = fiche.description
+                        acces = fiche.acces_metier if hasattr(fiche, 'acces_metier') else None
+                        missions = fiche.missions_principales if hasattr(fiche, 'missions_principales') and fiche.missions_principales else []
+                        savoirs = fiche.savoirs if hasattr(fiche, 'savoirs') and fiche.savoirs else []
+
                         if format_contenu == FormatContenu.FALC:
-                            desc = f"Simulation FALC pour {nom}. Contenu simple."
+                            desc = f"Ce professionnel fait le métier de {nom}. C'est un travail utile."
+                            acces = f"1. Vous n'avez pas besoin de diplôme spécial. 2. Une formation est recommandée."
+                            missions = [f"Vous faites le travail de {nom}."]
                         if tranche_age == TrancheAge.JEUNE_11_15:
-                            desc = f"Version pour 11-15 ans : {nom} est un métier intéressant."
+                            desc = f"Tu connais le métier de {nom} ? C'est un métier super intéressant !"
+                            acces = f"Après le collège, tu peux faire des études pour devenir {nom}."
+                            missions = [f"Tu aides les gens en tant que {nom}."]
+                        elif tranche_age == TrancheAge.JEUNE_15_18:
+                            desc = f"Le métier de {nom} offre de bonnes perspectives. Voici comment y accéder après le bac."
 
                         variante = VarianteFiche(
                             code_rome=fiche.code_rome,
@@ -613,8 +698,15 @@ IMPORTANT :
                             nom=nom,
                             description=desc,
                             description_courte=fiche.description_courte or "Simulation",
+                            missions_principales=missions[:3] if missions else [],
+                            acces_metier=acces,
                             competences=fiche.competences[:3],
+                            competences_transversales=fiche.competences_transversales[:3] if fiche.competences_transversales else [],
+                            savoirs=savoirs[:3],
                             formations=fiche.formations[:2],
+                            certifications=fiche.certifications[:2] if fiche.certifications else [],
+                            conditions_travail=fiche.conditions_travail[:3] if fiche.conditions_travail else [],
+                            environnements=fiche.environnements[:2] if fiche.environnements else [],
                         )
                         variantes.append(variante)
 
