@@ -306,6 +306,9 @@ class VarianteFiche(BaseModel):
     certifications: List[str] = Field(default_factory=list)
     conditions_travail: List[str] = Field(default_factory=list)
     environnements: List[str] = Field(default_factory=list)
+    autres_appellations: List[str] = Field(default_factory=list)
+    traits_personnalite: List[str] = Field(default_factory=list)
+    secteurs_activite: List[str] = Field(default_factory=list)
 
     # Métadonnées
     date_creation: datetime = Field(default_factory=datetime.now)
@@ -579,6 +582,9 @@ class VarianteFicheDB(Base):
     certifications = Column(JSON, default=list)
     conditions_travail = Column(JSON, default=list)
     environnements = Column(JSON, default=list)
+    autres_appellations = Column(JSON, default=list)
+    traits_personnalite = Column(JSON, default=list)
+    secteurs_activite = Column(JSON, default=list)
 
     # Métadonnées
     date_creation = Column(DateTime, default=datetime.now)
@@ -612,6 +618,9 @@ class VarianteFicheDB(Base):
             certifications=self.certifications or [],
             conditions_travail=self.conditions_travail or [],
             environnements=self.environnements or [],
+            autres_appellations=self.autres_appellations or [],
+            traits_personnalite=self.traits_personnalite or [],
+            secteurs_activite=self.secteurs_activite or [],
             date_creation=self.date_creation,
             date_maj=self.date_maj,
             version=self.version
@@ -638,6 +647,9 @@ class VarianteFicheDB(Base):
             certifications=variante.certifications,
             conditions_travail=variante.conditions_travail,
             environnements=variante.environnements,
+            autres_appellations=variante.autres_appellations,
+            traits_personnalite=variante.traits_personnalite,
+            secteurs_activite=variante.secteurs_activite,
             date_creation=variante.date_creation,
             date_maj=variante.date_maj,
             version=variante.version

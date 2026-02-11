@@ -111,6 +111,9 @@ def run_variantes_migrations():
         "missions_principales": "JSON DEFAULT '[]'",
         "acces_metier": "TEXT",
         "savoirs": "JSON DEFAULT '[]'",
+        "autres_appellations": "JSON DEFAULT '[]'",
+        "traits_personnalite": "JSON DEFAULT '[]'",
+        "secteurs_activite": "JSON DEFAULT '[]'",
     }
     with engine.begin() as conn:
         for col_name, col_type in new_columns.items():
@@ -606,6 +609,9 @@ async def get_variante_detail(code_rome: str, variante_id: int):
             "certifications": variante.certifications,
             "conditions_travail": variante.conditions_travail,
             "environnements": variante.environnements,
+            "autres_appellations": variante.autres_appellations,
+            "traits_personnalite": variante.traits_personnalite,
+            "secteurs_activite": variante.secteurs_activite,
             "date_creation": variante.date_creation,
             "date_maj": variante.date_maj,
             "version": variante.version
@@ -1379,6 +1385,9 @@ FICHE SOURCE :
 - Compétences : {competences}
 - Savoirs : {savoirs}
 - Formations : {formations}
+- Autres appellations : {autres_appellations}
+- Traits de personnalité : {traits_personnalite}
+- Secteurs d'activité : {secteurs_activite}
 
 TÂCHE : Générer EXACTEMENT {nb_variantes} variantes de cette fiche selon les axes suivants :
 - Langues : {langues_str}
@@ -1434,7 +1443,10 @@ Réponds UNIQUEMENT avec un objet JSON valide (sans texte avant ou après) :
             "formations": ["Formation 1 dans la langue", "..."],
             "certifications": ["Certification 1", "..."],
             "conditions_travail": ["Condition 1 dans la langue", "..."],
-            "environnements": ["Environnement 1 dans la langue", "..."]
+            "environnements": ["Environnement 1 dans la langue", "..."],
+            "autres_appellations": ["Appellation 1 dans la langue", "..."],
+            "traits_personnalite": ["Trait 1 dans la langue", "..."],
+            "secteurs_activite": ["Secteur 1 dans la langue", "..."]
         }}
     ]
 }}
@@ -1544,6 +1556,9 @@ def generate_variantes(code_rome: str, request: GenerateVariantesRequest, curren
                 competences=", ".join((fiche.competences or [])[:5]) + ("..." if len(fiche.competences or []) > 5 else ""),
                 savoirs=", ".join((fiche.savoirs or [])[:5]) + ("..." if len(fiche.savoirs or []) > 5 else ""),
                 formations=", ".join((fiche.formations or [])[:3]) + ("..." if len(fiche.formations or []) > 3 else ""),
+                autres_appellations=", ".join((fiche.autres_appellations or [])[:5]) + ("..." if len(fiche.autres_appellations or []) > 5 else ""),
+                traits_personnalite=", ".join((fiche.traits_personnalite or [])[:5]) + ("..." if len(fiche.traits_personnalite or []) > 5 else ""),
+                secteurs_activite=", ".join((fiche.secteurs_activite or [])[:5]) + ("..." if len(fiche.secteurs_activite or []) > 5 else ""),
                 nb_variantes=len(batch),
                 tranches_str=", ".join(batch_tranches),
                 formats_str=", ".join(batch_formats),
@@ -1593,6 +1608,9 @@ def generate_variantes(code_rome: str, request: GenerateVariantesRequest, curren
                         certifications=v_data.get("certifications", []),
                         conditions_travail=v_data.get("conditions_travail", []),
                         environnements=v_data.get("environnements", []),
+                        autres_appellations=v_data.get("autres_appellations", []),
+                        traits_personnalite=v_data.get("traits_personnalite", []),
+                        secteurs_activite=v_data.get("secteurs_activite", []),
                     )
                     repo.save_variante(variante)
                     saved_count += 1

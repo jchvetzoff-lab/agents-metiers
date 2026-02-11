@@ -523,6 +523,9 @@ class Repository:
                 existing.certifications = variante.certifications
                 existing.conditions_travail = variante.conditions_travail
                 existing.environnements = variante.environnements
+                existing.autres_appellations = variante.autres_appellations
+                existing.traits_personnalite = variante.traits_personnalite
+                existing.secteurs_activite = variante.secteurs_activite
                 existing.date_maj = datetime.now()
                 existing.version += 1
                 session.flush()
