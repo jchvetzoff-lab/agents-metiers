@@ -53,6 +53,16 @@ def get_enrichment_prompt(fiche: dict) -> str:
     return f"""Tu es un expert RH et rédacteur de fiches métiers pour France Travail (ROME 4.0).
 Génère une fiche COMPLÈTE et PROFESSIONNELLE, style MetierScope.
 
+IMPORTANT — TOUS les textes doivent être rédigés en FALC (Facile À Lire et à Comprendre) :
+- Phrases COURTES : maximum 15 mots par phrase.
+- UNE SEULE idée par phrase.
+- Mots SIMPLES et CONCRETS. Pas de jargon administratif.
+- Voix ACTIVE, s'adresser au lecteur avec "vous".
+- Pas de mots abstraits ("dynamique", "polyvalent", "rigoureux"). Utiliser des exemples concrets.
+- Utiliser des listes numérotées ou à puces quand c'est possible.
+- Expliquer les sigles et termes techniques entre parenthèses à la première utilisation.
+- Donner des exemples concrets (chiffres, durées, noms de diplômes précis).
+
 Métier : {nom}
 Code ROME : {code_rome}
 Domaine : {domaine}
@@ -60,12 +70,12 @@ Domaine : {domaine}
 Réponds UNIQUEMENT avec un objet JSON valide (sans texte avant/après) :
 
 {{
-    "description": "Phrase d'accroche élégante (1 phrase, style MetierScope : Le/La [métier], un(e) professionnel(le) de..., garantit/assure...). Suivie de 2-3 phrases de contexte général.",
-    "description_courte": "Résumé en 1 phrase (max 180 caractères).",
+    "description": "3 à 5 phrases FALC. Première phrase : Ce que fait ce professionnel au quotidien, en mots simples. Puis 2-3 phrases de contexte : où il travaille, avec qui, pourquoi c'est utile. Max 15 mots par phrase.",
+    "description_courte": "Résumé en 1 phrase simple (max 150 caractères). Commence par 'Ce métier consiste à...' ou 'Ce professionnel...'.",
     "missions_principales": [
-        "6 à 8 missions principales du métier, chaque mission commence par un verbe d'action et est une phrase complète décrivant une tâche concrète"
+        "6 à 8 missions. Chaque mission = 1 phrase courte commençant par un verbe d'action. Exemple : 'Vous réparez les pannes électriques dans les maisons.' PAS de formulation abstraite."
     ],
-    "acces_metier": "Paragraphe complet décrivant : niveau de diplôme requis ou si accessible sans diplôme, formations recommandées, expérience demandée, conditions particulières (permis, CACES, habilitations, aptitude médicale, casier judiciaire, etc.). Style France Travail.",
+    "acces_metier": "Texte FALC structuré avec des phrases numérotées. Chaque étape = 1 phrase courte. Exemple : '1. Vous devez avoir le permis B depuis plus de 3 ans. 2. Vous passez un examen écrit et pratique. 3. Si vous réussissez, la préfecture vous donne une carte professionnelle.' Expliquer chaque sigle. Dire clairement si un diplôme est obligatoire ou non.",
     "competences": [
         "8 à 12 savoir-faire techniques (verbe + complément, ex: Réaliser un diagnostic technique)"
     ],
@@ -82,7 +92,7 @@ Réponds UNIQUEMENT avec un objet JSON valide (sans texte avant/après) :
         "1 à 4 certifications professionnelles pertinentes (ex: Habilitation électrique, CACES R489, CQP spécifique, etc.)"
     ],
     "conditions_travail": [
-        "5 à 8 conditions incluant : risques professionnels, déplacements, travail en extérieur/intérieur, port EPI, travail en hauteur, horaires atypiques, etc."
+        "5 à 8 conditions en phrases FALC simples. Exemple : 'Vous travaillez souvent debout.' ou 'Vous pouvez travailler le week-end.' PAS de formulation comme 'horaires atypiques' — dire concrètement ce que ça veut dire."
     ],
     "environnements": [
         "4 à 6 types de structures/employeurs (ex: Entreprise artisanale, PME/PMI industrielle, Collectivité territoriale, Bureau d'études)"
@@ -95,7 +105,7 @@ Réponds UNIQUEMENT avec un objet JSON valide (sans texte avant/après) :
     "perspectives": {{
         "tension": 0.65,
         "tendance": "emergence",
-        "evolution_5ans": "Analyse factuelle de l'évolution du métier sur 5 ans : impact du numérique, de la transition écologique, de la réglementation, des évolutions technologiques. 3-4 phrases.",
+        "evolution_5ans": "Texte FALC : 4-6 phrases courtes et concrètes sur l'avenir du métier. Dire ce qui change vraiment pour la personne qui fait ce métier. Exemple : 'De plus en plus d'entreprises cherchent ce métier. Les outils numériques changent la façon de travailler. Vous devrez apprendre à utiliser de nouveaux logiciels.' PAS de mots comme 'digitalisation', 'dynamique', 'concurrence accrue'.",
         "nombre_offres": 2500,
         "taux_insertion": 0.72
     }},
@@ -160,15 +170,16 @@ Réponds UNIQUEMENT avec un objet JSON valide (sans texte avant/après) :
         {{"nom": "France Travail", "url": "https://www.francetravail.fr", "description": "Offres d'emploi et services"}}
     ],
     "conditions_travail_detaillees": {{
-        "exigences_physiques": ["Liste des exigences physiques du métier"],
-        "horaires": "Description des horaires typiques",
-        "deplacements": "Fréquence et nature des déplacements",
-        "environnement": "Description de l'environnement de travail",
-        "risques": ["Liste des risques professionnels spécifiques"]
+        "exigences_physiques": ["Phrases FALC simples. Ex: 'Vous portez des charges lourdes.' PAS 'port de charges'"],
+        "horaires": "Phrase FALC. Ex: 'Vous travaillez du lundi au vendredi, de 8h à 17h.' ou 'Vos horaires changent chaque semaine.'",
+        "deplacements": "Phrase FALC. Ex: 'Vous vous déplacez souvent chez les clients.' ou 'Vous travaillez toujours au même endroit.'",
+        "environnement": "Phrase FALC. Ex: 'Vous travaillez dans un bureau, devant un ordinateur.' ou 'Vous travaillez dehors, même quand il pleut.'",
+        "risques": ["Phrases FALC simples. Ex: 'Vous pouvez vous blesser avec des outils coupants.' PAS 'risques de coupure'"]
     }}
 }}
 
 RÈGLES STRICTES :
+- FALC OBLIGATOIRE sur tous les champs textuels : description, description_courte, missions_principales, acces_metier, conditions_travail, evolution_5ans, conditions_travail_detaillees. Phrases courtes (<15 mots), mots simples, exemples concrets, voix active.
 - Salaires en euros brut ANNUEL France, réalistes pour 2025.
 - tension : float 0-1 (0=peu de demande, 1=très forte demande).
 - tendance : choisir parmi "emergence", "stable", "disparition" en analysant factuellement :
@@ -179,7 +190,7 @@ RÈGLES STRICTES :
 - types_contrats : pourcentages totalisant 100, réalistes pour le secteur.
 - nombre_offres : estimation réaliste du nombre d'offres/an en France.
 - taux_insertion : float 0-1, taux d'insertion à 6 mois.
-- missions_principales : phrases complètes, concrètes, variées.
+- missions_principales : phrases FALC complètes, concrètes, variées. Commencent par "Vous".
 - traits_personnalite : exactement 9 traits (adjectifs ou noms courts).
 - aptitudes : exactement 11 aptitudes avec niveau 1 (faible) à 5 (excellent).
 - competences_dimensions : 7 dimensions totalisant exactement 100.
@@ -188,7 +199,7 @@ RÈGLES STRICTES :
 - statuts_professionnels : parmi "Salarié", "Fonctionnaire", "Indépendant" (1 à 3 items).
 - niveau_formation : niveau minimum typique (ex: "CAP/BEP", "Bac", "Bac+2", "Bac+3", "Bac+5").
 - code_domaine : une lettre majuscule correspondant au domaine ROME (A à N, etc.).
-- Sois FACTUEL, PRÉCIS et PROFESSIONNEL. Pas de formulations vagues ou génériques."""
+- Sois FACTUEL, PRÉCIS et ACCESSIBLE. Pas de formulations vagues, abstraites ou de jargon administratif."""
 
 
 async def fetch_fiches(limit: int = 100) -> list:
