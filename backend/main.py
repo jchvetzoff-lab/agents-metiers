@@ -1835,6 +1835,29 @@ FRANCE_REGIONS = [
     {"code": "94", "libelle": "Corse"},
 ]
 
+# Coefficients salariaux régionaux (source: INSEE DADS/DSN 2022, compilé HelloWork/Staffmatch/JDN)
+# Ratio du salaire net moyen régional vs moyenne nationale (~2 630 EUR net/mois EQTP privé)
+COEFFICIENTS_REGIONAUX = {
+    "11": 1.28,   # Île-de-France (+28%)
+    "84": 1.02,   # Auvergne-Rhône-Alpes (+2%)
+    "93": 1.00,   # Provence-Alpes-Côte d'Azur (≈ moyenne)
+    "76": 0.95,   # Occitanie (-5%)
+    "24": 0.93,   # Centre-Val de Loire (-7%)
+    "32": 0.93,   # Hauts-de-France (-7%)
+    "52": 0.93,   # Pays de la Loire (-7%)
+    "28": 0.93,   # Normandie (-7%)
+    "75": 0.92,   # Nouvelle-Aquitaine (-8%)
+    "44": 0.92,   # Grand Est (-8%)
+    "53": 0.91,   # Bretagne (-9%)
+    "27": 0.89,   # Bourgogne-Franche-Comté (-11%)
+    "94": 0.86,   # Corse (-14%)
+    "01": 0.91,   # Guadeloupe (-9%)
+    "02": 0.89,   # Martinique (-11%)
+    "03": 0.93,   # Guyane (-7%)
+    "04": 0.85,   # La Réunion (-15%)
+    "06": 0.84,   # Mayotte (-16%)
+}
+
 
 def _get_ft_token():
     """Obtient un token OAuth2 France Travail (Offres d'emploi v2)."""
@@ -1897,25 +1920,84 @@ async def get_regions():
     return {"regions": FRANCE_REGIONS}
 
 
+def _estimate_regional_salaries(fiche, region_code: str, region_name: str, code_rome: str) -> dict:
+    """Estime les salaires régionaux en appliquant le coefficient INSEE aux salaires nationaux de la fiche."""
+    coeff = COEFFICIENTS_REGIONAUX.get(region_code, 1.0)
+
+    salaires_result = None
+    salaires_par_niveau = None
+
+    if fiche and hasattr(fiche, 'salaires') and fiche.salaires:
+        sal = fiche.salaires if isinstance(fiche.salaires, dict) else (fiche.salaires.model_dump() if hasattr(fiche.salaires, 'model_dump') else None)
+        if sal:
+            niveaux = {}
+            global_vals = []
+            for niveau in ("junior", "confirme", "senior"):
+                niv_data = sal.get(niveau)
+                if niv_data and isinstance(niv_data, dict):
+                    est_min = round(niv_data["min"] * coeff) if niv_data.get("min") else None
+                    est_max = round(niv_data["max"] * coeff) if niv_data.get("max") else None
+                    est_med = round(niv_data["median"] * coeff) if niv_data.get("median") else None
+                    niveaux[niveau] = {"min": est_min, "max": est_max, "median": est_med, "nb_offres": None}
+                    for v in (est_min, est_max, est_med):
+                        if v:
+                            global_vals.append(v)
+                else:
+                    niveaux[niveau] = None
+            if niveaux.get("junior") or niveaux.get("confirme") or niveaux.get("senior"):
+                salaires_par_niveau = niveaux
+            if global_vals:
+                global_vals.sort()
+                n = len(global_vals)
+                salaires_result = {
+                    "nb_offres_avec_salaire": None,
+                    "min": global_vals[0],
+                    "max": global_vals[-1],
+                    "median": global_vals[n // 2],
+                    "moyenne": round(sum(global_vals) / n),
+                }
+
+    # Estimation types de contrats: utiliser ceux de la fiche si dispo
+    contrats = None
+    if fiche and hasattr(fiche, 'types_contrats') and fiche.types_contrats:
+        tc = fiche.types_contrats if isinstance(fiche.types_contrats, dict) else (fiche.types_contrats.model_dump() if hasattr(fiche.types_contrats, 'model_dump') else None)
+        if tc:
+            contrats = {"cdi": tc.get("cdi", 0), "cdd": tc.get("cdd", 0), "interim": tc.get("interim", 0), "autre": tc.get("autre", 0)}
+
+    return {
+        "region": region_code,
+        "region_name": region_name,
+        "code_rome": code_rome,
+        "nb_offres": None,
+        "salaires": salaires_result,
+        "types_contrats": contrats,
+        "salaires_par_niveau": salaires_par_niveau,
+        "experience_distribution": None,
+        "tension_regionale": None,
+        "source": "estimation_insee",
+        "coefficient_regional": coeff,
+    }
+
+
 @app.get("/api/fiches/{code_rome}/regional")
 async def get_regional_data(
     code_rome: str,
     region: str = Query(..., description="Code région (ex: 11 pour Île-de-France)"),
 ):
-    """Récupère les données régionales pour un métier via l'API Offres d'emploi France Travail."""
+    """Récupère les données régionales pour un métier via l'API Offres d'emploi France Travail.
+    Si l'API n'est pas disponible, retourne des estimations basées sur les coefficients INSEE."""
     import httpx as _httpx
-
-    token = _get_ft_token()
-    if not token:
-        raise HTTPException(
-            status_code=503,
-            detail="Credentials France Travail non configurés (FT_CLIENT_ID / FT_CLIENT_SECRET)"
-        )
 
     # Vérifier que la région existe
     region_name = next((r["libelle"] for r in FRANCE_REGIONS if r["code"] == region), None)
     if not region_name:
         raise HTTPException(status_code=400, detail=f"Région inconnue: {region}")
+
+    token = _get_ft_token()
+    if not token:
+        # Pas de credentials FT: retourner une estimation basée sur les salaires de la fiche
+        fiche = repo.get_fiche(code_rome)
+        return _estimate_regional_salaries(fiche, region, region_name, code_rome)
 
     try:
         async with _httpx.AsyncClient(timeout=30.0) as client:
@@ -1926,17 +2008,11 @@ async def get_regional_data(
             )
 
         if resp.status_code in (204, 404):
-            return {
-                "region": region,
-                "region_name": region_name,
-                "code_rome": code_rome,
-                "nb_offres": 0,
-                "salaires": None,
-                "types_contrats": None,
-                "salaires_par_niveau": None,
-                "experience_distribution": None,
-                "tension_regionale": None,
-            }
+            # Pas d'offres FT: retourner des estimations INSEE
+            fiche = repo.get_fiche(code_rome)
+            result = _estimate_regional_salaries(fiche, region, region_name, code_rome)
+            result["nb_offres"] = 0
+            return result
 
         if resp.status_code not in (200, 206):
             raise HTTPException(status_code=502, detail=f"Erreur API France Travail: HTTP {resp.status_code}")
@@ -2066,12 +2142,18 @@ async def get_regional_data(
             "salaires_par_niveau": salaires_par_niveau,
             "experience_distribution": experience_dist,
             "tension_regionale": tension_regionale,
+            "source": "france_travail",
         }
 
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erreur données régionales: {str(e)}")
+        # En cas d'erreur FT, fallback sur les estimations INSEE
+        try:
+            fiche = repo.get_fiche(code_rome)
+            return _estimate_regional_salaries(fiche, region, region_name, code_rome)
+        except Exception:
+            raise HTTPException(status_code=500, detail=f"Erreur données régionales: {str(e)}")
 
 
 @app.get("/api/fiches/{code_rome}/recrutements")
