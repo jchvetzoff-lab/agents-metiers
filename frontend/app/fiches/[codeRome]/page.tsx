@@ -1796,9 +1796,7 @@ export default function FicheDetailPage() {
                     const tendance = fiche.perspectives?.tendance?.toLowerCase() || "";
                     const isHausse = tendance.includes("hausse") || tendance.includes("croiss") || tendance.includes("forte");
                     const isBaisse = tendance.includes("baisse") || tendance.includes("declin") || tendance.includes("recul");
-                    // Salary growth rate per year
                     const salGrowth = isHausse ? 0.035 : isBaisse ? -0.01 : 0.018;
-                    // Employment growth rate per year
                     const empGrowth = isHausse ? 0.06 : isBaisse ? -0.04 : 0.015;
                     const currentYear = new Date().getFullYear();
                     const medianSalary = fiche.salaires?.confirme?.median || fiche.salaires?.junior?.median || 0;
@@ -1807,7 +1805,7 @@ export default function FicheDetailPage() {
                     if (!medianSalary && !nbOffres) return null;
 
                     const salTrend = medianSalary ? Array.from({ length: 5 }, (_, i) => {
-                      const yearOffset = i - 2; // -2, -1, 0, +1, +2
+                      const yearOffset = i - 2;
                       const factor = Math.pow(1 + salGrowth, yearOffset);
                       return { annee: String(currentYear + yearOffset), salaire: Math.round(medianSalary * factor / 100) / 10 };
                     }) : null;
@@ -1818,54 +1816,92 @@ export default function FicheDetailPage() {
                       return { annee: String(currentYear + yearOffset), offres: Math.round(nbOffres * factor) };
                     }) : null;
 
+                    const salFirst = salTrend?.[0]?.salaire ?? 0;
+                    const salLast = salTrend?.[salTrend.length - 1]?.salaire ?? 0;
+                    const salDelta = salFirst > 0 ? ((salLast - salFirst) / salFirst * 100).toFixed(1) : "0";
+                    const salUp = salLast >= salFirst;
+
+                    const empFirst = empTrend?.[0]?.offres ?? 0;
+                    const empLast = empTrend?.[empTrend.length - 1]?.offres ?? 0;
+                    const empDelta = empFirst > 0 ? ((empLast - empFirst) / empFirst * 100).toFixed(1) : "0";
+                    const empUp = empLast >= empFirst;
+
                     return (
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-2">
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
                         {salTrend && (
-                          <div>
-                            <div className="flex items-center gap-2 mb-2">
-                              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">{t.salaryTrend5y}</h3>
-                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold">{t.projectionEstimated}</span>
+                          <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+                            <div className="flex items-center justify-between mb-4">
+                              <div className="flex items-center gap-2.5">
+                                <div className="w-9 h-9 rounded-xl bg-indigo-100 flex items-center justify-center text-lg">💰</div>
+                                <div>
+                                  <h3 className="text-sm font-bold text-gray-900">{t.salaryTrend5y}</h3>
+                                  <span className="text-[10px] text-gray-400">{t.projectionEstimated}</span>
+                                </div>
+                              </div>
+                              <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${salUp ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-500"}`}>
+                                <span>{salUp ? "↑" : "↓"}</span> {salUp ? "+" : ""}{salDelta}%
+                              </div>
                             </div>
-                            <ResponsiveContainer width="100%" height={200}>
-                              <AreaChart data={salTrend}>
+                            <ResponsiveContainer width="100%" height={180}>
+                              <AreaChart data={salTrend} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
                                 <defs>
                                   <linearGradient id="salGrad" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor={PURPLE} stopOpacity={0.2} />
-                                    <stop offset="95%" stopColor={PURPLE} stopOpacity={0.02} />
+                                    <stop offset="0%" stopColor={PURPLE} stopOpacity={0.25} />
+                                    <stop offset="100%" stopColor={PURPLE} stopOpacity={0.03} />
                                   </linearGradient>
                                 </defs>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                                <XAxis dataKey="annee" tick={{ fontSize: 11, fill: "#6B7280" }} axisLine={false} tickLine={false} />
-                                <YAxis tick={{ fontSize: 11, fill: "#9CA3AF" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}k€`} domain={["dataMin - 2", "dataMax + 2"]} />
-                                <Tooltip formatter={(v: number) => [`${v}k€`, t.medianSalaryK]} labelFormatter={(l) => l} />
-                                <Area type="monotone" dataKey="salaire" stroke={PURPLE} strokeWidth={2.5} fill="url(#salGrad)" dot={{ r: 4, fill: PURPLE, strokeWidth: 2, stroke: "#fff" }} />
+                                <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
+                                <XAxis dataKey="annee" tick={{ fontSize: 11, fill: "#9CA3AF" }} axisLine={false} tickLine={false} />
+                                <YAxis tick={{ fontSize: 10, fill: "#D1D5DB" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}k`} domain={["dataMin - 1", "dataMax + 1"]} width={35} />
+                                <Tooltip
+                                  contentStyle={{ borderRadius: 12, border: "1px solid #E5E7EB", boxShadow: "0 4px 12px rgba(0,0,0,.08)", fontSize: 13 }}
+                                  formatter={(v: number) => [`${v} k€/an`, t.medianSalaryK]}
+                                  labelFormatter={(l) => `${l}`}
+                                />
+                                <Area type="monotone" dataKey="salaire" stroke={PURPLE} strokeWidth={2.5} fill="url(#salGrad)"
+                                  dot={{ r: 5, fill: "#fff", stroke: PURPLE, strokeWidth: 2.5 }}
+                                  activeDot={{ r: 7, fill: PURPLE, stroke: "#fff", strokeWidth: 3 }} />
                               </AreaChart>
                             </ResponsiveContainer>
-                            <SourceTag>{t.sourceProjection}</SourceTag>
+                            <div className="mt-2 text-[10px] text-gray-400 text-center">{t.sourceProjection}</div>
                           </div>
                         )}
                         {empTrend && (
-                          <div>
-                            <div className="flex items-center gap-2 mb-2">
-                              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">{t.employmentTrend5y}</h3>
-                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold">{t.projectionEstimated}</span>
+                          <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+                            <div className="flex items-center justify-between mb-4">
+                              <div className="flex items-center gap-2.5">
+                                <div className="w-9 h-9 rounded-xl bg-cyan-100 flex items-center justify-center text-lg">📈</div>
+                                <div>
+                                  <h3 className="text-sm font-bold text-gray-900">{t.employmentTrend5y}</h3>
+                                  <span className="text-[10px] text-gray-400">{t.projectionEstimated}</span>
+                                </div>
+                              </div>
+                              <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${empUp ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-500"}`}>
+                                <span>{empUp ? "↑" : "↓"}</span> {empUp ? "+" : ""}{empDelta}%
+                              </div>
                             </div>
-                            <ResponsiveContainer width="100%" height={200}>
-                              <AreaChart data={empTrend}>
+                            <ResponsiveContainer width="100%" height={180}>
+                              <AreaChart data={empTrend} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
                                 <defs>
                                   <linearGradient id="empGrad" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor={CYAN} stopOpacity={0.2} />
-                                    <stop offset="95%" stopColor={CYAN} stopOpacity={0.02} />
+                                    <stop offset="0%" stopColor={CYAN} stopOpacity={0.25} />
+                                    <stop offset="100%" stopColor={CYAN} stopOpacity={0.03} />
                                   </linearGradient>
                                 </defs>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                                <XAxis dataKey="annee" tick={{ fontSize: 11, fill: "#6B7280" }} axisLine={false} tickLine={false} />
-                                <YAxis tick={{ fontSize: 11, fill: "#9CA3AF" }} axisLine={false} tickLine={false} domain={["dataMin - 100", "dataMax + 100"]} />
-                                <Tooltip formatter={(v: number) => [v.toLocaleString(t.locale), t.estimatedOffers]} labelFormatter={(l) => l} />
-                                <Area type="monotone" dataKey="offres" stroke={CYAN} strokeWidth={2.5} fill="url(#empGrad)" dot={{ r: 4, fill: CYAN, strokeWidth: 2, stroke: "#fff" }} />
+                                <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
+                                <XAxis dataKey="annee" tick={{ fontSize: 11, fill: "#9CA3AF" }} axisLine={false} tickLine={false} />
+                                <YAxis tick={{ fontSize: 10, fill: "#D1D5DB" }} axisLine={false} tickLine={false} domain={["dataMin * 0.9", "dataMax * 1.1"]} width={40} />
+                                <Tooltip
+                                  contentStyle={{ borderRadius: 12, border: "1px solid #E5E7EB", boxShadow: "0 4px 12px rgba(0,0,0,.08)", fontSize: 13 }}
+                                  formatter={(v: number) => [v.toLocaleString(t.locale), t.estimatedOffers]}
+                                  labelFormatter={(l) => `${l}`}
+                                />
+                                <Area type="monotone" dataKey="offres" stroke={CYAN} strokeWidth={2.5} fill="url(#empGrad)"
+                                  dot={{ r: 5, fill: "#fff", stroke: CYAN, strokeWidth: 2.5 }}
+                                  activeDot={{ r: 7, fill: CYAN, stroke: "#fff", strokeWidth: 3 }} />
                               </AreaChart>
                             </ResponsiveContainer>
-                            <SourceTag>{t.sourceProjection}</SourceTag>
+                            <div className="mt-2 text-[10px] text-gray-400 text-center">{t.sourceProjection}</div>
                           </div>
                         )}
                       </div>
