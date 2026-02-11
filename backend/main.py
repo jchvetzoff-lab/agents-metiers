@@ -32,14 +32,23 @@ app = FastAPI(
 )
 
 # Configuration CORS pour le frontend Next.js
+# ALLOWED_ORIGINS env var: comma-separated list, or "*" (default) for all origins
+# JWT auth is header-based (not cookies), so allow_credentials=False is safe with "*"
+_allowed_origins = os.environ.get("ALLOWED_ORIGINS", "*")
+if _allowed_origins == "*":
+    _cors_origins = ["*"]
+    _cors_regex = None
+    _cors_credentials = False
+else:
+    _cors_origins = [o.strip() for o in _allowed_origins.split(",")]
+    _cors_regex = r"https://.*\.netlify\.app"
+    _cors_credentials = True
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:3001",
-    ],
-    allow_origin_regex=r"https://.*\.netlify\.app",
-    allow_credentials=True,
+    allow_origins=_cors_origins,
+    allow_origin_regex=_cors_regex,
+    allow_credentials=_cors_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
 )
