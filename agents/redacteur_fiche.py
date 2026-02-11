@@ -477,7 +477,9 @@ Notes :
                         formations=var_data.get("formations", []),
                         certifications=var_data.get("certifications", []),
                         conditions_travail=var_data.get("conditions_travail", []),
-                        environnements=var_data.get("environnements", [])
+                        environnements=var_data.get("environnements", []),
+                        evolution_5ans=var_data.get("evolution_5ans"),
+                        conditions_travail_detaillees=var_data.get("conditions_travail_detaillees"),
                     )
                     variantes.append(variante)
 
@@ -637,7 +639,15 @@ Réponds UNIQUEMENT avec un objet JSON valide (sans texte avant ou après) :
             "formations": ["Formation 1 (adaptée au pays pour les langues étrangères)", "Formation 2"],
             "certifications": ["Certification 1"],
             "conditions_travail": ["En FALC : 'Vous travaillez souvent debout.' PAS 'Station debout prolongée'"],
-            "environnements": ["Type de structure 1"]
+            "environnements": ["Type de structure 1"],
+            "evolution_5ans": "Texte adapté sur l'avenir du métier. En FALC : 'De plus en plus d'entreprises cherchent ce métier. Les outils changent.' PAS 'Le secteur reste dynamique malgré la concurrence accrue.' Pour 11-15 : 'Ce métier a de l'avenir ! De plus en plus de gens en auront besoin.'",
+            "conditions_travail_detaillees": {{
+                "exigences_physiques": ["En FALC : 'Vous portez des choses lourdes.' PAS 'Port de charges lourdes'"],
+                "horaires": "En FALC : 'Vous travaillez du lundi au vendredi.' PAS 'Horaires réguliers en journée'",
+                "deplacements": "En FALC : 'Vous restez au même endroit.' PAS 'Poste sédentaire sans déplacements'",
+                "environnement": "En FALC : 'Vous travaillez dans un bureau.' PAS 'Environnement tertiaire climatisé'",
+                "risques": ["En FALC : 'Vous pouvez avoir mal au dos.' PAS 'Risques de troubles musculo-squelettiques'"]
+            }}
         }},
         ... (répéter pour CHAQUE combinaison)
     ]
@@ -650,7 +660,9 @@ VÉRIFICATION FINALE OBLIGATOIRE :
 - Pour les langues étrangères : VÉRIFIE que les diplômes sont ceux du pays, PAS une traduction littérale du français.
 - Pour le genre féminin : VÉRIFIE que TOUS les accords sont au féminin.
 - Pour l'épicène : VÉRIFIE qu'aucun "il" ou "elle" n'apparaît seul.
-- Chaque variante DOIT avoir TOUS les champs : nom, description, description_courte, missions_principales, acces_metier, competences, competences_transversales, savoirs, formations, certifications, conditions_travail, environnements."""
+- Chaque variante DOIT avoir TOUS les champs : nom, description, description_courte, missions_principales, acces_metier, competences, competences_transversales, savoirs, formations, certifications, conditions_travail, environnements, evolution_5ans, conditions_travail_detaillees.
+- evolution_5ans en FALC : phrases simples, pas de mots comme "dynamique", "digitalisation", "concurrence accrue", "intensifier". Dire concrètement ce qui change pour la personne.
+- conditions_travail_detaillees en FALC : chaque sous-champ doit être une phrase simple. "Vous travaillez dehors." PAS "Activité exercée en extérieur"."""
 
     def _generer_variantes_simulation(
         self,

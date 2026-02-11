@@ -309,6 +309,8 @@ class VarianteFiche(BaseModel):
     autres_appellations: List[str] = Field(default_factory=list)
     traits_personnalite: List[str] = Field(default_factory=list)
     secteurs_activite: List[str] = Field(default_factory=list)
+    evolution_5ans: Optional[str] = None
+    conditions_travail_detaillees: Optional[Dict[str, Any]] = None
 
     # Métadonnées
     date_creation: datetime = Field(default_factory=datetime.now)
@@ -585,6 +587,8 @@ class VarianteFicheDB(Base):
     autres_appellations = Column(JSON, default=list)
     traits_personnalite = Column(JSON, default=list)
     secteurs_activite = Column(JSON, default=list)
+    evolution_5ans = Column(Text, nullable=True)
+    conditions_travail_detaillees = Column(JSON, nullable=True)
 
     # Métadonnées
     date_creation = Column(DateTime, default=datetime.now)
@@ -621,6 +625,8 @@ class VarianteFicheDB(Base):
             autres_appellations=self.autres_appellations or [],
             traits_personnalite=self.traits_personnalite or [],
             secteurs_activite=self.secteurs_activite or [],
+            evolution_5ans=self.evolution_5ans,
+            conditions_travail_detaillees=self.conditions_travail_detaillees,
             date_creation=self.date_creation,
             date_maj=self.date_maj,
             version=self.version
@@ -650,6 +656,8 @@ class VarianteFicheDB(Base):
             autres_appellations=variante.autres_appellations,
             traits_personnalite=variante.traits_personnalite,
             secteurs_activite=variante.secteurs_activite,
+            evolution_5ans=variante.evolution_5ans,
+            conditions_travail_detaillees=variante.conditions_travail_detaillees,
             date_creation=variante.date_creation,
             date_maj=variante.date_maj,
             version=variante.version

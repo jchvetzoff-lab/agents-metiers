@@ -114,6 +114,8 @@ def run_variantes_migrations():
         "autres_appellations": "JSON DEFAULT '[]'",
         "traits_personnalite": "JSON DEFAULT '[]'",
         "secteurs_activite": "JSON DEFAULT '[]'",
+        "evolution_5ans": "TEXT",
+        "conditions_travail_detaillees": "JSON",
     }
     with engine.begin() as conn:
         for col_name, col_type in new_columns.items():
