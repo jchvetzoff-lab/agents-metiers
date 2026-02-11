@@ -1713,7 +1713,7 @@ async def get_regional_data(
                 headers={"Authorization": f"Bearer {token}"},
             )
 
-        if resp.status_code == 404:
+        if resp.status_code in (204, 404):
             return {
                 "region": region,
                 "region_name": region_name,
