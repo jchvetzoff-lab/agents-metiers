@@ -142,8 +142,11 @@ class Repository:
             db_fiche.nom_epicene = fiche.nom_epicene
             db_fiche.description = fiche.description
             db_fiche.description_courte = fiche.description_courte
+            db_fiche.missions_principales = fiche.missions_principales
+            db_fiche.acces_metier = fiche.acces_metier
             db_fiche.competences = fiche.competences
             db_fiche.competences_transversales = fiche.competences_transversales
+            db_fiche.savoirs = fiche.savoirs
             db_fiche.formations = fiche.formations
             db_fiche.certifications = fiche.certifications
             db_fiche.conditions_travail = fiche.conditions_travail
@@ -152,6 +155,20 @@ class Repository:
             db_fiche.secteurs_activite = fiche.secteurs_activite
             db_fiche.salaires = fiche.salaires.model_dump(mode="json")
             db_fiche.perspectives = fiche.perspectives.model_dump(mode="json")
+            db_fiche.types_contrats = fiche.types_contrats.model_dump(mode="json")
+            db_fiche.mobilite = fiche.mobilite.model_dump(mode="json")
+            # Parcoureo-level fields
+            db_fiche.traits_personnalite = fiche.traits_personnalite
+            db_fiche.aptitudes = fiche.aptitudes
+            db_fiche.competences_dimensions = fiche.competences_dimensions
+            db_fiche.profil_riasec = fiche.profil_riasec
+            db_fiche.autres_appellations = fiche.autres_appellations
+            db_fiche.statuts_professionnels = fiche.statuts_professionnels
+            db_fiche.niveau_formation = fiche.niveau_formation
+            db_fiche.domaine_professionnel = fiche.domaine_professionnel
+            db_fiche.preferences_interets = fiche.preferences_interets
+            db_fiche.sites_utiles = fiche.sites_utiles
+            db_fiche.conditions_travail_detaillees = fiche.conditions_travail_detaillees
             db_fiche.statut = fiche.metadata.statut.value
             db_fiche.version = fiche.metadata.version + 1
             db_fiche.tags = fiche.metadata.tags

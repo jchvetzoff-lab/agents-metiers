@@ -27,6 +27,20 @@ API_URL = os.getenv("API_BACKEND_URL", "https://agents-metiers.onrender.com")
 CLAUDE_MODEL = "claude-sonnet-4-20250514"
 BATCH_SIZE = int(os.getenv("BATCH_SIZE", "90"))  # Nombre de fiches à traiter
 DELAY_BETWEEN_CALLS = 1  # Secondes entre chaque appel Claude
+AUTH_TOKEN = None  # Set after login
+
+
+async def login() -> str:
+    """Login to the API and return a JWT token."""
+    email = os.getenv("AUTH_EMAIL")
+    password = os.getenv("AUTH_PASSWORD")
+    if not email or not password:
+        raise ValueError("AUTH_EMAIL et AUTH_PASSWORD doivent être définis dans .env")
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        r = await client.post(f"{API_URL}/api/auth/login", json={"email": email, "password": password})
+        if r.status_code != 200:
+            raise ValueError(f"Login failed: {r.status_code} {r.text}")
+        return r.json()["token"]
 
 
 def get_enrichment_prompt(fiche: dict) -> str:
@@ -222,9 +236,11 @@ async def enrich_with_claude(client: anthropic.AsyncAnthropic, fiche: dict) -> d
 
 async def update_fiche(code_rome: str, enrichment: dict) -> bool:
     """Met à jour la fiche via l'API."""
+    headers = {"Authorization": f"Bearer {AUTH_TOKEN}"} if AUTH_TOKEN else {}
     async with httpx.AsyncClient(timeout=30.0) as client:
         response = await client.patch(
             f"{API_URL}/api/fiches/{code_rome}",
+            headers=headers,
             json={
                 "description": enrichment.get("description"),
                 "description_courte": enrichment.get("description_courte"),
@@ -276,6 +292,15 @@ async def main():
         print("❌ ANTHROPIC_API_KEY non définie !")
         sys.exit(1)
     print(f"✅ Clé API Anthropic configurée")
+
+    # Login to backend API
+    global AUTH_TOKEN
+    try:
+        AUTH_TOKEN = await login()
+        print(f"✅ Authentifié sur le backend")
+    except Exception as e:
+        print(f"❌ Login échoué: {e}")
+        sys.exit(1)
 
     # Récupérer les fiches
     print(f"\n📥 Récupération des fiches à enrichir...")
