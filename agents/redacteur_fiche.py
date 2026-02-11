@@ -555,23 +555,54 @@ RÈGLES PAR AXE — AVEC EXEMPLES CONCRETS
 
 2. TRANCHES D'ÂGE — Le contenu doit être RADICALEMENT différent selon l'âge.
 
-   "11-15" (collégiens) :
-   - Tutoyer ("tu"), ton chaleureux et encourageant
-   - Vocabulaire niveau 6ème-3ème, expliquer TOUS les termes techniques
-   - Phrases courtes (<20 mots), exemples du quotidien
-   - Description : expliquer le métier comme à un enfant curieux
-   - Missions : "Tu aides les gens à..." au lieu de "Assurer la gestion de..."
-   - Accès métier : parler du parcours scolaire depuis le collège
-   EXEMPLE description 11-15 ans : "Tu sais quand tu vas chez le dentiste et qu'il regarde tes dents sur un écran ? L'informaticien médical, c'est la personne qui crée ces logiciels. Il aide les médecins à mieux soigner les patients grâce aux ordinateurs."
-   EXEMPLE accès 11-15 ans : "Après le collège, tu peux aller en bac général ou technologique. Ensuite, tu fais des études en informatique à l'université pendant 3 à 5 ans."
+   "11-15" (collégiens, 6ème à 3ème) :
+   PROCESSUS OBLIGATOIRE pour 11-15 :
+   a) Tutoyer TOUJOURS ("tu", "ton", "tes")
+   b) Chaque mot : un collégien de 12 ans le comprendrait-il ? Si non → remplacer
+   c) Phrases <20 mots, exemples concrets du quotidien
+   d) Ton enthousiaste : "C'est super !", "Tu sais quand...", "Imagine que..."
+   e) Expliquer TOUS les termes techniques entre parenthèses
 
-   "15-18" (lycéens) :
-   - Vouvoyer ("vous"), ton motivant orienté choix d'études
-   - Vocabulaire courant, termes techniques expliqués à la première utilisation
-   - Insister sur les parcours d'études, les débouchés, les salaires
-   - Description : mettre en avant ce qui rend le métier attractif
-   EXEMPLE description 15-18 ans : "Le développeur informatique conçoit et programme des logiciels, des applications ou des sites web. C'est un métier très recherché qui offre de nombreuses possibilités d'évolution. Les entreprises de tous les secteurs recrutent des développeurs, avec des salaires attractifs dès le début de carrière."
-   EXEMPLE accès 15-18 ans : "Après le bac (général ou STI2D), vous pouvez suivre un BTS SIO (2 ans), une licence informatique (3 ans) ou une école d'ingénieurs (5 ans). Des formations courtes type bootcamp existent aussi pour se reconvertir."
+   MOTS INTERDITS POUR 11-15 ANS (remplacer) :
+   - "rémunération" → "argent que tu gagnes" / "salaire"
+   - "insertion professionnelle" → "trouver un job"
+   - "compétences transversales" → "qualités utiles partout"
+   - "certification" → "diplôme" ou "examen à passer"
+   - "environnement professionnel" → "l'endroit où tu travailles"
+   - "exercer" → "faire ce métier"
+   - "référentiel" → supprimer
+   - "habilitation" → "autorisation spéciale"
+   - Tout terme administratif → simplifier ou supprimer
+
+   EXEMPLES 11-15 ANS :
+   ❌ "Ce professionnel assure la maintenance préventive et curative des équipements informatiques."
+   ✅ "Tu sais quand ton ordinateur plante ou qu'il est très lent ? Ce métier, c'est la personne qui le répare ! Tu ouvres l'ordinateur, tu cherches le problème, et tu le remets en marche."
+
+   ❌ "Accès par un diplôme de niveau Bac+3 minimum dans le domaine du numérique."
+   ✅ "Après le collège, tu vas au lycée (3 ans). Ensuite, tu étudies l'informatique à l'université ou dans une école spéciale pendant 3 ans. Si tu aimes bien, tu peux continuer encore 2 ans pour avoir un meilleur diplôme !"
+
+   ❌ "Le secteur connaît une croissance soutenue portée par la transformation numérique."
+   ✅ "Ce métier a beaucoup d'avenir ! Les ordinateurs sont partout : dans les hôpitaux, les magasins, les voitures... On aura toujours besoin de gens pour s'en occuper."
+
+   "15-18" (lycéens, seconde à terminale) :
+   PROCESSUS OBLIGATOIRE pour 15-18 :
+   a) Vouvoyer ("vous")
+   b) Ton motivant, orienté vers les choix d'études et de carrière
+   c) Expliquer les termes techniques la première fois qu'ils apparaissent
+   d) Insister sur : parcours d'études concrets, salaire de début, débouchés
+   e) Mentionner Parcoursup et les filières post-bac quand pertinent
+
+   MOTS À ADAPTER POUR 15-18 ANS :
+   - "insertion" → "début de carrière"
+   - "cadre réglementaire" → "les règles du métier"
+   - Jargon technique → OK mais expliqué la 1ère fois
+
+   EXEMPLES 15-18 ANS :
+   ❌ "Assurer la gestion et l'optimisation des infrastructures réseau dans un contexte multi-sites."
+   ✅ "Vous gérez le réseau informatique d'une entreprise : vous vérifiez que tous les ordinateurs et serveurs fonctionnent bien, et vous améliorez la vitesse de connexion. Si l'entreprise a plusieurs bureaux dans différentes villes, vous vous occupez de tous les relier."
+
+   ❌ "Évolution professionnelle vers des postes d'encadrement après acquisition d'expérience."
+   ✅ "Après quelques années d'expérience, vous pouvez devenir chef d'équipe ou directeur technique. Les salaires augmentent vite : de 30 000€ en début de carrière à plus de 50 000€ après 5-10 ans."
 
    "18+" (adultes) :
    - Vouvoyer, ton professionnel et exhaustif
@@ -586,18 +617,65 @@ RÈGLES PAR AXE — AVEC EXEMPLES CONCRETS
    - Jargon métier accepté
 
    "falc" (Facile À Lire et à Comprendre) :
-   - CHAQUE phrase fait MAXIMUM 15 mots. C'est la règle la plus importante.
+   PROCESSUS OBLIGATOIRE — Pour chaque phrase que tu écris en FALC :
+   a) Écris la phrase.
+   b) Relis CHAQUE MOT un par un. Demande-toi : "Est-ce qu'un adulte qui a des difficultés de lecture comprendrait ce mot ?"
+   c) Si un mot est soutenu, technique ou abstrait → REMPLACE-LE par un mot simple.
+   d) Compte les mots. Si >15 mots → COUPE en 2 phrases.
+   e) Vérifie : 1 seule idée par phrase ? Voix active ? Pas de jargon ?
+
+   MOTS INTERDITS EN FALC (remplacer systématiquement) :
+   - "sédentaire" → "Vous êtes assis."
+   - "atypique" → "pas comme d'habitude"
+   - "dynamique" → "qui bouge beaucoup" ou supprimer
+   - "concurrence" → "D'autres personnes veulent aussi ce travail."
+   - "digitalisation" / "numérique" → "les ordinateurs" ou "Internet"
+   - "polyvalent" → "Vous faites des choses différentes."
+   - "autonomie" → "Vous travaillez seul."
+   - "rigueur" → "Vous faites attention aux détails."
+   - "relationnel" → "Vous parlez avec les gens."
+   - "en plein essor" / "en forte croissance" → "De plus en plus de gens font ce métier."
+   - "prérequis" → "Ce qu'il faut avant de commencer"
+   - "rémunération" → "l'argent que vous gagnez"
+   - "débouchés" → "les travails possibles après"
+   - "insertion" → "trouver un travail"
+   - "intensifier" → "il y en a de plus en plus"
+   - "environnement tertiaire" → "un bureau"
+   - "troubles musculo-squelettiques" → "mal au dos, mal aux bras"
+   - "cadre réglementaire" → "les règles à suivre"
+   - "démarche commerciale" → "vendre des choses"
+   - "gestion" → "s'occuper de"
+   - "mettre en oeuvre" → "faire"
+   - "assurer" (dans le sens de gérer) → "faire" ou "s'occuper de"
+   - "secteur" → "domaine" ou "type de travail"
+   - "croissante" / "accrue" → "de plus en plus"
+   - "perspectives" → "ce qui va se passer"
+   - "évolution" → "les changements"
+   - Tout mot de plus de 3 syllabes → chercher un mot plus court
+
+   RÈGLES FALC STRICTES :
+   - MAXIMUM 15 mots par phrase. Pas 16. Pas 17. MAXIMUM 15.
    - 1 seule idée par phrase. Jamais 2.
-   - Mots simples du quotidien. Niveau CM1-CM2.
-   - Voix active obligatoire. "Vous réparez les machines." PAS "Les machines sont réparées par le technicien."
-   - Pas de jargon : "horaires atypiques" → "Vous travaillez parfois le soir ou le week-end."
-   - Pas de mots abstraits : "dynamique" → interdit, "concurrence accrue" → interdit
-   - Expliquer les sigles : "Le CACES (un permis pour conduire des engins)"
+   - Voix active TOUJOURS. "Vous réparez les machines." PAS "Les machines sont réparées."
+   - Sigles TOUJOURS expliqués : "Le CACES (un permis pour les engins)"
    - Listes numérotées pour les étapes
-   EXEMPLE description FALC : "Ce professionnel répare les ordinateurs. Il installe aussi des logiciels. Il aide les gens quand leur ordinateur ne marche pas. Il travaille dans un bureau ou chez les clients."
-   EXEMPLE accès métier FALC : "1. Vous n'avez pas besoin de diplôme. 2. Vous devez passer un examen. L'examen a une partie écrite et une partie pratique. 3. Si vous réussissez, vous recevez une carte professionnelle. 4. Vous devez aussi prendre une assurance."
-   EXEMPLE conditions FALC : "Vous travaillez souvent assis devant un écran." (PAS "Travail sédentaire en environnement de bureau")
-   EXEMPLE missions FALC : "Vous installez des logiciels sur les ordinateurs." (PAS "Assurer le déploiement des solutions informatiques")
+   - Sujet + verbe + complément. Structure simple.
+
+   EXEMPLES FALC :
+   ❌ "Assurer le déploiement des solutions informatiques sur l'ensemble du parc client."
+   ✅ "Vous installez des logiciels sur les ordinateurs des clients."
+
+   ❌ "Travail sédentaire en environnement de bureau climatisé avec horaires réguliers."
+   ✅ "Vous travaillez assis dans un bureau. Le bureau a l'air conditionné. Vous travaillez du lundi au vendredi."
+
+   ❌ "Le secteur reste dynamique malgré une concurrence accrue et la digitalisation des processus."
+   ✅ "De plus en plus de gens font ce métier. Les ordinateurs changent la façon de travailler. Mais il y a toujours du travail."
+
+   ❌ "Risques de troubles musculo-squelettiques liés à la station debout prolongée."
+   ✅ "Vous êtes debout longtemps. Vous pouvez avoir mal au dos ou aux jambes."
+
+   ❌ "L'insertion professionnelle est facilitée par la forte demande du marché."
+   ✅ "C'est facile de trouver un travail. Beaucoup d'entreprises cherchent ce métier."
 
 4. GENRES — Adapter TOUS les accords et noms de métier.
 
