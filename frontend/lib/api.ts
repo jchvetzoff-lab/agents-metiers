@@ -154,6 +154,27 @@ export interface RecrutementsData {
   recrutements: { mois: string; nb_offres: number }[];
 }
 
+export interface OffreEmploi {
+  offre_id: string;
+  titre: string;
+  entreprise: string | null;
+  lieu: string | null;
+  type_contrat: string | null;
+  salaire: string | null;
+  experience: string | null;
+  date_publication: string | null;
+  url: string | null;
+}
+
+export interface OffresData {
+  code_rome: string;
+  region: string | null;
+  region_name: string | null;
+  total: number;
+  offres: OffreEmploi[];
+  from_cache: boolean;
+}
+
 export interface AuditLog {
   id: number;
   type_evenement: string;
@@ -365,6 +386,14 @@ class ApiClient {
   async getRecrutements(codeRome: string, region?: string): Promise<RecrutementsData> {
     const params = region ? `?region=${region}` : "";
     return this.request<RecrutementsData>(`/api/fiches/${codeRome}/recrutements${params}`);
+  }
+
+  async getOffres(codeRome: string, region?: string, limit?: number): Promise<OffresData> {
+    const searchParams = new URLSearchParams();
+    if (region) searchParams.set("region", region);
+    if (limit != null) searchParams.set("limit", limit.toString());
+    const query = searchParams.toString() ? `?${searchParams.toString()}` : "";
+    return this.request<OffresData>(`/api/fiches/${codeRome}/offres${query}`);
   }
 
   // ==================== ROME SYNC ====================
