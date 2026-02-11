@@ -199,6 +199,9 @@ const translations: Record<FicheLang, Record<string, string>> = {
     salaryFallbackNational: "Salaires regionaux non disponibles — estimation nationale affichee",
     noContractDataRegion: "Aucune donnee de contrat disponible pour cette region",
     estimationIaNationale: "Estimation IA (nationale)",
+    estimationInsee: "Estimation regionale (INSEE 2022)",
+    sourceInsee: "Source : Estimation basee sur les ecarts salariaux regionaux (INSEE 2022)",
+    regionalEstimation: "Estimation regionale",
   },
 
   en: {
@@ -379,6 +382,9 @@ const translations: Record<FicheLang, Record<string, string>> = {
     salaryFallbackNational: "Regional salaries not available — national estimate shown",
     noContractDataRegion: "No contract data available for this region",
     estimationIaNationale: "AI Estimate (national)",
+    estimationInsee: "Regional estimate (INSEE 2022)",
+    sourceInsee: "Source: Estimate based on regional salary gaps (INSEE 2022)",
+    regionalEstimation: "Regional estimate",
   },
 
   es: {
@@ -559,6 +565,9 @@ const translations: Record<FicheLang, Record<string, string>> = {
     salaryFallbackNational: "Salarios regionales no disponibles — estimacion nacional mostrada",
     noContractDataRegion: "No hay datos de contratos para esta region",
     estimationIaNationale: "Estimacion IA (nacional)",
+    estimationInsee: "Estimacion regional (INSEE 2022)",
+    sourceInsee: "Fuente: Estimacion basada en diferencias salariales regionales (INSEE 2022)",
+    regionalEstimation: "Estimacion regional",
   },
 
   de: {
@@ -739,6 +748,9 @@ const translations: Record<FicheLang, Record<string, string>> = {
     salaryFallbackNational: "Regionale Gehalter nicht verfugbar — nationale Schatzung angezeigt",
     noContractDataRegion: "Keine Vertragsdaten fur diese Region verfugbar",
     estimationIaNationale: "KI-Schatzung (national)",
+    estimationInsee: "Regionale Schatzung (INSEE 2022)",
+    sourceInsee: "Quelle: Schatzung basierend auf regionalen Gehaltsunterschieden (INSEE 2022)",
+    regionalEstimation: "Regionale Schatzung",
   },
 
   it: {
@@ -919,6 +931,9 @@ const translations: Record<FicheLang, Record<string, string>> = {
     salaryFallbackNational: "Stipendi regionali non disponibili — stima nazionale mostrata",
     noContractDataRegion: "Nessun dato contrattuale disponibile per questa regione",
     estimationIaNationale: "Stima IA (nazionale)",
+    estimationInsee: "Stima regionale (INSEE 2022)",
+    sourceInsee: "Fonte: Stima basata sulle differenze salariali regionali (INSEE 2022)",
+    regionalEstimation: "Stima regionale",
   },
 
   pt: {
@@ -1099,6 +1114,9 @@ const translations: Record<FicheLang, Record<string, string>> = {
     salaryFallbackNational: "Salarios regionais nao disponiveis — estimativa nacional mostrada",
     noContractDataRegion: "Sem dados de contratos para esta regiao",
     estimationIaNationale: "Estimativa IA (nacional)",
+    estimationInsee: "Estimativa regional (INSEE 2022)",
+    sourceInsee: "Fonte: Estimativa baseada nas diferencas salariais regionais (INSEE 2022)",
+    regionalEstimation: "Estimativa regional",
   },
 
   ar: {
@@ -1279,6 +1297,9 @@ const translations: Record<FicheLang, Record<string, string>> = {
     salaryFallbackNational: "الرواتب الاقليمية غير متوفرة — التقدير الوطني معروض",
     noContractDataRegion: "لا توجد بيانات عقود لهذه المنطقة",
     estimationIaNationale: "تقدير الذكاء الاصطناعي (وطني)",
+    estimationInsee: "تقدير إقليمي (INSEE 2022)",
+    sourceInsee: "المصدر: تقدير استنادا إلى الفوارق الإقليمية للرواتب (INSEE 2022)",
+    regionalEstimation: "تقدير إقليمي",
   },
 };
 

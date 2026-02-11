@@ -179,9 +179,9 @@ export interface RegionalData {
   region: string;
   region_name: string;
   code_rome: string;
-  nb_offres: number;
+  nb_offres: number | null;
   salaires: {
-    nb_offres_avec_salaire: number;
+    nb_offres_avec_salaire: number | null;
     min: number;
     max: number;
     median: number;
@@ -207,6 +207,8 @@ export interface RegionalData {
     senior_pct: number;
   } | null;
   tension_regionale: number | null;
+  source?: "france_travail" | "estimation_insee";
+  coefficient_regional?: number;
 }
 
 export interface RecrutementsData {

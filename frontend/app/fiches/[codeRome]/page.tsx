@@ -1242,6 +1242,7 @@ export default function FicheDetailPage() {
 
   // ── Données dérivées (region-aware) ──
   const isRegional = !!(selectedRegion && regionalData && !regionalLoading);
+  const isEstimation = isRegional && regionalData?.source === "estimation_insee";
   // Key suffix to force Recharts remount when data source changes
   const chartKey = isRegional ? `reg-${selectedRegion}` : "national";
 
@@ -1262,7 +1263,7 @@ export default function FicheDetailPage() {
   // When regional is selected but has 0 offers, don't show IA fallback pie chart
   const regContrats = isRegional ? regionalData?.types_contrats : null;
   const useContratRegional = !!(regContrats && (regContrats.cdi > 0 || regContrats.cdd > 0));
-  const hideContractChart = isRegional && regionalData?.nb_offres === 0 && !useContratRegional;
+  const hideContractChart = isRegional && !isEstimation && regionalData?.nb_offres === 0 && !useContratRegional;
   const contratSource = useContratRegional ? regContrats! : fiche.types_contrats;
   const contractData = !hideContractChart && contratSource && (contratSource.cdi > 0 || contratSource.cdd > 0)
     ? [
@@ -1626,11 +1627,14 @@ export default function FicheDetailPage() {
                 {/* ── Regional badge indicator ── */}
                 {isRegional && (
                   <div className="flex items-center gap-2 mb-4">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-100 text-indigo-600 text-xs font-semibold">
-                      <span>📍</span> {regionalData!.region_name} — {t.regionalLive} France Travail
+                    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${isEstimation ? "bg-amber-100 text-amber-700" : "bg-indigo-100 text-indigo-600"}`}>
+                      <span>📍</span> {regionalData!.region_name} — {isEstimation ? t.estimationInsee : `${t.regionalLive} France Travail`}
                     </span>
-                    {regionalData!.nb_offres === 0 && (
+                    {!isEstimation && regionalData!.nb_offres === 0 && (
                       <span className="text-sm text-gray-400 italic">{t.noOffersRegion}</span>
+                    )}
+                    {isEstimation && regionalData!.coefficient_regional && (
+                      <span className="text-xs text-gray-400">Coeff. {regionalData!.coefficient_regional.toFixed(2)}</span>
                     )}
                   </div>
                 )}
@@ -1638,9 +1642,11 @@ export default function FicheDetailPage() {
                 {/* ── Stat cards (region-aware) ── */}
                 {isRegional ? (
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-                    <StatCard label={t.activeOffers} value={regionalData!.nb_offres.toLocaleString(t.locale)} color="#2563EB" bgColor="#EFF6FF" icon="💼" />
+                    {regionalData!.nb_offres != null && (
+                      <StatCard label={t.activeOffers} value={regionalData!.nb_offres.toLocaleString(t.locale)} color="#2563EB" bgColor="#EFF6FF" icon="💼" />
+                    )}
                     {regionalData!.salaires && (
-                      <StatCard label={t.medianSalary} value={`${(regionalData!.salaires.median / 1000).toFixed(0)}k€`} sub={t.grossAnnual} color="#059669" bgColor="#ECFDF5" icon="💰" />
+                      <StatCard label={t.medianSalary} value={`${(regionalData!.salaires.median / 1000).toFixed(0)}k€`} sub={isEstimation ? t.regionalEstimation : t.grossAnnual} color="#059669" bgColor="#ECFDF5" icon="💰" />
                     )}
                     <div className="col-span-2 md:col-span-1">
                       {showTensionGauge ? (
@@ -1673,7 +1679,10 @@ export default function FicheDetailPage() {
                     <div>
                       <div className="flex items-center gap-2 mb-2">
                         <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">{t.grossSalaries}</h3>
-                        {useSalRegional && (
+                        {useSalRegional && isEstimation && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold">{t.estimationInsee}</span>
+                        )}
+                        {useSalRegional && !isEstimation && (
                           <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-600 font-semibold">{t.regionalLive}</span>
                         )}
                         {!useSalRegional && (
@@ -1721,7 +1730,10 @@ export default function FicheDetailPage() {
                     <div>
                       <div className="flex items-center gap-2 mb-4">
                         <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">{t.hiringBreakdown}</h3>
-                        {useContratRegional && (
+                        {useContratRegional && isEstimation && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold">{t.estimationInsee}</span>
+                        )}
+                        {useContratRegional && !isEstimation && (
                           <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-600 font-semibold">{t.regionalLive}</span>
                         )}
                         {!useContratRegional && (
@@ -1738,7 +1750,7 @@ export default function FicheDetailPage() {
                           <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} formatter={(value: string) => <span className="text-gray-700">{value}</span>} />
                         </PieChart>
                       </ResponsiveContainer>
-                      <SourceTag>{useContratRegional ? t.sourceFranceTravail : t.sourceIa}</SourceTag>
+                      <SourceTag>{useContratRegional ? (isEstimation ? t.sourceInsee : t.sourceFranceTravail) : t.sourceIa}</SourceTag>
                     </div>
                   ) : hideContractChart ? (
                     <div>
@@ -1754,7 +1766,7 @@ export default function FicheDetailPage() {
                 {/* Source for salary chart */}
                 {salaryData && (
                   <div className="mt-1">
-                    <SourceTag>{useSalRegional ? t.sourceFranceTravail : t.sourceIa}</SourceTag>
+                    <SourceTag>{useSalRegional ? (isEstimation ? t.sourceInsee : t.sourceFranceTravail) : t.sourceIa}</SourceTag>
                   </div>
                 )}
 
