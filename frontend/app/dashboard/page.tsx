@@ -78,41 +78,36 @@ export default function DashboardPage() {
         <StaggerContainer stagger={0.08} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 md:gap-6 mb-16">
           <StaggerItem>
             <MetricCard
-              label="Total des fiches"
+              label="📄 Total des fiches"
               value={stats?.total || 0}
-              icon="📄"
             />
           </StaggerItem>
           <StaggerItem>
             <MetricCard
-              label="Brouillons"
+              label="📝 Brouillons"
               value={stats?.brouillons || 0}
               trend="neutral"
               trendValue={`${pctBrouillon.toFixed(0)}%`}
-              icon="📝"
             />
           </StaggerItem>
           <StaggerItem>
             <MetricCard
-              label="En validation"
+              label="🔍 En validation"
               value={stats?.en_validation || 0}
-              icon="🔍"
             />
           </StaggerItem>
           <StaggerItem>
             <MetricCard
-              label="Publiées"
+              label="✅ Publiées"
               value={stats?.publiees || 0}
               trend="up"
               trendValue={`${pctPubliees.toFixed(0)}%`}
-              icon="✅"
             />
           </StaggerItem>
           <StaggerItem>
             <MetricCard
-              label="Archivées"
+              label="📦 Archivées"
               value={stats?.archivees || 0}
-              icon="📦"
             />
           </StaggerItem>
         </StaggerContainer>

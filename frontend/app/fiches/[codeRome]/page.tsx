@@ -332,6 +332,9 @@ export default function FicheDetailPage() {
       certifications: av?.certifications?.length ? av.certifications : fiche.certifications,
       conditions_travail: av?.conditions_travail?.length ? av.conditions_travail : fiche.conditions_travail,
       environnements: av?.environnements?.length ? av.environnements : fiche.environnements,
+      autres_appellations: av?.autres_appellations?.length ? av.autres_appellations : fiche.autres_appellations,
+      traits_personnalite: av?.traits_personnalite?.length ? av.traits_personnalite : fiche.traits_personnalite,
+      secteurs_activite: av?.secteurs_activite?.length ? av.secteurs_activite : fiche.secteurs_activite,
     };
     setPdfLoading(true);
 
@@ -1286,6 +1289,9 @@ export default function FicheDetailPage() {
   const dCertifications = v?.certifications?.length ? v.certifications : fiche.certifications;
   const dConditions = v?.conditions_travail?.length ? v.conditions_travail : fiche.conditions_travail;
   const dEnvironnements = v?.environnements?.length ? v.environnements : fiche.environnements;
+  const dAutresAppellations = v?.autres_appellations?.length ? v.autres_appellations : fiche.autres_appellations;
+  const dTraitsPersonnalite = v?.traits_personnalite?.length ? v.traits_personnalite : fiche.traits_personnalite;
+  const dSecteurs = v?.secteurs_activite?.length ? v.secteurs_activite : fiche.secteurs_activite;
 
   const hasMissions = (dMissions?.length ?? 0) > 0;
   const hasCompetences = (dCompetences?.length ?? 0) > 0;
@@ -1294,8 +1300,8 @@ export default function FicheDetailPage() {
   const hasContextes = (dConditions?.length ?? 0) > 0 || (dEnvironnements?.length ?? 0) > 0 || !!fiche.conditions_travail_detaillees;
   const hasMobilite = fiche.mobilite && ((fiche.mobilite.metiers_proches?.length ?? 0) > 0 || (fiche.mobilite.evolutions?.length ?? 0) > 0);
   const hasStats = salaryData || contractData || fiche.perspectives;
-  const hasDomain = !!fiche.domaine_professionnel?.domaine || (fiche.autres_appellations?.length ?? 0) > 0;
-  const hasProfile = (fiche.traits_personnalite?.length ?? 0) > 0 || (fiche.aptitudes?.length ?? 0) > 0 || !!fiche.profil_riasec?.realiste;
+  const hasDomain = !!fiche.domaine_professionnel?.domaine || (dAutresAppellations?.length ?? 0) > 0;
+  const hasProfile = (dTraitsPersonnalite?.length ?? 0) > 0 || (fiche.aptitudes?.length ?? 0) > 0 || !!fiche.profil_riasec?.realiste;
   const hasSitesUtiles = (fiche.sites_utiles?.length ?? 0) > 0;
 
   const sections = [
@@ -1518,11 +1524,11 @@ export default function FicheDetailPage() {
                   </div>
                 )}
               </div>
-              {fiche.secteurs_activite && fiche.secteurs_activite.length > 0 && (
+              {dSecteurs && dSecteurs.length > 0 && (
                 <div className="mt-5 pt-5 border-t border-gray-100">
                   <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t.activitySectors}</span>
                   <div className="flex flex-wrap gap-2 mt-2">
-                    {fiche.secteurs_activite.map((s, i) => (
+                    {dSecteurs.map((s, i) => (
                       <span key={i} className="px-3 py-1 rounded-full bg-gray-100 text-sm text-gray-700">{s}</span>
                     ))}
                   </div>
@@ -1564,11 +1570,11 @@ export default function FicheDetailPage() {
                     </div>
                   )}
                 </div>
-                {fiche.autres_appellations && fiche.autres_appellations.length > 0 && (
+                {dAutresAppellations && dAutresAppellations.length > 0 && (
                   <div className="mt-5 pt-5 border-t border-gray-100">
                     <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t.otherTitles}</span>
                     <div className="flex flex-wrap gap-2 mt-2">
-                      {fiche.autres_appellations.map((a, i) => (
+                      {dAutresAppellations.map((a, i) => (
                         <span key={i} className="px-3 py-1.5 rounded-full bg-gray-100 text-sm text-gray-700">{a}</span>
                       ))}
                     </div>
@@ -1995,7 +2001,7 @@ export default function FicheDetailPage() {
             {hasProfile && (
               <SectionAnchor id="profil" title={t.secProfile} icon="🧠" accentColor="#00C8C8">
                 {/* ── Traits de personnalité ── */}
-                {fiche.traits_personnalite && fiche.traits_personnalite.length > 0 && (() => {
+                {dTraitsPersonnalite && dTraitsPersonnalite.length > 0 && (() => {
                   const traitColors = [
                     { bg: "#EEF2FF", border: "#C7D2FE", badge: "#4F46E5" },
                     { bg: "#ECFEFF", border: "#A5F3FC", badge: "#06B6D4" },
@@ -2007,7 +2013,7 @@ export default function FicheDetailPage() {
                     <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-1">{t.personalityTraits}</h3>
                     <p className="text-xs text-gray-400 mb-4">{t.personalityTraitsDesc}</p>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      {fiche.traits_personnalite.map((trait, i) => {
+                      {dTraitsPersonnalite.map((trait, i) => {
                         const c = traitColors[i % traitColors.length];
                         return (
                         <div key={i} className="flex items-center gap-3 p-3 rounded-xl" style={{ backgroundColor: c.bg, border: `1px solid ${c.border}` }}>

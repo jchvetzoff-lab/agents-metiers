@@ -157,6 +157,9 @@ export interface VarianteDetail extends Variante {
   certifications: string[];
   conditions_travail: string[];
   environnements: string[];
+  autres_appellations: string[];
+  traits_personnalite: string[];
+  secteurs_activite: string[];
   version: number;
 }
 
