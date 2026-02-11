@@ -241,7 +241,8 @@ export default function FicheDetailPage() {
       .catch(() => { if (!cancelled) setRecrutements(null); })
       .finally(() => { if (!cancelled) setRecrutementsLoading(false); });
     return () => { cancelled = true; };
-  }, [codeRome, selectedRegion, fiche]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [codeRome, selectedRegion, !!fiche]);
 
   // Scroll spy
   useEffect(() => {
@@ -1125,12 +1126,12 @@ export default function FicheDetailPage() {
               {/* Tranche d'age */}
               <div className="flex items-center gap-3">
                 <span className="text-xs font-bold text-gray-500 uppercase tracking-wider w-14">{t.age}</span>
-                {[{ v: "18+", l: "18+" }, { v: "15-18", l: "15-18" }, { v: "11-15", l: "11-15" }].map(t => (
-                  <label key={t.v} className="flex items-center gap-1.5 text-sm text-gray-700 cursor-pointer">
-                    <input type="radio" name="filter-tranche" value={t.v} checked={filterTranche === t.v}
-                      onChange={() => setFilterTranche(t.v)}
+                {[{ v: "18+", l: "18+" }, { v: "15-18", l: "15-18" }, { v: "11-15", l: "11-15" }].map(opt => (
+                  <label key={opt.v} className="flex items-center gap-1.5 text-sm text-gray-700 cursor-pointer">
+                    <input type="radio" name="filter-tranche" value={opt.v} checked={filterTranche === opt.v}
+                      onChange={() => setFilterTranche(opt.v)}
                       className="w-3.5 h-3.5 accent-[#4A39C0] focus:ring-0 focus:ring-offset-0" />
-                    {t.l}
+                    {opt.l}
                   </label>
                 ))}
               </div>
@@ -1541,7 +1542,7 @@ export default function FicheDetailPage() {
                       { id: "sf" as const, label: t.knowHow, count: dCompetences?.length ?? 0, show: hasCompetences },
                       { id: "se" as const, label: t.softSkills, count: dCompetencesTransversales?.length ?? 0, show: hasSavoirEtre },
                       { id: "sa" as const, label: t.knowledge, count: fiche.savoirs?.length ?? 0, show: hasSavoirs },
-                    ].filter(t => t.show).map(tab => (
+                    ].filter(item => item.show).map(tab => (
                       <button key={tab.id} onClick={() => setActiveTab(tab.id)}
                         className={`px-3 md:px-4 py-3 text-xs md:text-sm font-medium border-b-2 transition-all whitespace-nowrap ${
                           activeTab === tab.id ? "border-[#4A39C0] text-[#4A39C0]" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"

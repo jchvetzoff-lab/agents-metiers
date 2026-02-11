@@ -13,25 +13,26 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    async function loadData() {
+      try {
+        const [statsData, logsData] = await Promise.all([
+          api.getStats(),
+          api.getAuditLogs(15),
+        ]);
+        setStats(statsData);
+        setLogs(logsData.logs);
+      } catch (err) {
+        console.error("Erreur chargement données:", err);
+        setError("Impossible de charger les donnees. Le serveur est peut-etre en cours de demarrage.");
+      } finally {
+        setLoading(false);
+      }
+    }
     loadData();
   }, []);
-
-  async function loadData() {
-    try {
-      const [statsData, logsData] = await Promise.all([
-        api.getStats(),
-        api.getAuditLogs(15),
-      ]);
-      setStats(statsData);
-      setLogs(logsData.logs);
-    } catch (error) {
-      console.error("Erreur chargement données:", error);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   if (loading) {
     return (
@@ -41,12 +42,19 @@ export default function DashboardPage() {
     );
   }
 
-  const pctBrouillon = stats ? (stats.brouillons / stats.total * 100) : 0;
-  const pctPubliees = stats ? (stats.publiees / stats.total * 100) : 0;
+  const pctBrouillon = stats && stats.total > 0 ? (stats.brouillons / stats.total * 100) : 0;
+  const pctPubliees = stats && stats.total > 0 ? (stats.publiees / stats.total * 100) : 0;
 
   return (
     <main className="min-h-screen py-12 px-4">
       <div className="max-w-7xl mx-auto">
+        {/* Error state */}
+        {error && (
+          <div className="mb-8 p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm text-center">
+            {error}
+          </div>
+        )}
+
         {/* Header */}
         <div className="text-center mb-16">
           <div className="flex items-center justify-center gap-4 mb-4">
@@ -108,16 +116,18 @@ export default function DashboardPage() {
               Repartition par statut
             </h3>
             <div className="h-56 md:h-72">
-              {stats && stats.total > 0 ? (
+              {stats && stats.total > 0 ? (() => {
+                const pieData = [
+                  { name: "Brouillons", value: stats.brouillons, color: "#6B7280" },
+                  { name: "En validation", value: stats.en_validation, color: "#EAB308" },
+                  { name: "Publiees", value: stats.publiees, color: "#16A34A" },
+                  { name: "Archivees", value: stats.archivees, color: "#9CA3AF" },
+                ].filter(d => d.value > 0);
+                return (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={[
-                        { name: "Brouillons", value: stats.brouillons },
-                        { name: "En validation", value: stats.en_validation },
-                        { name: "Publiees", value: stats.publiees },
-                        { name: "Archivees", value: stats.archivees },
-                      ].filter(d => d.value > 0)}
+                      data={pieData}
                       cx="50%"
                       cy="50%"
                       innerRadius={55}
@@ -127,20 +137,16 @@ export default function DashboardPage() {
                       label={({ name, value }) => `${name} (${value})`}
                       labelLine={{ stroke: "#d1d5db" }}
                     >
-                      {[
-                        { name: "Brouillons", value: stats.brouillons },
-                        { name: "En validation", value: stats.en_validation },
-                        { name: "Publiees", value: stats.publiees },
-                        { name: "Archivees", value: stats.archivees },
-                      ].filter(d => d.value > 0).map((_, i) => (
-                        <Cell key={i} fill={["#6B7280", "#EAB308", "#16A34A", "#9CA3AF"][i]} />
+                      {pieData.map((entry, i) => (
+                        <Cell key={i} fill={entry.color} />
                       ))}
                     </Pie>
                     <Tooltip formatter={(value: number) => [value, "Fiches"]} />
                     <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 13 }} />
                   </PieChart>
                 </ResponsiveContainer>
-              ) : (
+                );
+              })() : (
                 <div className="h-full flex items-center justify-center text-text-muted">
                   Aucune donnee
                 </div>
@@ -294,7 +300,7 @@ export default function DashboardPage() {
 
         {/* Footer */}
         <div className="mt-12 text-center text-sm text-text-muted">
-          Dashboard mis à jour en temps réel
+          Donnees chargees au chargement de la page
         </div>
       </div>
     </main>

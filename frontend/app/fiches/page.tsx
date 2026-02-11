@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import { api, FicheMetier } from "@/lib/api";
 import StatusBadge from "@/components/StatusBadge";
@@ -11,22 +11,26 @@ export default function FichesPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statutFilter, setStatutFilter] = useState("");
   const [page, setPage] = useState(0);
   const [deleteTarget, setDeleteTarget] = useState<FicheMetier | null>(null);
   const [confirmStep, setConfirmStep] = useState(0); // 0=hidden, 1=first confirm, 2=final confirm
   const [deleting, setDeleting] = useState(false);
   const limit = 50;
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Debounce search input (300ms)
   useEffect(() => {
-    loadFiches();
-  }, [search, statutFilter, page]);
+    debounceRef.current = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [search]);
 
-  async function loadFiches() {
+  const loadFiches = useCallback(async () => {
     try {
       setLoading(true);
       const data = await api.getFiches({
-        search: search || undefined,
+        search: debouncedSearch || undefined,
         statut: statutFilter || undefined,
         limit,
         offset: page * limit,
@@ -38,7 +42,11 @@ export default function FichesPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [debouncedSearch, statutFilter, page]);
+
+  useEffect(() => {
+    loadFiches();
+  }, [loadFiches]);
 
   async function handleDelete() {
     if (!deleteTarget) return;
@@ -170,6 +178,13 @@ export default function FichesPage() {
                     </tr>
                   </thead>
                   <tbody>
+                    {fiches.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="p-8 text-center text-text-muted">
+                          Aucune fiche trouvee{(search || statutFilter) ? " pour ces criteres" : ""}
+                        </td>
+                      </tr>
+                    )}
                     {fiches.map((fiche) => (
                       <tr
                         key={fiche.code_rome}

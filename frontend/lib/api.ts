@@ -226,8 +226,8 @@ class ApiClient {
     const searchParams = new URLSearchParams();
     if (params?.statut) searchParams.set("statut", params.statut);
     if (params?.search) searchParams.set("search", params.search);
-    if (params?.limit) searchParams.set("limit", params.limit.toString());
-    if (params?.offset) searchParams.set("offset", params.offset.toString());
+    if (params?.limit != null) searchParams.set("limit", params.limit.toString());
+    if (params?.offset != null) searchParams.set("offset", params.offset.toString());
 
     const query = searchParams.toString() ? `?${searchParams.toString()}` : "";
     return this.request<{ total: number; results: FicheMetier[] }>(`/api/fiches${query}`);

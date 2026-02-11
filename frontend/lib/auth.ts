@@ -23,7 +23,9 @@ export function removeToken(): void {
 export function parseToken(token: string): { sub: number; email: string; name: string; exp: number; iat: number } | null {
   try {
     const payload = token.split(".")[1];
-    const decoded = atob(payload);
+    // JWT uses Base64URL encoding (- instead of +, _ instead of /, no padding)
+    const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const decoded = atob(base64);
     return JSON.parse(decoded);
   } catch {
     return null;
