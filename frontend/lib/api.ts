@@ -147,6 +147,13 @@ export interface RegionalData {
   tension_regionale: number | null;
 }
 
+export interface RecrutementsData {
+  code_rome: string;
+  region: string | null;
+  region_name: string | null;
+  recrutements: { annee: number; nb_offres: number }[];
+}
+
 export interface AuditLog {
   id: number;
   type_evenement: string;
@@ -353,6 +360,11 @@ class ApiClient {
 
   async getRegionalData(codeRome: string, region: string): Promise<RegionalData> {
     return this.request<RegionalData>(`/api/fiches/${codeRome}/regional?region=${region}`);
+  }
+
+  async getRecrutements(codeRome: string, region?: string): Promise<RecrutementsData> {
+    const params = region ? `?region=${region}` : "";
+    return this.request<RecrutementsData>(`/api/fiches/${codeRome}/recrutements${params}`);
   }
 
   // ==================== ROME SYNC ====================

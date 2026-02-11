@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { api, FicheDetail, Variante, VarianteDetail, Region, RegionalData } from "@/lib/api";
+import { api, FicheDetail, Variante, VarianteDetail, Region, RegionalData, RecrutementsData } from "@/lib/api";
 import { getTranslations, translateTendance } from "@/lib/translations";
 import StatusBadge from "@/components/StatusBadge";
 import {
@@ -154,6 +154,11 @@ export default function FicheDetailPage() {
   const [regionalData, setRegionalData] = useState<RegionalData | null>(null);
   const [regionalLoading, setRegionalLoading] = useState(false);
 
+  // Recrutements data
+  const [recrutements, setRecrutements] = useState<RecrutementsData | null>(null);
+  const [recrutementsLoading, setRecrutementsLoading] = useState(false);
+  const [selectedYear, setSelectedYear] = useState<number>(2026);
+
   // ── i18n: derive language from applied variante ──
   const lang = appliedVariante?.langue || "fr";
   const t = getTranslations(lang);
@@ -220,6 +225,18 @@ export default function FicheDetailPage() {
       .finally(() => { if (!cancelled) setRegionalLoading(false); });
     return () => { cancelled = true; };
   }, [codeRome, selectedRegion]);
+
+  // Fetch recrutements data when fiche or region changes
+  useEffect(() => {
+    if (!fiche) return;
+    let cancelled = false;
+    setRecrutementsLoading(true);
+    api.getRecrutements(codeRome, selectedRegion || undefined)
+      .then(data => { if (!cancelled) setRecrutements(data); })
+      .catch(() => { if (!cancelled) setRecrutements(null); })
+      .finally(() => { if (!cancelled) setRecrutementsLoading(false); });
+    return () => { cancelled = true; };
+  }, [codeRome, selectedRegion, fiche]);
 
   // Scroll spy
   useEffect(() => {
@@ -990,6 +1007,9 @@ export default function FicheDetailPage() {
     ? regionalData.tension_regionale
     : (fiche.perspectives?.tension ?? 0.5);
 
+  // Hide tension gauge when regional is selected but has 0 offers (would fallback to IA data misleadingly)
+  const showTensionGauge = !(isRegional && regionalData?.nb_offres === 0);
+
   // Display data: use variante content when applied, fallback to fiche
   const v = appliedVariante;
   const dNom = v?.nom || fiche.nom_epicene;
@@ -1013,6 +1033,7 @@ export default function FicheDetailPage() {
   const sections = [
     { id: "infos", label: t.secKeyInfo, icon: "📋", show: true },
     { id: "stats", label: t.secStatistics, icon: "📊", show: hasStats },
+    { id: "recrutements", label: t.recruitmentsPerYear, icon: "📅", show: true },
     { id: "competences", label: t.secSkills, icon: "⚡", show: hasCompetences || hasSavoirEtre || hasSavoirs },
     { id: "contextes", label: t.secWorkContexts, icon: "🏢", show: hasContextes },
     { id: "services", label: t.secServices, icon: "🔗", show: true },
@@ -1282,7 +1303,14 @@ export default function FicheDetailPage() {
                       <StatCard label={t.medianSalary} value={`${(regionalData!.salaires.median / 1000).toFixed(0)}k€`} sub={t.grossAnnual} color={CYAN} />
                     )}
                     <div className="col-span-2 md:col-span-1">
-                      <TensionGauge value={tensionValue} labels={{ title: t.marketTension, high: t.highDemand, moderate: t.moderateDemand, low: t.lowDemand }} />
+                      {showTensionGauge ? (
+                        <TensionGauge value={tensionValue} labels={{ title: t.marketTension, high: t.highDemand, moderate: t.moderateDemand, low: t.lowDemand }} />
+                      ) : (
+                        <div className="bg-white rounded-xl border border-gray-200 p-5">
+                          <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">{t.marketTension}</div>
+                          <div className="text-sm text-gray-400 italic">{t.noDataAvailable}</div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ) : fiche.perspectives && (fiche.perspectives.nombre_offres != null || fiche.perspectives.taux_insertion != null) ? (
@@ -1391,6 +1419,96 @@ export default function FicheDetailPage() {
                 </div>
               </SectionAnchor>
             )}
+
+            {/* ═══ RECRUTEMENTS PAR ANNÉE ═══ */}
+            <SectionAnchor id="recrutements" title={t.recruitmentsPerYear} icon="📅">
+              <p className="text-sm text-gray-500 mb-4">{t.recruitmentsDesc}</p>
+              {selectedRegion && recrutements?.region_name && (
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#E4E1FF] text-[#4A39C0] text-xs font-semibold">
+                    <span>📍</span> {recrutements.region_name} — {t.regionalLive}
+                  </span>
+                </div>
+              )}
+              {recrutementsLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-8 h-8 rounded-full border-3 border-[#E4E1FF] border-t-[#4A39C0] animate-spin" />
+                    <span className="text-sm text-gray-400">{t.recruitmentsLoading}</span>
+                  </div>
+                </div>
+              ) : recrutements && recrutements.recrutements.length > 0 ? (
+                <>
+                  {/* Year pills */}
+                  <div className="flex flex-wrap gap-2 mb-6">
+                    {recrutements.recrutements.map(r => (
+                      <button
+                        key={r.annee}
+                        onClick={() => setSelectedYear(r.annee)}
+                        className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+                          selectedYear === r.annee
+                            ? "bg-[#4A39C0] text-white shadow-sm"
+                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                        }`}
+                      >
+                        {r.annee}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Bar chart */}
+                  <ResponsiveContainer key={`recr-${chartKey}`} width="100%" height={240}>
+                    <BarChart data={recrutements.recrutements.map(r => ({ annee: String(r.annee), offres: r.nb_offres }))} barCategoryGap="20%">
+                      <XAxis dataKey="annee" tick={{ fontSize: 13, fill: "#6B7280" }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 11, fill: "#9CA3AF" }} axisLine={false} tickLine={false} tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)} />
+                      <Tooltip
+                        formatter={(value: number) => [value.toLocaleString(t.locale), t.offers]}
+                        contentStyle={{ borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 13 }}
+                      />
+                      <Bar dataKey="offres" radius={[6, 6, 0, 0]}>
+                        {recrutements.recrutements.map((r) => (
+                          <Cell key={r.annee} fill={r.annee === selectedYear ? PURPLE : "#E4E1FF"} cursor="pointer" onClick={() => setSelectedYear(r.annee)} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+
+                  {/* Detail card for selected year */}
+                  {(() => {
+                    const sel = recrutements.recrutements.find(r => r.annee === selectedYear);
+                    if (!sel) return null;
+                    return (
+                      <div className="mt-4 p-5 bg-[#F9F8FF] rounded-xl border border-[#E4E1FF]">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">{sel.annee}</div>
+                            <div className="text-3xl font-bold text-[#4A39C0]">{sel.nb_offres.toLocaleString(t.locale)}</div>
+                            <div className="text-sm text-gray-500 mt-0.5">{t.offers}</div>
+                          </div>
+                          {(() => {
+                            const idx = recrutements.recrutements.findIndex(r => r.annee === selectedYear);
+                            if (idx <= 0) return null;
+                            const prev = recrutements.recrutements[idx - 1];
+                            if (prev.nb_offres === 0) return null;
+                            const pctChange = Math.round(((sel.nb_offres - prev.nb_offres) / prev.nb_offres) * 100);
+                            const isUp = pctChange >= 0;
+                            return (
+                              <div className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-semibold ${isUp ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500"}`}>
+                                <span>{isUp ? "↑" : "↓"}</span>
+                                <span>{isUp ? "+" : ""}{pctChange}%</span>
+                                <span className="text-xs font-normal ml-1">vs {prev.annee}</span>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </>
+              ) : (
+                <div className="text-center py-8 text-gray-400 text-sm">{t.recruitmentsError}</div>
+              )}
+            </SectionAnchor>
 
             {/* ═══ COMPÉTENCES ═══ */}
             {(hasCompetences || hasSavoirEtre || hasSavoirs) && (

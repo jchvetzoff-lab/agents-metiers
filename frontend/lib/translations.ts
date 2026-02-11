@@ -128,6 +128,12 @@ const translations: Record<FicheLang, Record<string, string>> = {
     basedOnOffers: "offres analysees",
     nationalData: "Donnees nationales (IA)",
     regionalLive: "Donnees temps reel",
+    noDataAvailable: "Pas de donnees disponibles",
+    recruitmentsPerYear: "Recrutements par annee",
+    recruitmentsDesc: "Nombre d'offres d'emploi publiees chaque annee sur France Travail.",
+    recruitmentsLoading: "Chargement des donnees...",
+    recruitmentsError: "Donnees indisponibles",
+    offers: "offres",
   },
 
   en: {
@@ -239,6 +245,12 @@ const translations: Record<FicheLang, Record<string, string>> = {
     basedOnOffers: "offers analysed",
     nationalData: "National data (AI)",
     regionalLive: "Live data",
+    noDataAvailable: "No data available",
+    recruitmentsPerYear: "Recruitments per year",
+    recruitmentsDesc: "Number of job offers published each year on France Travail.",
+    recruitmentsLoading: "Loading data...",
+    recruitmentsError: "Data unavailable",
+    offers: "offers",
   },
 
   es: {
@@ -350,6 +362,12 @@ const translations: Record<FicheLang, Record<string, string>> = {
     basedOnOffers: "ofertas analizadas",
     nationalData: "Datos nacionales (IA)",
     regionalLive: "Datos en tiempo real",
+    noDataAvailable: "Datos no disponibles",
+    recruitmentsPerYear: "Contrataciones por ano",
+    recruitmentsDesc: "Numero de ofertas de empleo publicadas cada ano en France Travail.",
+    recruitmentsLoading: "Cargando datos...",
+    recruitmentsError: "Datos no disponibles",
+    offers: "ofertas",
   },
 
   de: {
@@ -461,6 +479,12 @@ const translations: Record<FicheLang, Record<string, string>> = {
     basedOnOffers: "analysierte Angebote",
     nationalData: "Nationale Daten (KI)",
     regionalLive: "Echtzeitdaten",
+    noDataAvailable: "Keine Daten verfugbar",
+    recruitmentsPerYear: "Einstellungen pro Jahr",
+    recruitmentsDesc: "Anzahl der jahrlich auf France Travail veroffentlichten Stellenangebote.",
+    recruitmentsLoading: "Daten werden geladen...",
+    recruitmentsError: "Daten nicht verfugbar",
+    offers: "Angebote",
   },
 
   it: {
@@ -572,6 +596,12 @@ const translations: Record<FicheLang, Record<string, string>> = {
     basedOnOffers: "offerte analizzate",
     nationalData: "Dati nazionali (IA)",
     regionalLive: "Dati in tempo reale",
+    noDataAvailable: "Dati non disponibili",
+    recruitmentsPerYear: "Assunzioni per anno",
+    recruitmentsDesc: "Numero di offerte di lavoro pubblicate ogni anno su France Travail.",
+    recruitmentsLoading: "Caricamento dati...",
+    recruitmentsError: "Dati non disponibili",
+    offers: "offerte",
   },
 
   pt: {
@@ -683,6 +713,12 @@ const translations: Record<FicheLang, Record<string, string>> = {
     basedOnOffers: "ofertas analisadas",
     nationalData: "Dados nacionais (IA)",
     regionalLive: "Dados em tempo real",
+    noDataAvailable: "Dados nao disponiveis",
+    recruitmentsPerYear: "Contratacoes por ano",
+    recruitmentsDesc: "Numero de ofertas de emprego publicadas por ano no France Travail.",
+    recruitmentsLoading: "Carregando dados...",
+    recruitmentsError: "Dados indisponiveis",
+    offers: "ofertas",
   },
 
   ar: {
@@ -794,6 +830,12 @@ const translations: Record<FicheLang, Record<string, string>> = {
     basedOnOffers: "عروض محللة",
     nationalData: "بيانات وطنية (ذكاء اصطناعي)",
     regionalLive: "بيانات حية",
+    noDataAvailable: "لا تتوفر بيانات",
+    recruitmentsPerYear: "التوظيف حسب السنة",
+    recruitmentsDesc: "عدد عروض العمل المنشورة كل سنة على France Travail.",
+    recruitmentsLoading: "جاري تحميل البيانات...",
+    recruitmentsError: "البيانات غير متوفرة",
+    offers: "عروض",
   },
 };
 
