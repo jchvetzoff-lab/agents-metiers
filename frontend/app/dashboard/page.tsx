@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { api, Stats, AuditLog } from "@/lib/api";
 import MetricCard from "@/components/MetricCard";
 import SectionHeader from "@/components/SectionHeader";
@@ -253,52 +254,62 @@ export default function DashboardPage() {
                 veille_metiers: "VEILLE METIERS",
               };
 
-              return (
-                <StaggerItem key={log.id}>
-                  <div className="sojai-card" style={{ borderLeft: "3px solid #4F46E5" }}>
-                    <div className="flex justify-between items-start">
-                      <div className="flex items-start gap-4 flex-1">
-                        <div className="text-3xl mt-0.5">{icon}</div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-semibold text-text-dark">
-                              {typeLabels[log.type_evenement] || log.type_evenement.replace("_", " ").toUpperCase()}
+              const card = (
+                <div className={`sojai-card ${log.code_rome ? "cursor-pointer hover:shadow-card-hover transition-shadow" : ""}`} style={{ borderLeft: "3px solid #4F46E5" }}>
+                  <div className="flex justify-between items-start">
+                    <div className="flex items-start gap-4 flex-1">
+                      <div className="text-3xl mt-0.5">{icon}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-text-dark">
+                            {typeLabels[log.type_evenement] || log.type_evenement.replace("_", " ").toUpperCase()}
+                          </span>
+                          {log.code_rome && (
+                            <span className="badge badge-purple text-xs">
+                              {log.code_rome}
                             </span>
-                            {log.code_rome && (
-                              <span className="badge badge-purple text-xs">
-                                {log.code_rome}
-                              </span>
-                            )}
-                            {log.agent && (
-                              <span className={`text-xs px-2 py-0.5 rounded-full ${
-                                log.agent === "Claude IA"
-                                  ? "bg-blue-100 text-blue-700"
-                                  : "bg-gray-100 text-gray-600"
-                              }`}>
-                                {log.agent}
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-sm text-text-muted mt-1">
-                            {log.description}
-                          </div>
-                          {log.validateur && (
-                            <div className="text-xs text-green-600 mt-1">
-                              Validateur : {log.validateur}
-                            </div>
+                          )}
+                          {log.agent && (
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${
+                              log.agent === "Claude IA"
+                                ? "bg-blue-100 text-blue-700"
+                                : "bg-gray-100 text-gray-600"
+                            }`}>
+                              {log.agent}
+                            </span>
                           )}
                         </div>
-                      </div>
-                      <div className="text-xs text-text-muted text-right shrink-0 ml-4">
-                        {new Date(log.timestamp).toLocaleDateString("fr-FR")}
-                        <br />
-                        {new Date(log.timestamp).toLocaleTimeString("fr-FR", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
+                        <div className="text-sm text-text-muted mt-1">
+                          {log.description}
+                        </div>
+                        {log.validateur && (
+                          <div className="text-xs text-green-600 mt-1">
+                            Validateur : {log.validateur}
+                          </div>
+                        )}
                       </div>
                     </div>
+                    <div className="text-xs text-text-muted text-right shrink-0 ml-4">
+                      {new Date(log.timestamp).toLocaleDateString("fr-FR")}
+                      <br />
+                      {new Date(log.timestamp).toLocaleTimeString("fr-FR", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </div>
                   </div>
+                </div>
+              );
+
+              return (
+                <StaggerItem key={log.id}>
+                  {log.code_rome ? (
+                    <Link href={`/fiches/${log.code_rome}`}>
+                      {card}
+                    </Link>
+                  ) : (
+                    card
+                  )}
                 </StaggerItem>
               );
             })

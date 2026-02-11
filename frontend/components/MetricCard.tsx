@@ -20,7 +20,7 @@ export default function MetricCard({ label, value, icon, trend, trendValue }: Me
   const isNumber = typeof value === "number";
 
   return (
-    <div className="group sojai-card relative overflow-hidden">
+    <div className="group sojai-card relative overflow-hidden h-full">
       {/* Top gradient accent */}
       <div
         className="absolute top-0 left-0 right-0 h-1 rounded-t-[inherit]"
