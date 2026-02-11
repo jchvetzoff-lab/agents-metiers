@@ -97,6 +97,40 @@ try:
 except Exception as e:
     print(f"Users table migration warning: {e}")
 
+# Migration : créer la table offres_cache
+def create_offres_cache_table(engine):
+    """Crée la table offres_cache si elle n'existe pas."""
+    from sqlalchemy import inspect as sa_inspect
+    inspector = sa_inspect(engine)
+    if "offres_cache" not in inspector.get_table_names():
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            conn.execute(text("""
+                CREATE TABLE offres_cache (
+                    id SERIAL PRIMARY KEY,
+                    code_rome VARCHAR(10) NOT NULL,
+                    region VARCHAR(5),
+                    offre_id VARCHAR(50) NOT NULL,
+                    titre VARCHAR(500),
+                    entreprise VARCHAR(300),
+                    lieu VARCHAR(300),
+                    type_contrat VARCHAR(50),
+                    salaire VARCHAR(200),
+                    experience VARCHAR(200),
+                    date_publication TIMESTAMP,
+                    url VARCHAR(700),
+                    fetched_at TIMESTAMP NOT NULL DEFAULT NOW()
+                )
+            """))
+            conn.execute(text("CREATE INDEX idx_offres_cache_rome ON offres_cache (code_rome)"))
+            conn.execute(text("CREATE INDEX idx_offres_cache_fetched ON offres_cache (fetched_at)"))
+        print("Created offres_cache table")
+
+try:
+    create_offres_cache_table(repo.engine)
+except Exception as e:
+    print(f"Offres cache table migration warning: {e}")
+
 
 # ==================== HELPERS ====================
 
@@ -1970,6 +2004,213 @@ async def get_recrutements_par_mois(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur recrutements: {str(e)}")
+
+
+# ==================== OFFRES D'EMPLOI CACHE ====================
+
+OFFRES_CACHE_TTL_HOURS = 24  # Durée de vie du cache en heures
+
+
+def _get_cached_offres(code_rome: str, region: str | None) -> list | None:
+    """Retourne les offres en cache si elles sont encore fraîches, sinon None."""
+    from sqlalchemy import text
+    try:
+        with repo.engine.connect() as conn:
+            region_clause = "AND region = :region" if region else "AND region IS NULL"
+            row = conn.execute(text(f"""
+                SELECT fetched_at FROM offres_cache
+                WHERE code_rome = :code_rome {region_clause}
+                LIMIT 1
+            """), {"code_rome": code_rome, "region": region}).fetchone()
+
+            if not row:
+                return None
+
+            fetched_at = row[0]
+            age_hours = (datetime.now() - fetched_at).total_seconds() / 3600
+            if age_hours > OFFRES_CACHE_TTL_HOURS:
+                return None
+
+            rows = conn.execute(text(f"""
+                SELECT offre_id, titre, entreprise, lieu, type_contrat, salaire,
+                       experience, date_publication, url
+                FROM offres_cache
+                WHERE code_rome = :code_rome {region_clause}
+                ORDER BY date_publication DESC
+            """), {"code_rome": code_rome, "region": region}).fetchall()
+
+            return [
+                {
+                    "offre_id": r[0], "titre": r[1], "entreprise": r[2],
+                    "lieu": r[3], "type_contrat": r[4], "salaire": r[5],
+                    "experience": r[6],
+                    "date_publication": r[7].isoformat() if r[7] else None,
+                    "url": r[8],
+                }
+                for r in rows
+            ]
+    except Exception:
+        return None
+
+
+def _save_offres_cache(code_rome: str, region: str | None, offres: list):
+    """Remplace les offres en cache pour un code_rome + region."""
+    from sqlalchemy import text
+    try:
+        with repo.engine.begin() as conn:
+            region_clause = "AND region = :region" if region else "AND region IS NULL"
+            conn.execute(text(f"""
+                DELETE FROM offres_cache
+                WHERE code_rome = :code_rome {region_clause}
+            """), {"code_rome": code_rome, "region": region})
+
+            for o in offres:
+                conn.execute(text("""
+                    INSERT INTO offres_cache
+                        (code_rome, region, offre_id, titre, entreprise, lieu,
+                         type_contrat, salaire, experience, date_publication, url, fetched_at)
+                    VALUES
+                        (:code_rome, :region, :offre_id, :titre, :entreprise, :lieu,
+                         :type_contrat, :salaire, :experience, :date_publication, :url, NOW())
+                """), {
+                    "code_rome": code_rome,
+                    "region": region,
+                    "offre_id": o.get("offre_id", ""),
+                    "titre": o.get("titre", ""),
+                    "entreprise": o.get("entreprise"),
+                    "lieu": o.get("lieu"),
+                    "type_contrat": o.get("type_contrat"),
+                    "salaire": o.get("salaire"),
+                    "experience": o.get("experience"),
+                    "date_publication": o.get("date_publication"),
+                    "url": o.get("url"),
+                })
+
+            # Cleanup : supprimer les entrées de plus de 30 jours (toutes fiches)
+            conn.execute(text("""
+                DELETE FROM offres_cache
+                WHERE fetched_at < NOW() - INTERVAL '30 days'
+            """))
+    except Exception as e:
+        print(f"Save offres cache error: {e}")
+
+
+async def _fetch_offres_from_api(code_rome: str, region: str | None, token: str) -> list:
+    """Récupère les offres depuis l'API France Travail Offres v2."""
+    import httpx as _httpx
+
+    params = {"codeROME": code_rome, "range": "0-49"}
+    if region:
+        params["region"] = region
+
+    async with _httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.get(
+            "https://api.francetravail.io/partenaire/offresdemploi/v2/offres/search",
+            params=params,
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+    if resp.status_code in (204, 404):
+        return []
+    if resp.status_code not in (200, 206):
+        return []
+
+    data = resp.json()
+    resultats = data.get("resultats", [])
+
+    offres = []
+    for r in resultats:
+        # Extraire le salaire lisible
+        sal = r.get("salaire", {})
+        salaire_txt = sal.get("libelle") or sal.get("commentaire")
+
+        # URL de l'offre
+        url = None
+        origine = r.get("origineOffre", {})
+        url = origine.get("urlOrigine")
+        if not url:
+            offre_id = r.get("id", "")
+            if offre_id:
+                url = f"https://candidat.francetravail.fr/offres/recherche/detail/{offre_id}"
+
+        # Date de publication
+        date_pub = None
+        date_str = r.get("dateCreation")
+        if date_str:
+            try:
+                date_pub = datetime.fromisoformat(date_str.replace("Z", "+00:00")).replace(tzinfo=None)
+            except (ValueError, AttributeError):
+                pass
+
+        offres.append({
+            "offre_id": r.get("id", ""),
+            "titre": r.get("intitule", ""),
+            "entreprise": r.get("entreprise", {}).get("nom"),
+            "lieu": r.get("lieuTravail", {}).get("libelle"),
+            "type_contrat": r.get("typeContratLibelle"),
+            "salaire": salaire_txt,
+            "experience": r.get("experienceLibelle"),
+            "date_publication": date_pub,
+            "url": url,
+        })
+
+    return offres
+
+
+@app.get("/api/fiches/{code_rome}/offres")
+async def get_offres_emploi(
+    code_rome: str,
+    region: str = Query(None, description="Code région (optionnel)"),
+    limit: int = Query(20, ge=1, le=50),
+):
+    """Récupère les offres d'emploi actuelles pour un métier, avec cache intelligent."""
+    # 1. Vérifier le cache
+    cached = _get_cached_offres(code_rome, region)
+    if cached is not None:
+        region_name = None
+        if region:
+            region_name = next((r["libelle"] for r in FRANCE_REGIONS if r["code"] == region), None)
+        return {
+            "code_rome": code_rome,
+            "region": region,
+            "region_name": region_name,
+            "total": len(cached),
+            "offres": cached[:limit],
+            "from_cache": True,
+        }
+
+    # 2. Pas de cache frais → fetch depuis l'API
+    token = _get_ft_token()
+    if not token:
+        raise HTTPException(
+            status_code=503,
+            detail="Credentials France Travail non configurés"
+        )
+
+    region_name = None
+    if region:
+        region_name = next((r["libelle"] for r in FRANCE_REGIONS if r["code"] == region), None)
+        if not region_name:
+            raise HTTPException(status_code=400, detail=f"Région inconnue: {region}")
+
+    try:
+        offres = await _fetch_offres_from_api(code_rome, region, token)
+
+        # 3. Sauvegarder en cache
+        _save_offres_cache(code_rome, region, offres)
+
+        return {
+            "code_rome": code_rome,
+            "region": region,
+            "region_name": region_name,
+            "total": len(offres),
+            "offres": offres[:limit],
+            "from_cache": False,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur offres: {str(e)}")
 
 
 # ==================== AUTH ENDPOINTS ====================
