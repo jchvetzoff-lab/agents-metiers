@@ -160,6 +160,8 @@ export interface VarianteDetail extends Variante {
   autres_appellations: string[];
   traits_personnalite: string[];
   secteurs_activite: string[];
+  evolution_5ans?: string;
+  conditions_travail_detaillees?: string;
   version: number;
 }
 

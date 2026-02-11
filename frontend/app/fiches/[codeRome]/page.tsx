@@ -29,12 +29,12 @@ const PIE_COLORS = ["#4F46E5", "#06B6D4", "#F97316", "#78716C"];
 function SectionAnchor({ id, title, icon, children, accentColor }: {
   id: string; title: string; icon: string; children: React.ReactNode; accentColor?: string;
 }) {
+  const ac = accentColor || PURPLE;
   return (
     <section id={id} className="scroll-mt-24">
-      <div className="bg-white rounded-2xl border border-gray-200/60 shadow-card overflow-hidden hover:shadow-card-hover transition-shadow duration-500">
-        <div className="flex items-center gap-3 px-6 md:px-8 py-5 border-b border-gray-100 bg-gradient-to-r from-indigo-50/50 to-transparent">
-          {accentColor && <span className="w-1 h-6 rounded-full shrink-0" style={{ backgroundColor: accentColor }} />}
-          <span className="text-xl">{icon}</span>
+      <div className="bg-white rounded-2xl border border-gray-200/60 shadow-card overflow-hidden hover:shadow-card-hover transition-shadow duration-500" style={{ borderLeft: `3px solid ${ac}` }}>
+        <div className="flex items-center gap-3 px-6 md:px-8 py-5 border-b border-gray-100" style={{ background: `linear-gradient(135deg, ${ac}08 0%, ${ac}03 50%, transparent 100%)` }}>
+          <span className="flex items-center justify-center w-9 h-9 rounded-xl text-lg" style={{ backgroundColor: `${ac}15` }}>{icon}</span>
           <h2 className="text-lg md:text-xl font-bold text-[#1A1A2E]">{title}</h2>
         </div>
         <div className="px-6 md:px-8 py-6">{children}</div>
@@ -1300,6 +1300,7 @@ export default function FicheDetailPage() {
   const dAutresAppellations = v?.autres_appellations?.length ? v.autres_appellations : fiche.autres_appellations;
   const dTraitsPersonnalite = v?.traits_personnalite?.length ? v.traits_personnalite : fiche.traits_personnalite;
   const dSecteurs = v?.secteurs_activite?.length ? v.secteurs_activite : fiche.secteurs_activite;
+  const dEvolution5ans = v?.evolution_5ans || fiche.perspectives?.evolution_5ans;
 
   const hasMissions = (dMissions?.length ?? 0) > 0;
   const hasCompetences = (dCompetences?.length ?? 0) > 0;
@@ -1329,7 +1330,7 @@ export default function FicheDetailPage() {
   return (
     <main className="min-h-screen bg-[#F8F9FA]">
       {/* ── HEADER ── */}
-      <div className="bg-white border-b border-gray-200 shadow-sm">
+      <div className="bg-gradient-to-br from-indigo-50 via-white to-purple-50/40 border-b border-indigo-100/50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 md:px-8 py-6">
           <Link href="/fiches" className="inline-flex items-center gap-1.5 text-sm text-indigo-600 hover:underline mb-4">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -1338,7 +1339,7 @@ export default function FicheDetailPage() {
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
             <div>
               <div className="flex items-center gap-3 mb-2">
-                <span className="px-3 py-1 rounded-md bg-indigo-100 text-indigo-600 text-sm font-bold">{fiche.code_rome}</span>
+                <span className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-sm font-bold shadow-sm">{fiche.code_rome}</span>
                 <StatusBadge statut={fiche.statut} />
               </div>
               <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#1A1A2E] mb-1">{dNom}</h1>
@@ -1507,27 +1508,39 @@ export default function FicheDetailPage() {
                 </div>
               )}
               {hasMissions && (
-                <div className="mb-6">
-                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">{t.mainMissions}</h3>
+                <div className="mb-6 p-5 bg-gradient-to-r from-indigo-50/50 to-transparent rounded-xl border border-indigo-100/40">
+                  <h3 className="text-sm font-bold text-indigo-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <span className="w-1.5 h-4 rounded-full bg-indigo-500" />
+                    {t.mainMissions}
+                  </h3>
                   <NumberedList items={dMissions} color={PURPLE} />
                 </div>
               )}
               {dAcces && (
-                <div className="mb-6 p-5 bg-[#F9F8FF] rounded-xl border border-indigo-200/60">
-                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-2">{t.howToAccess}</h3>
+                <div className="mb-6 p-5 bg-gradient-to-r from-emerald-50/60 to-transparent rounded-xl border border-emerald-200/60">
+                  <h3 className="text-sm font-bold text-emerald-700 uppercase tracking-wider mb-2 flex items-center gap-2">
+                    <span className="w-1.5 h-4 rounded-full bg-emerald-500" />
+                    {t.howToAccess}
+                  </h3>
                   <p className="text-[15px] text-gray-600 leading-relaxed">{dAcces}</p>
                 </div>
               )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {dFormations && dFormations.length > 0 && (
-                  <div>
-                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">{t.trainingDiplomas}</h3>
-                    <BulletList items={dFormations} color={PURPLE} />
+                  <div className="p-4 bg-violet-50/40 rounded-xl border border-violet-100/60">
+                    <h3 className="text-sm font-bold text-violet-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+                      <span className="w-1.5 h-4 rounded-full bg-violet-500" />
+                      {t.trainingDiplomas}
+                    </h3>
+                    <BulletList items={dFormations} color="#7C3AED" />
                   </div>
                 )}
                 {dCertifications && dCertifications.length > 0 && (
-                  <div>
-                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">{t.certifications}</h3>
+                  <div className="p-4 bg-pink-50/40 rounded-xl border border-pink-100/60">
+                    <h3 className="text-sm font-bold text-pink-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+                      <span className="w-1.5 h-4 rounded-full bg-pink-500" />
+                      {t.certifications}
+                    </h3>
                     <BulletList items={dCertifications} color={PINK} />
                   </div>
                 )}
@@ -1537,7 +1550,10 @@ export default function FicheDetailPage() {
                   <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t.activitySectors}</span>
                   <div className="flex flex-wrap gap-2 mt-2">
                     {dSecteurs.map((s, i) => (
-                      <span key={i} className="px-3 py-1 rounded-full bg-gray-100 text-sm text-gray-700">{s}</span>
+                      <span key={i} className="px-3 py-1.5 rounded-full text-sm font-medium" style={{
+                        backgroundColor: [`#EEF2FF`, `#F0FDF4`, `#FFF7ED`, `#FDF2F8`, `#F0F9FF`, `#FAF5FF`][i % 6],
+                        color: [`#4338CA`, `#15803D`, `#C2410C`, `#BE185D`, `#0369A1`, `#7E22CE`][i % 6],
+                      }}>{s}</span>
                     ))}
                   </div>
                 </div>
@@ -1773,21 +1789,38 @@ export default function FicheDetailPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
                   {fiche.perspectives && (
-                    <div className="bg-gray-50 rounded-xl p-5">
+                    <div className="rounded-xl p-5 border" style={{
+                      background: fiche.perspectives.tendance === "emergence" || fiche.perspectives.tendance?.includes("croiss")
+                        ? "linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%)"
+                        : fiche.perspectives.tendance === "disparition" || fiche.perspectives.tendance?.includes("declin")
+                        ? "linear-gradient(135deg, #fef2f2 0%, #fff5f5 100%)"
+                        : "linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%)",
+                      borderColor: fiche.perspectives.tendance === "emergence" || fiche.perspectives.tendance?.includes("croiss")
+                        ? "#bbf7d0"
+                        : fiche.perspectives.tendance === "disparition" || fiche.perspectives.tendance?.includes("declin")
+                        ? "#fecaca"
+                        : "#bfdbfe",
+                    }}>
                       <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{t.jobTrend}</div>
                       <div className="flex items-center gap-3">
-                        <span className="text-3xl">{fiche.perspectives.tendance === "emergence" ? "📈" : fiche.perspectives.tendance === "disparition" ? "📉" : "➡️"}</span>
+                        <span className="text-3xl">{fiche.perspectives.tendance === "emergence" || fiche.perspectives.tendance?.includes("croiss") ? "📈" : fiche.perspectives.tendance === "disparition" || fiche.perspectives.tendance?.includes("declin") ? "📉" : "➡️"}</span>
                         <div>
-                          <div className="text-lg font-bold capitalize">{translateTendance(fiche.perspectives.tendance, t)}</div>
+                          <div className="text-lg font-bold capitalize" style={{
+                            color: fiche.perspectives.tendance === "emergence" || fiche.perspectives.tendance?.includes("croiss")
+                              ? "#16a34a"
+                              : fiche.perspectives.tendance === "disparition" || fiche.perspectives.tendance?.includes("declin")
+                              ? "#dc2626"
+                              : "#2563eb",
+                          }}>{translateTendance(fiche.perspectives.tendance, t)}</div>
                           <div className="text-xs text-gray-500">{t.next5Years}</div>
                         </div>
                       </div>
                     </div>
                   )}
-                  {fiche.perspectives?.evolution_5ans && (
-                    <div className="bg-gray-50 rounded-xl p-5">
-                      <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{t.evolution5y}</div>
-                      <p className="text-sm text-gray-600 leading-relaxed">{fiche.perspectives.evolution_5ans}</p>
+                  {dEvolution5ans && (
+                    <div className="bg-gradient-to-br from-violet-50 to-indigo-50/50 rounded-xl p-5 border border-violet-100">
+                      <div className="text-xs font-semibold text-indigo-400 uppercase tracking-wider mb-2">{t.evolution5y}</div>
+                      <p className="text-sm text-gray-600 leading-relaxed">{dEvolution5ans}</p>
                     </div>
                   )}
 
@@ -1827,23 +1860,23 @@ export default function FicheDetailPage() {
                     const empUp = empLast >= empFirst;
 
                     return (
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
+                      <div className="space-y-6 mt-4">
                         {salTrend && (
-                          <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+                          <div className="bg-gradient-to-br from-indigo-50/60 to-white rounded-2xl border border-indigo-100 p-6 shadow-sm">
                             <div className="flex items-center justify-between mb-4">
-                              <div className="flex items-center gap-2.5">
-                                <div className="w-9 h-9 rounded-xl bg-indigo-100 flex items-center justify-center text-lg">💰</div>
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center text-xl shadow-sm">💰</div>
                                 <div>
-                                  <h3 className="text-sm font-bold text-gray-900">{t.salaryTrend5y}</h3>
-                                  <span className="text-[10px] text-gray-400">{t.projectionEstimated}</span>
+                                  <h3 className="text-base font-bold text-gray-900">{t.salaryTrend5y}</h3>
+                                  <span className="text-xs text-gray-400">{t.projectionEstimated}</span>
                                 </div>
                               </div>
-                              <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${salUp ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-500"}`}>
+                              <div className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold ${salUp ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-500"}`}>
                                 <span>{salUp ? "↑" : "↓"}</span> {salUp ? "+" : ""}{salDelta}%
                               </div>
                             </div>
-                            <ResponsiveContainer width="100%" height={180}>
-                              <AreaChart data={salTrend} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
+                            <ResponsiveContainer width="100%" height={220}>
+                              <AreaChart data={salTrend} margin={{ top: 5, right: 20, left: 0, bottom: 0 }}>
                                 <defs>
                                   <linearGradient id="salGrad" x1="0" y1="0" x2="0" y2="1">
                                     <stop offset="0%" stopColor={PURPLE} stopOpacity={0.25} />
@@ -1851,8 +1884,8 @@ export default function FicheDetailPage() {
                                   </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
-                                <XAxis dataKey="annee" tick={{ fontSize: 11, fill: "#9CA3AF" }} axisLine={false} tickLine={false} />
-                                <YAxis tick={{ fontSize: 10, fill: "#D1D5DB" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}k`} domain={["dataMin - 1", "dataMax + 1"]} width={35} />
+                                <XAxis dataKey="annee" tick={{ fontSize: 12, fill: "#9CA3AF" }} axisLine={false} tickLine={false} />
+                                <YAxis tick={{ fontSize: 11, fill: "#D1D5DB" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}k`} domain={["dataMin - 1", "dataMax + 1"]} width={40} />
                                 <Tooltip
                                   contentStyle={{ borderRadius: 12, border: "1px solid #E5E7EB", boxShadow: "0 4px 12px rgba(0,0,0,.08)", fontSize: 13 }}
                                   formatter={(v: number) => [`${v} k€/an`, t.medianSalaryK]}
@@ -1867,21 +1900,21 @@ export default function FicheDetailPage() {
                           </div>
                         )}
                         {empTrend && (
-                          <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+                          <div className="bg-gradient-to-br from-cyan-50/60 to-white rounded-2xl border border-cyan-100 p-6 shadow-sm">
                             <div className="flex items-center justify-between mb-4">
-                              <div className="flex items-center gap-2.5">
-                                <div className="w-9 h-9 rounded-xl bg-cyan-100 flex items-center justify-center text-lg">📈</div>
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-cyan-100 flex items-center justify-center text-xl shadow-sm">📈</div>
                                 <div>
-                                  <h3 className="text-sm font-bold text-gray-900">{t.employmentTrend5y}</h3>
-                                  <span className="text-[10px] text-gray-400">{t.projectionEstimated}</span>
+                                  <h3 className="text-base font-bold text-gray-900">{t.employmentTrend5y}</h3>
+                                  <span className="text-xs text-gray-400">{t.projectionEstimated}</span>
                                 </div>
                               </div>
-                              <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${empUp ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-500"}`}>
+                              <div className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold ${empUp ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-500"}`}>
                                 <span>{empUp ? "↑" : "↓"}</span> {empUp ? "+" : ""}{empDelta}%
                               </div>
                             </div>
-                            <ResponsiveContainer width="100%" height={180}>
-                              <AreaChart data={empTrend} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
+                            <ResponsiveContainer width="100%" height={220}>
+                              <AreaChart data={empTrend} margin={{ top: 5, right: 20, left: 0, bottom: 0 }}>
                                 <defs>
                                   <linearGradient id="empGrad" x1="0" y1="0" x2="0" y2="1">
                                     <stop offset="0%" stopColor={CYAN} stopOpacity={0.25} />
@@ -1889,8 +1922,8 @@ export default function FicheDetailPage() {
                                   </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
-                                <XAxis dataKey="annee" tick={{ fontSize: 11, fill: "#9CA3AF" }} axisLine={false} tickLine={false} />
-                                <YAxis tick={{ fontSize: 10, fill: "#D1D5DB" }} axisLine={false} tickLine={false} domain={["dataMin * 0.9", "dataMax * 1.1"]} width={40} />
+                                <XAxis dataKey="annee" tick={{ fontSize: 12, fill: "#9CA3AF" }} axisLine={false} tickLine={false} />
+                                <YAxis tick={{ fontSize: 11, fill: "#D1D5DB" }} axisLine={false} tickLine={false} domain={["dataMin * 0.9", "dataMax * 1.1"]} width={45} />
                                 <Tooltip
                                   contentStyle={{ borderRadius: 12, border: "1px solid #E5E7EB", boxShadow: "0 4px 12px rgba(0,0,0,.08)", fontSize: 13 }}
                                   formatter={(v: number) => [v.toLocaleString(t.locale), t.estimatedOffers]}
@@ -2359,14 +2392,20 @@ export default function FicheDetailPage() {
               <SectionAnchor id="contextes" title={t.secWorkContexts} icon="🏢" accentColor="#06B6D4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   {dConditions && dConditions.length > 0 && (
-                    <div>
-                      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">{t.workConditions}</h3>
-                      <BulletList items={dConditions} color={PURPLE} />
+                    <div className="p-4 bg-amber-50/40 rounded-xl border border-amber-100/60">
+                      <h3 className="text-sm font-bold text-amber-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <span className="w-1.5 h-4 rounded-full bg-amber-500" />
+                        {t.workConditions}
+                      </h3>
+                      <BulletList items={dConditions} color="#D97706" />
                     </div>
                   )}
                   {dEnvironnements && dEnvironnements.length > 0 && (
-                    <div>
-                      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">{t.structuresEnv}</h3>
+                    <div className="p-4 bg-cyan-50/40 rounded-xl border border-cyan-100/60">
+                      <h3 className="text-sm font-bold text-cyan-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <span className="w-1.5 h-4 rounded-full bg-cyan-500" />
+                        {t.structuresEnv}
+                      </h3>
                       <BulletList items={dEnvironnements} color={CYAN} />
                     </div>
                   )}
@@ -2378,20 +2417,26 @@ export default function FicheDetailPage() {
                     <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">{t.detailedConditions}</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {fiche.conditions_travail_detaillees.horaires && (
-                        <div className="p-4 bg-[#F9F8FF] rounded-xl border border-indigo-200/60">
-                          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t.schedule}</span>
+                        <div className="p-4 bg-blue-50/60 rounded-xl border border-blue-100">
+                          <span className="text-xs font-semibold text-blue-500 uppercase tracking-wider flex items-center gap-1.5">
+                            <span>🕐</span> {t.schedule}
+                          </span>
                           <p className="text-sm text-gray-700 mt-1">{fiche.conditions_travail_detaillees.horaires}</p>
                         </div>
                       )}
                       {fiche.conditions_travail_detaillees.deplacements && (
-                        <div className="p-4 bg-[#F9F8FF] rounded-xl border border-indigo-200/60">
-                          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t.travel}</span>
+                        <div className="p-4 bg-emerald-50/60 rounded-xl border border-emerald-100">
+                          <span className="text-xs font-semibold text-emerald-500 uppercase tracking-wider flex items-center gap-1.5">
+                            <span>🚗</span> {t.travel}
+                          </span>
                           <p className="text-sm text-gray-700 mt-1">{fiche.conditions_travail_detaillees.deplacements}</p>
                         </div>
                       )}
                       {fiche.conditions_travail_detaillees.environnement && (
-                        <div className="p-4 bg-[#F9F8FF] rounded-xl border border-indigo-200/60">
-                          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t.workEnvironment}</span>
+                        <div className="p-4 bg-violet-50/60 rounded-xl border border-violet-100">
+                          <span className="text-xs font-semibold text-violet-500 uppercase tracking-wider flex items-center gap-1.5">
+                            <span>🏢</span> {t.workEnvironment}
+                          </span>
                           <p className="text-sm text-gray-700 mt-1">{fiche.conditions_travail_detaillees.environnement}</p>
                         </div>
                       )}
