@@ -151,7 +151,7 @@ export interface RecrutementsData {
   code_rome: string;
   region: string | null;
   region_name: string | null;
-  recrutements: { annee: number; nb_offres: number }[];
+  recrutements: { mois: string; nb_offres: number }[];
 }
 
 export interface AuditLog {

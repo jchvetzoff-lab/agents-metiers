@@ -157,7 +157,7 @@ export default function FicheDetailPage() {
   // Recrutements data
   const [recrutements, setRecrutements] = useState<RecrutementsData | null>(null);
   const [recrutementsLoading, setRecrutementsLoading] = useState(false);
-  const [selectedYear, setSelectedYear] = useState<number>(2026);
+  const [selectedMonth, setSelectedMonth] = useState<string>("");
 
   // ── i18n: derive language from applied variante ──
   const lang = appliedVariante?.langue || "fr";
@@ -232,7 +232,12 @@ export default function FicheDetailPage() {
     let cancelled = false;
     setRecrutementsLoading(true);
     api.getRecrutements(codeRome, selectedRegion || undefined)
-      .then(data => { if (!cancelled) setRecrutements(data); })
+      .then(data => {
+        if (!cancelled) {
+          setRecrutements(data);
+          if (data.recrutements.length > 0) setSelectedMonth(data.recrutements[data.recrutements.length - 1].mois);
+        }
+      })
       .catch(() => { if (!cancelled) setRecrutements(null); })
       .finally(() => { if (!cancelled) setRecrutementsLoading(false); });
     return () => { cancelled = true; };
@@ -1420,7 +1425,7 @@ export default function FicheDetailPage() {
               </SectionAnchor>
             )}
 
-            {/* ═══ RECRUTEMENTS PAR ANNÉE ═══ */}
+            {/* ═══ RECRUTEMENTS PAR MOIS ═══ */}
             <SectionAnchor id="recrutements" title={t.recruitmentsPerYear} icon="📅">
               <p className="text-sm text-gray-500 mb-4">{t.recruitmentsDesc}</p>
               {selectedRegion && recrutements?.region_name && (
@@ -1439,64 +1444,81 @@ export default function FicheDetailPage() {
                 </div>
               ) : recrutements && recrutements.recrutements.length > 0 ? (
                 <>
-                  {/* Year pills */}
-                  <div className="flex flex-wrap gap-2 mb-6">
-                    {recrutements.recrutements.map(r => (
-                      <button
-                        key={r.annee}
-                        onClick={() => setSelectedYear(r.annee)}
-                        className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
-                          selectedYear === r.annee
-                            ? "bg-[#4A39C0] text-white shadow-sm"
-                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                        }`}
-                      >
-                        {r.annee}
-                      </button>
-                    ))}
+                  {/* Month pills */}
+                  <div className="flex flex-wrap gap-1.5 mb-6">
+                    {recrutements.recrutements.map(r => {
+                      const [y, m] = r.mois.split("-");
+                      const shortLabel = new Date(Number(y), Number(m) - 1).toLocaleDateString(t.locale, { month: "short", year: "2-digit" });
+                      return (
+                        <button
+                          key={r.mois}
+                          onClick={() => setSelectedMonth(r.mois)}
+                          className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                            selectedMonth === r.mois
+                              ? "bg-[#4A39C0] text-white shadow-sm"
+                              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                          }`}
+                        >
+                          {shortLabel}
+                        </button>
+                      );
+                    })}
                   </div>
 
                   {/* Bar chart */}
-                  <ResponsiveContainer key={`recr-${chartKey}`} width="100%" height={240}>
-                    <BarChart data={recrutements.recrutements.map(r => ({ annee: String(r.annee), offres: r.nb_offres }))} barCategoryGap="20%">
-                      <XAxis dataKey="annee" tick={{ fontSize: 13, fill: "#6B7280" }} axisLine={false} tickLine={false} />
+                  <ResponsiveContainer key={`recr-${chartKey}`} width="100%" height={260}>
+                    <BarChart data={recrutements.recrutements.map(r => {
+                      const [y, m] = r.mois.split("-");
+                      const label = new Date(Number(y), Number(m) - 1).toLocaleDateString(t.locale, { month: "short" });
+                      return { mois: r.mois, label, offres: r.nb_offres };
+                    })} barCategoryGap="12%">
+                      <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#6B7280" }} axisLine={false} tickLine={false} />
                       <YAxis tick={{ fontSize: 11, fill: "#9CA3AF" }} axisLine={false} tickLine={false} tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)} />
                       <Tooltip
                         formatter={(value: number) => [value.toLocaleString(t.locale), t.offers]}
+                        labelFormatter={(label: string, payload) => {
+                          if (!payload?.[0]?.payload?.mois) return label;
+                          const [y, m] = payload[0].payload.mois.split("-");
+                          return new Date(Number(y), Number(m) - 1).toLocaleDateString(t.locale, { month: "long", year: "numeric" });
+                        }}
                         contentStyle={{ borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 13 }}
                       />
                       <Bar dataKey="offres" radius={[6, 6, 0, 0]}>
                         {recrutements.recrutements.map((r) => (
-                          <Cell key={r.annee} fill={r.annee === selectedYear ? PURPLE : "#E4E1FF"} cursor="pointer" onClick={() => setSelectedYear(r.annee)} />
+                          <Cell key={r.mois} fill={r.mois === selectedMonth ? PURPLE : "#E4E1FF"} cursor="pointer" onClick={() => setSelectedMonth(r.mois)} />
                         ))}
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>
 
-                  {/* Detail card for selected year */}
+                  {/* Detail card for selected month */}
                   {(() => {
-                    const sel = recrutements.recrutements.find(r => r.annee === selectedYear);
+                    const sel = recrutements.recrutements.find(r => r.mois === selectedMonth);
                     if (!sel) return null;
+                    const [y, m] = sel.mois.split("-");
+                    const monthLabel = new Date(Number(y), Number(m) - 1).toLocaleDateString(t.locale, { month: "long", year: "numeric" });
                     return (
                       <div className="mt-4 p-5 bg-[#F9F8FF] rounded-xl border border-[#E4E1FF]">
                         <div className="flex items-center justify-between">
                           <div>
-                            <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">{sel.annee}</div>
+                            <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">{monthLabel}</div>
                             <div className="text-3xl font-bold text-[#4A39C0]">{sel.nb_offres.toLocaleString(t.locale)}</div>
                             <div className="text-sm text-gray-500 mt-0.5">{t.offers}</div>
                           </div>
                           {(() => {
-                            const idx = recrutements.recrutements.findIndex(r => r.annee === selectedYear);
+                            const idx = recrutements.recrutements.findIndex(r => r.mois === selectedMonth);
                             if (idx <= 0) return null;
                             const prev = recrutements.recrutements[idx - 1];
                             if (prev.nb_offres === 0) return null;
                             const pctChange = Math.round(((sel.nb_offres - prev.nb_offres) / prev.nb_offres) * 100);
                             const isUp = pctChange >= 0;
+                            const [py, pm] = prev.mois.split("-");
+                            const prevLabel = new Date(Number(py), Number(pm) - 1).toLocaleDateString(t.locale, { month: "short" });
                             return (
                               <div className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-semibold ${isUp ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500"}`}>
                                 <span>{isUp ? "↑" : "↓"}</span>
                                 <span>{isUp ? "+" : ""}{pctChange}%</span>
-                                <span className="text-xs font-normal ml-1">vs {prev.annee}</span>
+                                <span className="text-xs font-normal ml-1">vs {prevLabel}</span>
                               </div>
                             );
                           })()}
