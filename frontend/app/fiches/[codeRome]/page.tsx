@@ -2312,7 +2312,7 @@ export default function FicheDetailPage() {
                 <ServiceLink icon="🏅" title={t.vae} desc={t.vaeDesc} url="https://vae.gouv.fr" />
                 <ServiceLink icon="🚗" title={t.mobilityAids} desc={t.mobilityAidsDesc} url="https://candidat.francetravail.fr/aides" />
                 <ServiceLink icon="📅" title={t.ftEvents} desc={t.ftEventsDesc} url="https://mesevenementsemploi.francetravail.fr" />
-                <ServiceLink icon="💼" title={t.jobOffers} desc={`${t.seeOffersFor} ${fiche.nom_epicene}`} url={`https://candidat.francetravail.fr/offres/recherche?motsCles=${encodeURIComponent(fiche.nom_masculin)}`} />
+                <ServiceLink icon="💼" title={t.jobOffers} desc={`${t.seeOffersFor} ${dNom}`} url={`https://candidat.francetravail.fr/offres/recherche?motsCles=${encodeURIComponent(dNom)}`} />
               </div>
             </SectionAnchor>
 
