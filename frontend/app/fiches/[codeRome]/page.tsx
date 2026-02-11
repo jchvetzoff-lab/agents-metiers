@@ -23,13 +23,14 @@ const PIE_COLORS = [PURPLE, PINK, CYAN, "#F59E0B"];
 // ── Composants réutilisables ──
 // ══════════════════════════════════════════════
 
-function SectionAnchor({ id, title, icon, children }: {
-  id: string; title: string; icon: string; children: React.ReactNode;
+function SectionAnchor({ id, title, icon, children, accentColor }: {
+  id: string; title: string; icon: string; children: React.ReactNode; accentColor?: string;
 }) {
   return (
     <section id={id} className="scroll-mt-24">
       <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
         <div className="flex items-center gap-3 px-6 md:px-8 py-5 border-b border-gray-100 bg-gray-50/50">
+          {accentColor && <span className="w-1 h-6 rounded-full shrink-0" style={{ backgroundColor: accentColor }} />}
           <span className="text-xl">{icon}</span>
           <h2 className="text-lg md:text-xl font-bold text-[#1A1A2E]">{title}</h2>
         </div>
@@ -39,11 +40,12 @@ function SectionAnchor({ id, title, icon, children }: {
   );
 }
 
-function StatCard({ label, value, sub, color = PURPLE }: {
-  label: string; value: string; sub?: string; color?: string;
+function StatCard({ label, value, sub, color = PURPLE, bgColor, icon }: {
+  label: string; value: string; sub?: string; color?: string; bgColor?: string; icon?: string;
 }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5 text-center">
+    <div className="rounded-xl border border-gray-200 p-5 text-center" style={{ backgroundColor: bgColor || "#fff" }}>
+      {icon && <div className="text-2xl mb-1">{icon}</div>}
       <div className="text-3xl font-bold mb-1" style={{ color }}>{value}</div>
       <div className="text-sm font-medium text-gray-700">{label}</div>
       {sub && <div className="text-xs text-gray-400 mt-1">{sub}</div>}
@@ -122,6 +124,29 @@ function ServiceLink({ icon, title, desc, url }: {
       </div>
       <svg className="w-4 h-4 text-gray-300 group-hover:text-[#4A39C0] shrink-0 ml-auto mt-1 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
     </a>
+  );
+}
+
+function SourceTag({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="mt-3 text-[11px] text-gray-400 italic flex items-center gap-1">
+      <svg className="w-3 h-3 text-gray-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="10" strokeWidth="2"/><path strokeLinecap="round" d="M12 16v-4m0-4h.01" strokeWidth="2"/></svg>
+      {children}
+    </p>
+  );
+}
+
+// Custom label for pie chart: show % inside segment, names go in legend
+const RADIAN = Math.PI / 180;
+function renderPieLabel({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) {
+  if (percent < 0.08) return null; // hide label for very small slices
+  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+  return (
+    <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" fontSize={12} fontWeight={700}>
+      {`${(percent * 100).toFixed(0)}%`}
+    </text>
   );
 }
 
@@ -493,6 +518,15 @@ export default function FicheDetailPage() {
         y += boxH + 5;
       }
 
+      function sourceText(text: string) {
+        ensureSpace(8);
+        pdf.setFontSize(7);
+        pdf.setFont("helvetica", "italic");
+        txt(C.gray400);
+        pdf.text(text, ML + 2, y);
+        y += 6;
+      }
+
       function tags(items: string[]) {
         ensureSpace(10);
         let x = ML + 2;
@@ -599,6 +633,7 @@ export default function FicheDetailPage() {
         subTitle("Secteurs d'activite");
         tags(d.secteurs_activite);
       }
+      sourceText("Source : Referentiel ROME + enrichissement IA");
 
       // ══════════════════════════════════════════════
       // STATISTIQUES
@@ -830,6 +865,7 @@ export default function FicheDetailPage() {
           }
           y += 32;
         }
+        sourceText("Source : Estimation IA (Claude)");
       }
 
       // ══════════════════════════════════════════════
@@ -871,6 +907,7 @@ export default function FicheDetailPage() {
           y += 6;
           bulletList(d.savoirs!, C.cyan);
         }
+        sourceText("Source : Referentiel ROME + enrichissement IA");
       }
 
       // ══════════════════════════════════════════════
@@ -922,6 +959,7 @@ export default function FicheDetailPage() {
           subTitle("Autres appellations");
           tags(d.autres_appellations);
         }
+        sourceText("Source : Referentiel ROME");
       }
 
       // ══════════════════════════════════════════════
@@ -998,6 +1036,7 @@ export default function FicheDetailPage() {
           }
           y += 4;
         }
+        sourceText("Source : Analyse IA (Claude)");
       }
 
       // ══════════════════════════════════════════════
@@ -1035,6 +1074,7 @@ export default function FicheDetailPage() {
             bulletList(cd.risques, C.pink);
           }
         }
+        sourceText("Source : Referentiel ROME");
       }
 
       // ══════════════════════════════════════════════
@@ -1185,6 +1225,7 @@ export default function FicheDetailPage() {
   // Salary data: prefer regional salaires_par_niveau when available
   const regSal = isRegional ? regionalData?.salaires_par_niveau : null;
   const useSalRegional = !!(regSal && (regSal.junior || regSal.confirme || regSal.senior));
+  const salaryFallbackToNational = isRegional && !useSalRegional;
   const salarySource = useSalRegional ? regSal! : fiche.salaires;
   const salaryData = salarySource && (salarySource.junior?.median || salarySource.confirme?.median || salarySource.senior?.median)
     ? [
@@ -1195,10 +1236,12 @@ export default function FicheDetailPage() {
     : null;
 
   // Contract data: prefer regional when available
+  // When regional is selected but has 0 offers, don't show IA fallback pie chart
   const regContrats = isRegional ? regionalData?.types_contrats : null;
   const useContratRegional = !!(regContrats && (regContrats.cdi > 0 || regContrats.cdd > 0));
+  const hideContractChart = isRegional && regionalData?.nb_offres === 0 && !useContratRegional;
   const contratSource = useContratRegional ? regContrats! : fiche.types_contrats;
-  const contractData = contratSource && (contratSource.cdi > 0 || contratSource.cdd > 0)
+  const contractData = !hideContractChart && contratSource && (contratSource.cdi > 0 || contratSource.cdd > 0)
     ? [
         { name: t.cdi, value: contratSource.cdi },
         { name: t.cdd, value: contratSource.cdd },
@@ -1418,7 +1461,7 @@ export default function FicheDetailPage() {
           <div className="flex-1 min-w-0 space-y-6">
 
             {/* ═══ INFORMATIONS CLÉS ═══ */}
-            <SectionAnchor id="infos" title={t.secKeyInfo} icon="📋">
+            <SectionAnchor id="infos" title={t.secKeyInfo} icon="📋" accentColor="#4A39C0">
               {dDescription && (
                 <div className="mb-6">
                   <p className="text-gray-700 leading-relaxed text-[16px]">{dDescription}</p>
@@ -1460,11 +1503,12 @@ export default function FicheDetailPage() {
                   </div>
                 </div>
               )}
+              <SourceTag>{t.sourceRomeIa}</SourceTag>
             </SectionAnchor>
 
             {/* ═══ DOMAINE PROFESSIONNEL ═══ */}
             {hasDomain && (
-              <SectionAnchor id="domaine" title={t.professionalDomain} icon="🏷️">
+              <SectionAnchor id="domaine" title={t.professionalDomain} icon="🏷️" accentColor="#FF3254">
                 {fiche.domaine_professionnel?.domaine && (
                   <div className="flex flex-wrap gap-3 mb-5">
                     <span className="px-4 py-2 rounded-full bg-[#4A39C0] text-white text-sm font-semibold">
@@ -1505,12 +1549,13 @@ export default function FicheDetailPage() {
                     </div>
                   </div>
                 )}
+                <SourceTag>{t.sourceRome}</SourceTag>
               </SectionAnchor>
             )}
 
             {/* ═══ STATISTIQUES ═══ */}
             {hasStats && (
-              <SectionAnchor id="stats" title={t.statsTitle} icon="📊">
+              <SectionAnchor id="stats" title={t.statsTitle} icon="📊" accentColor="#00C8C8">
                 {/* ── Region selector ── */}
                 {regions.length > 0 && (
                   <div className="flex flex-wrap items-center gap-3 mb-6 p-4 bg-[#F9F8FF] rounded-xl border border-[#E4E1FF]">
@@ -1556,9 +1601,9 @@ export default function FicheDetailPage() {
                 {/* ── Stat cards (region-aware) ── */}
                 {isRegional ? (
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-                    <StatCard label={t.activeOffers} value={regionalData!.nb_offres.toLocaleString(t.locale)} color={PURPLE} />
+                    <StatCard label={t.activeOffers} value={regionalData!.nb_offres.toLocaleString(t.locale)} color="#2563EB" bgColor="#EFF6FF" icon="💼" />
                     {regionalData!.salaires && (
-                      <StatCard label={t.medianSalary} value={`${(regionalData!.salaires.median / 1000).toFixed(0)}k€`} sub={t.grossAnnual} color={CYAN} />
+                      <StatCard label={t.medianSalary} value={`${(regionalData!.salaires.median / 1000).toFixed(0)}k€`} sub={t.grossAnnual} color="#059669" bgColor="#ECFDF5" icon="💰" />
                     )}
                     <div className="col-span-2 md:col-span-1">
                       {showTensionGauge ? (
@@ -1574,10 +1619,10 @@ export default function FicheDetailPage() {
                 ) : fiche.perspectives && (fiche.perspectives.nombre_offres != null || fiche.perspectives.taux_insertion != null) ? (
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
                     {fiche.perspectives.nombre_offres != null && (
-                      <StatCard label={t.offersPerYear} value={fiche.perspectives.nombre_offres.toLocaleString(t.locale)} sub={t.nationalEstimate} color={PURPLE} />
+                      <StatCard label={t.offersPerYear} value={fiche.perspectives.nombre_offres.toLocaleString(t.locale)} sub={t.nationalEstimate} color="#2563EB" bgColor="#EFF6FF" icon="💼" />
                     )}
                     {fiche.perspectives.taux_insertion != null && (
-                      <StatCard label={t.insertionRate} value={`${(fiche.perspectives.taux_insertion * 100).toFixed(0)}%`} sub={t.afterTraining} color={CYAN} />
+                      <StatCard label={t.insertionRate} value={`${(fiche.perspectives.taux_insertion * 100).toFixed(0)}%`} sub={t.afterTraining} color="#059669" bgColor="#ECFDF5" icon="🎯" />
                     )}
                     <div className="col-span-2 md:col-span-1">
                       <TensionGauge value={tensionValue} labels={{ title: t.marketTension, high: t.highDemand, moderate: t.moderateDemand, low: t.lowDemand }} />
@@ -1589,15 +1634,18 @@ export default function FicheDetailPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {salaryData && (
                     <div>
-                      <div className="flex items-center gap-2 mb-4">
+                      <div className="flex items-center gap-2 mb-2">
                         <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">{t.grossSalaries}</h3>
                         {useSalRegional && (
                           <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#E4E1FF] text-[#4A39C0] font-semibold">{t.regionalLive}</span>
                         )}
                         {!useSalRegional && (
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-semibold">{t.nationalData}</span>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-semibold">{t.estimationIaNationale}</span>
                         )}
                       </div>
+                      {salaryFallbackToNational && (
+                        <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-1.5 mb-3">{t.salaryFallbackNational}</p>
+                      )}
                       <ResponsiveContainer key={`sal-${chartKey}`} width="100%" height={240}>
                         <BarChart data={salaryData} barCategoryGap="20%">
                           <XAxis dataKey="niveau" tick={{ fontSize: 12, fill: "#6B7280" }} axisLine={false} tickLine={false} />
@@ -1632,7 +1680,7 @@ export default function FicheDetailPage() {
                       )}
                     </div>
                   )}
-                  {contractData && (
+                  {contractData ? (
                     <div>
                       <div className="flex items-center gap-2 mb-4">
                         <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">{t.hiringBreakdown}</h3>
@@ -1640,21 +1688,39 @@ export default function FicheDetailPage() {
                           <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#E4E1FF] text-[#4A39C0] font-semibold">{t.regionalLive}</span>
                         )}
                         {!useContratRegional && (
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-semibold">{t.nationalData}</span>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-semibold">{t.estimationIaNationale}</span>
                         )}
                       </div>
                       <ResponsiveContainer key={`ctr-${chartKey}`} width="100%" height={240}>
                         <PieChart>
                           <Pie data={contractData} cx="50%" cy="50%" innerRadius={50} outerRadius={85} paddingAngle={3} dataKey="value"
-                            label={({ name, value }) => `${name} (${value}%)`} labelLine={{ stroke: "#d1d5db" }}>
+                            label={renderPieLabel} labelLine={false}>
                             {contractData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
                           </Pie>
-                          <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} />
+                          <Tooltip formatter={(val: number) => `${val}%`} />
+                          <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} formatter={(value: string) => <span className="text-gray-700">{value}</span>} />
                         </PieChart>
                       </ResponsiveContainer>
+                      <SourceTag>{useContratRegional ? t.sourceFranceTravail : t.sourceIa}</SourceTag>
                     </div>
-                  )}
+                  ) : hideContractChart ? (
+                    <div>
+                      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">{t.hiringBreakdown}</h3>
+                      <div className="flex flex-col items-center justify-center py-12 bg-gray-50 rounded-xl">
+                        <span className="text-3xl mb-2">📊</span>
+                        <p className="text-sm text-gray-400 italic">{t.noContractDataRegion}</p>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
+
+                {/* Source for salary chart */}
+                {salaryData && (
+                  <div className="mt-1">
+                    <SourceTag>{useSalRegional ? t.sourceFranceTravail : t.sourceIa}</SourceTag>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
                   {fiche.perspectives && (
                     <div className="bg-gray-50 rounded-xl p-5">
@@ -1675,11 +1741,13 @@ export default function FicheDetailPage() {
                     </div>
                   )}
                 </div>
+                {fiche.perspectives && <SourceTag>{t.sourceIa}</SourceTag>}
+                {showTensionGauge && isRegional && <SourceTag>{t.sourceFranceTravail}</SourceTag>}
               </SectionAnchor>
             )}
 
             {/* ═══ RECRUTEMENTS PAR MOIS ═══ */}
-            <SectionAnchor id="recrutements" title={t.recruitmentsPerYear} icon="📅">
+            <SectionAnchor id="recrutements" title={t.recruitmentsPerYear} icon="📅" accentColor="#4A39C0">
               <p className="text-sm text-gray-500 mb-4">{t.recruitmentsDesc}</p>
               {selectedRegion && recrutements?.region_name && (
                 <div className="flex items-center gap-2 mb-4">
@@ -1783,10 +1851,11 @@ export default function FicheDetailPage() {
               ) : (
                 <div className="text-center py-8 text-gray-400 text-sm">{t.recruitmentsError}</div>
               )}
+              <SourceTag>{t.sourceFtMonthly}</SourceTag>
             </SectionAnchor>
 
             {/* ═══ OFFRES D'EMPLOI ═══ */}
-            <SectionAnchor id="offres" title={t.liveOffers} icon="💼">
+            <SectionAnchor id="offres" title={t.liveOffers} icon="💼" accentColor="#FF3254">
               <p className="text-sm text-gray-500 mb-4">{t.liveOffersDesc}</p>
 
               {offresLoading ? (
@@ -1894,26 +1963,38 @@ export default function FicheDetailPage() {
               ) : (
                 <div className="text-center py-8 text-gray-400 text-sm">{t.liveOffersError}</div>
               )}
+              <SourceTag>{t.sourceFtOffers}</SourceTag>
             </SectionAnchor>
 
             {/* ═══ PROFIL & PERSONNALITÉ ═══ */}
             {hasProfile && (
-              <SectionAnchor id="profil" title={t.secProfile} icon="🧠">
+              <SectionAnchor id="profil" title={t.secProfile} icon="🧠" accentColor="#00C8C8">
                 {/* ── Traits de personnalité ── */}
-                {fiche.traits_personnalite && fiche.traits_personnalite.length > 0 && (
+                {fiche.traits_personnalite && fiche.traits_personnalite.length > 0 && (() => {
+                  const traitColors = [
+                    { bg: "#F5F3FF", border: "#E4E1FF", badge: "#4A39C0" },
+                    { bg: "#FFF5F7", border: "#FFE0E6", badge: "#FF3254" },
+                    { bg: "#F0FDFA", border: "#CCFBF1", badge: "#00C8C8" },
+                    { bg: "#FFF7ED", border: "#FED7AA", badge: "#F59E0B" },
+                  ];
+                  return (
                   <div className="mb-8">
                     <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-1">{t.personalityTraits}</h3>
                     <p className="text-xs text-gray-400 mb-4">{t.personalityTraitsDesc}</p>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      {fiche.traits_personnalite.map((trait, i) => (
-                        <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-[#F9F8FF] border border-[#E4E1FF]/60">
-                          <span className="w-7 h-7 rounded-full bg-[#4A39C0] text-white flex items-center justify-center text-xs font-bold shrink-0">{i + 1}</span>
+                      {fiche.traits_personnalite.map((trait, i) => {
+                        const c = traitColors[i % traitColors.length];
+                        return (
+                        <div key={i} className="flex items-center gap-3 p-3 rounded-xl" style={{ backgroundColor: c.bg, border: `1px solid ${c.border}` }}>
+                          <span className="w-7 h-7 rounded-full text-white flex items-center justify-center text-xs font-bold shrink-0" style={{ backgroundColor: c.badge }}>{i + 1}</span>
                           <span className="text-sm text-gray-700 font-medium">{trait}</span>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
-                )}
+                  );
+                })()}
 
                 {/* ── Aptitudes ── */}
                 {fiche.aptitudes && fiche.aptitudes.length > 0 && (
@@ -1925,7 +2006,7 @@ export default function FicheDetailPage() {
                         <div key={i} className="flex items-center gap-4">
                           <span className="text-sm text-gray-700 font-medium w-48 shrink-0 truncate">{apt.nom}</span>
                           <div className="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden">
-                            <div className="h-full rounded-full bg-[#4A39C0] transition-all duration-500" style={{ width: `${(apt.niveau / 5) * 100}%` }} />
+                            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${(apt.niveau / 5) * 100}%`, background: "linear-gradient(90deg, #4A39C0, #FF3254)" }} />
                           </div>
                           <span className="text-xs font-bold text-[#4A39C0] w-8 text-right">{apt.niveau}/5</span>
                         </div>
@@ -2043,12 +2124,13 @@ export default function FicheDetailPage() {
                     </div>
                   </div>
                 )}
+                <SourceTag>{t.sourceIaClaude}</SourceTag>
               </SectionAnchor>
             )}
 
             {/* ═══ COMPÉTENCES ═══ */}
             {(hasCompetences || hasSavoirEtre || hasSavoirs) && (
-              <SectionAnchor id="competences" title={t.secSkills} icon="⚡">
+              <SectionAnchor id="competences" title={t.secSkills} icon="⚡" accentColor="#4A39C0">
                 <div className="border-b border-gray-200 mb-6 overflow-x-auto scrollbar-hide">
                   <div className="flex gap-0 -mb-px min-w-0">
                     {[
@@ -2094,12 +2176,13 @@ export default function FicheDetailPage() {
                     ))}
                   </div>
                 )}
+                <SourceTag>{t.sourceRomeIa}</SourceTag>
               </SectionAnchor>
             )}
 
             {/* ═══ CONTEXTES DE TRAVAIL ═══ */}
             {hasContextes && (
-              <SectionAnchor id="contextes" title={t.secWorkContexts} icon="🏢">
+              <SectionAnchor id="contextes" title={t.secWorkContexts} icon="🏢" accentColor="#FF3254">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   {dConditions && dConditions.length > 0 && (
                     <div>
@@ -2157,12 +2240,13 @@ export default function FicheDetailPage() {
                     )}
                   </div>
                 )}
+                <SourceTag>{t.sourceRome}</SourceTag>
               </SectionAnchor>
             )}
 
             {/* ═══ SITES UTILES ═══ */}
             {hasSitesUtiles && (
-              <SectionAnchor id="sites" title={t.secUsefulLinks} icon="🌐">
+              <SectionAnchor id="sites" title={t.secUsefulLinks} icon="🌐" accentColor="#00C8C8">
                 <p className="text-sm text-gray-500 mb-4">{t.usefulSitesDesc}</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {fiche.sites_utiles.map((site, i) => (
@@ -2180,7 +2264,7 @@ export default function FicheDetailPage() {
             )}
 
             {/* ═══ SERVICES & OFFRES ═══ */}
-            <SectionAnchor id="services" title={t.secServices} icon="🔗">
+            <SectionAnchor id="services" title={t.secServices} icon="🔗" accentColor="#4A39C0">
               <p className="text-sm text-gray-500 mb-4">{t.servicesIntro}</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <ServiceLink icon="🎓" title={t.findTraining} desc={t.findTrainingDesc} url="https://candidat.francetravail.fr/formations/recherche" />
@@ -2196,7 +2280,7 @@ export default function FicheDetailPage() {
 
             {/* ═══ MÉTIERS PROCHES ═══ */}
             {hasMobilite && (
-              <SectionAnchor id="mobilite" title={t.secRelatedJobs} icon="🔄">
+              <SectionAnchor id="mobilite" title={t.secRelatedJobs} icon="🔄" accentColor="#FF3254">
                 <p className="text-sm text-gray-500 mb-5">{t.relatedJobsIntro}</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   {fiche.mobilite!.metiers_proches?.length > 0 && (
