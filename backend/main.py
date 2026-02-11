@@ -98,6 +98,30 @@ try:
 except Exception as e:
     print(f"Migration warning: {e}")
 
+# Migration variantes : ajouter missions_principales, acces_metier, savoirs
+def run_variantes_migrations():
+    """Ajoute les colonnes manquantes à la table variantes_fiches."""
+    from sqlalchemy import text, inspect
+    engine = repo.engine
+    inspector = inspect(engine)
+    if "variantes_fiches" not in inspector.get_table_names():
+        return
+    existing_cols = {c["name"] for c in inspector.get_columns("variantes_fiches")}
+    new_columns = {
+        "missions_principales": "JSON DEFAULT '[]'",
+        "acces_metier": "TEXT",
+        "savoirs": "JSON DEFAULT '[]'",
+    }
+    with engine.begin() as conn:
+        for col_name, col_type in new_columns.items():
+            if col_name not in existing_cols:
+                conn.execute(text(f'ALTER TABLE variantes_fiches ADD COLUMN {col_name} {col_type}'))
+
+try:
+    run_variantes_migrations()
+except Exception as e:
+    print(f"Variantes migration warning: {e}")
+
 # Migration auth : créer la table users
 from backend.auth import (
     create_users_table, UserCreate, UserLogin, UserResponse, UserDB,
@@ -573,8 +597,11 @@ async def get_variante_detail(code_rome: str, variante_id: int):
             "nom": variante.nom,
             "description": variante.description,
             "description_courte": variante.description_courte,
+            "missions_principales": variante.missions_principales,
+            "acces_metier": variante.acces_metier,
             "competences": variante.competences,
             "competences_transversales": variante.competences_transversales,
+            "savoirs": variante.savoirs,
             "formations": variante.formations,
             "certifications": variante.certifications,
             "conditions_travail": variante.conditions_travail,
@@ -1347,7 +1374,10 @@ FICHE SOURCE :
 - Code ROME : {code_rome}
 - Nom : {nom_masculin} / {nom_feminin}
 - Description : {description}
+- Missions principales : {missions}
+- Accès métier : {acces}
 - Compétences : {competences}
+- Savoirs : {savoirs}
 - Formations : {formations}
 
 TÂCHE : Générer EXACTEMENT {nb_variantes} variantes de cette fiche selon les axes suivants :
@@ -1396,8 +1426,11 @@ Réponds UNIQUEMENT avec un objet JSON valide (sans texte avant ou après) :
             "nom": "Nom du métier dans la langue demandée",
             "description": "Description complète dans la langue demandée (3-5 phrases)",
             "description_courte": "Description courte dans la langue demandée (1 phrase max 200 car)",
+            "missions_principales": ["Mission 1 dans la langue", "Mission 2", "..."],
+            "acces_metier": "Texte décrivant comment accéder à ce métier, dans la langue demandée",
             "competences": ["Compétence 1 dans la langue", "Compétence 2", "..."],
             "competences_transversales": ["Soft skill 1 dans la langue", "..."],
+            "savoirs": ["Savoir 1 dans la langue", "Savoir 2", "..."],
             "formations": ["Formation 1 dans la langue", "..."],
             "certifications": ["Certification 1", "..."],
             "conditions_travail": ["Condition 1 dans la langue", "..."],
@@ -1506,7 +1539,10 @@ def generate_variantes(code_rome: str, request: GenerateVariantesRequest, curren
                 nom_masculin=fiche.nom_masculin,
                 nom_feminin=fiche.nom_feminin,
                 description=fiche.description or "",
+                missions=", ".join((fiche.missions_principales or [])[:5]) + ("..." if len(fiche.missions_principales or []) > 5 else ""),
+                acces=fiche.acces_metier or "Non renseigné",
                 competences=", ".join((fiche.competences or [])[:5]) + ("..." if len(fiche.competences or []) > 5 else ""),
+                savoirs=", ".join((fiche.savoirs or [])[:5]) + ("..." if len(fiche.savoirs or []) > 5 else ""),
                 formations=", ".join((fiche.formations or [])[:3]) + ("..." if len(fiche.formations or []) > 3 else ""),
                 nb_variantes=len(batch),
                 tranches_str=", ".join(batch_tranches),
@@ -1548,8 +1584,11 @@ def generate_variantes(code_rome: str, request: GenerateVariantesRequest, curren
                         nom=v_data.get("nom", fiche.nom_epicene),
                         description=v_data.get("description", ""),
                         description_courte=v_data.get("description_courte"),
+                        missions_principales=v_data.get("missions_principales", []),
+                        acces_metier=v_data.get("acces_metier"),
                         competences=v_data.get("competences", []),
                         competences_transversales=v_data.get("competences_transversales", []),
+                        savoirs=v_data.get("savoirs", []),
                         formations=v_data.get("formations", []),
                         certifications=v_data.get("certifications", []),
                         conditions_travail=v_data.get("conditions_travail", []),

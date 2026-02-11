@@ -297,8 +297,11 @@ class VarianteFiche(BaseModel):
     nom: str
     description: str = ""
     description_courte: Optional[str] = None
+    missions_principales: List[str] = Field(default_factory=list)
+    acces_metier: Optional[str] = None
     competences: List[str] = Field(default_factory=list)
     competences_transversales: List[str] = Field(default_factory=list)
+    savoirs: List[str] = Field(default_factory=list)
     formations: List[str] = Field(default_factory=list)
     certifications: List[str] = Field(default_factory=list)
     conditions_travail: List[str] = Field(default_factory=list)
@@ -567,8 +570,11 @@ class VarianteFicheDB(Base):
     nom = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     description_courte = Column(String(500), nullable=True)
+    missions_principales = Column(JSON, default=list)
+    acces_metier = Column(Text, nullable=True)
     competences = Column(JSON, default=list)
     competences_transversales = Column(JSON, default=list)
+    savoirs = Column(JSON, default=list)
     formations = Column(JSON, default=list)
     certifications = Column(JSON, default=list)
     conditions_travail = Column(JSON, default=list)
@@ -597,8 +603,11 @@ class VarianteFicheDB(Base):
             nom=self.nom,
             description=self.description or "",
             description_courte=self.description_courte,
+            missions_principales=self.missions_principales or [],
+            acces_metier=self.acces_metier,
             competences=self.competences or [],
             competences_transversales=self.competences_transversales or [],
+            savoirs=self.savoirs or [],
             formations=self.formations or [],
             certifications=self.certifications or [],
             conditions_travail=self.conditions_travail or [],
@@ -620,8 +629,11 @@ class VarianteFicheDB(Base):
             nom=variante.nom,
             description=variante.description,
             description_courte=variante.description_courte,
+            missions_principales=variante.missions_principales,
+            acces_metier=variante.acces_metier,
             competences=variante.competences,
             competences_transversales=variante.competences_transversales,
+            savoirs=variante.savoirs,
             formations=variante.formations,
             certifications=variante.certifications,
             conditions_travail=variante.conditions_travail,

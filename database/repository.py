@@ -514,8 +514,11 @@ class Repository:
                 existing.nom = variante.nom
                 existing.description = variante.description
                 existing.description_courte = variante.description_courte
+                existing.missions_principales = variante.missions_principales
+                existing.acces_metier = variante.acces_metier
                 existing.competences = variante.competences
                 existing.competences_transversales = variante.competences_transversales
+                existing.savoirs = variante.savoirs
                 existing.formations = variante.formations
                 existing.certifications = variante.certifications
                 existing.conditions_travail = variante.conditions_travail
