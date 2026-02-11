@@ -94,7 +94,7 @@ Réponds UNIQUEMENT avec un objet JSON valide (sans texte avant/après) :
     }},
     "perspectives": {{
         "tension": 0.65,
-        "tendance": "stable",
+        "tendance": "emergence",
         "evolution_5ans": "Analyse factuelle de l'évolution du métier sur 5 ans : impact du numérique, de la transition écologique, de la réglementation, des évolutions technologiques. 3-4 phrases.",
         "nombre_offres": 2500,
         "taux_insertion": 0.72
@@ -171,7 +171,11 @@ Réponds UNIQUEMENT avec un objet JSON valide (sans texte avant/après) :
 RÈGLES STRICTES :
 - Salaires en euros brut ANNUEL France, réalistes pour 2025.
 - tension : float 0-1 (0=peu de demande, 1=très forte demande).
-- tendance : "emergence", "stable" ou "disparition".
+- tendance : choisir parmi "emergence", "stable", "disparition" en analysant factuellement :
+  * "emergence" si le métier bénéficie du numérique, IA, transition écologique, vieillissement, nouvelles réglementations
+  * "stable" UNIQUEMENT si le métier n'est ni en croissance ni en déclin notable
+  * "disparition" si le métier est menacé par l'automatisation, IA, délocalisation, évolution réglementaire
+  NE PAS mettre "stable" par défaut. Justifier dans evolution_5ans.
 - types_contrats : pourcentages totalisant 100, réalistes pour le secteur.
 - nombre_offres : estimation réaliste du nombre d'offres/an en France.
 - taux_insertion : float 0-1, taux d'insertion à 6 mois.

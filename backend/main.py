@@ -644,7 +644,7 @@ Réponds UNIQUEMENT avec un objet JSON valide (sans texte avant ou après) conte
     }},
     "perspectives": {{
         "tension": 0.6,
-        "tendance": "stable",
+        "tendance": "emergence",
         "evolution_5ans": "Analyse courte de l'évolution du métier dans les 5 prochaines années.",
         "nombre_offres": 5000,
         "taux_insertion": 0.75
@@ -718,7 +718,11 @@ Réponds UNIQUEMENT avec un objet JSON valide (sans texte avant ou après) conte
 Notes :
 - Les salaires sont en euros brut annuel pour la France en 2025.
 - "tension" est un float entre 0 (peu de demande) et 1 (très forte demande).
-- "tendance" est "emergence", "stable" ou "disparition".
+- "tendance" : choisir parmi "emergence", "stable", "disparition" en analysant factuellement :
+  * "emergence" si le métier bénéficie du numérique, IA, transition écologique, vieillissement, nouvelles réglementations
+  * "stable" UNIQUEMENT si le métier n'est ni en croissance ni en déclin notable
+  * "disparition" si le métier est menacé par l'automatisation, IA, délocalisation, évolution réglementaire
+  NE PAS mettre "stable" par défaut. Justifier dans evolution_5ans.
 - "nombre_offres" est une estimation du nombre d'offres d'emploi par an en France.
 - "taux_insertion" est un float entre 0 et 1.
 - "types_contrats" : les pourcentages doivent totaliser 100.
