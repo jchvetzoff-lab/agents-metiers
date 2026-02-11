@@ -1031,10 +1031,10 @@ def validate_fiche(code_rome: str, current_user: dict = Depends(get_current_user
             conditions_travail=json.dumps(fiche.conditions_travail or [], ensure_ascii=False),
             environnements=json.dumps(fiche.environnements or [], ensure_ascii=False),
             secteurs_activite=json.dumps(fiche.secteurs_activite or [], ensure_ascii=False),
-            salaires=json.dumps(fiche.salaires.model_dump() if fiche.salaires else {}, ensure_ascii=False),
-            perspectives=json.dumps(fiche.perspectives.model_dump() if fiche.perspectives else {}, ensure_ascii=False),
-            types_contrats=json.dumps(fiche.types_contrats.model_dump() if fiche.types_contrats else {}, ensure_ascii=False),
-            mobilite=json.dumps(fiche.mobilite.model_dump() if fiche.mobilite else {}, ensure_ascii=False),
+            salaires=json.dumps(fiche.salaires.model_dump(mode="json") if fiche.salaires else {}, ensure_ascii=False),
+            perspectives=json.dumps(fiche.perspectives.model_dump(mode="json") if fiche.perspectives else {}, ensure_ascii=False),
+            types_contrats=json.dumps(fiche.types_contrats.model_dump(mode="json") if fiche.types_contrats else {}, ensure_ascii=False),
+            mobilite=json.dumps(fiche.mobilite.model_dump(mode="json") if fiche.mobilite else {}, ensure_ascii=False),
         )
 
         response = claude_call_with_retry(
@@ -1301,10 +1301,10 @@ def auto_correct_fiche(code_rome: str, rapport: AutoCorrectRequest, current_user
             environnements=json.dumps(fiche.environnements or [], ensure_ascii=False),
             nb_secteurs=len(fiche.secteurs_activite or []),
             secteurs_activite=json.dumps(fiche.secteurs_activite or [], ensure_ascii=False),
-            salaires=json.dumps(fiche.salaires.model_dump() if fiche.salaires else {}, ensure_ascii=False),
-            perspectives=json.dumps(fiche.perspectives.model_dump() if fiche.perspectives else {}, ensure_ascii=False),
-            types_contrats=json.dumps(fiche.types_contrats.model_dump() if fiche.types_contrats else {}, ensure_ascii=False),
-            mobilite=json.dumps(fiche.mobilite.model_dump() if fiche.mobilite else {}, ensure_ascii=False),
+            salaires=json.dumps(fiche.salaires.model_dump(mode="json") if fiche.salaires else {}, ensure_ascii=False),
+            perspectives=json.dumps(fiche.perspectives.model_dump(mode="json") if fiche.perspectives else {}, ensure_ascii=False),
+            types_contrats=json.dumps(fiche.types_contrats.model_dump(mode="json") if fiche.types_contrats else {}, ensure_ascii=False),
+            mobilite=json.dumps(fiche.mobilite.model_dump(mode="json") if fiche.mobilite else {}, ensure_ascii=False),
             problemes="\n".join(f"- {p}" for p in rapport.problemes) or "Aucun problème spécifique",
             suggestions="\n".join(f"- {s}" for s in rapport.suggestions) or "Aucune suggestion spécifique",
         )
