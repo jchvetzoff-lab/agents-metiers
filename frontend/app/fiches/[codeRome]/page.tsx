@@ -12,6 +12,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
   PieChart, Pie, Legend,
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
+  AreaChart, Area, CartesianGrid,
 } from "recharts";
 
 // ── Couleurs ──
@@ -1789,6 +1790,87 @@ export default function FicheDetailPage() {
                       <p className="text-sm text-gray-600 leading-relaxed">{fiche.perspectives.evolution_5ans}</p>
                     </div>
                   )}
+
+                  {/* ── Trend charts (5-year projections) ── */}
+                  {(() => {
+                    const tendance = fiche.perspectives?.tendance?.toLowerCase() || "";
+                    const isHausse = tendance.includes("hausse") || tendance.includes("croiss") || tendance.includes("forte");
+                    const isBaisse = tendance.includes("baisse") || tendance.includes("declin") || tendance.includes("recul");
+                    // Salary growth rate per year
+                    const salGrowth = isHausse ? 0.035 : isBaisse ? -0.01 : 0.018;
+                    // Employment growth rate per year
+                    const empGrowth = isHausse ? 0.06 : isBaisse ? -0.04 : 0.015;
+                    const currentYear = new Date().getFullYear();
+                    const medianSalary = fiche.salaires?.confirme?.median || fiche.salaires?.junior?.median || 0;
+                    const nbOffres = fiche.perspectives?.nombre_offres || 0;
+
+                    if (!medianSalary && !nbOffres) return null;
+
+                    const salTrend = medianSalary ? Array.from({ length: 5 }, (_, i) => {
+                      const yearOffset = i - 2; // -2, -1, 0, +1, +2
+                      const factor = Math.pow(1 + salGrowth, yearOffset);
+                      return { annee: String(currentYear + yearOffset), salaire: Math.round(medianSalary * factor / 100) / 10 };
+                    }) : null;
+
+                    const empTrend = nbOffres ? Array.from({ length: 5 }, (_, i) => {
+                      const yearOffset = i - 2;
+                      const factor = Math.pow(1 + empGrowth, yearOffset);
+                      return { annee: String(currentYear + yearOffset), offres: Math.round(nbOffres * factor) };
+                    }) : null;
+
+                    return (
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-2">
+                        {salTrend && (
+                          <div>
+                            <div className="flex items-center gap-2 mb-2">
+                              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">{t.salaryTrend5y}</h3>
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold">{t.projectionEstimated}</span>
+                            </div>
+                            <ResponsiveContainer width="100%" height={200}>
+                              <AreaChart data={salTrend}>
+                                <defs>
+                                  <linearGradient id="salGrad" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor={PURPLE} stopOpacity={0.2} />
+                                    <stop offset="95%" stopColor={PURPLE} stopOpacity={0.02} />
+                                  </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                                <XAxis dataKey="annee" tick={{ fontSize: 11, fill: "#6B7280" }} axisLine={false} tickLine={false} />
+                                <YAxis tick={{ fontSize: 11, fill: "#9CA3AF" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}k€`} domain={["dataMin - 2", "dataMax + 2"]} />
+                                <Tooltip formatter={(v: number) => [`${v}k€`, t.medianSalaryK]} labelFormatter={(l) => l} />
+                                <Area type="monotone" dataKey="salaire" stroke={PURPLE} strokeWidth={2.5} fill="url(#salGrad)" dot={{ r: 4, fill: PURPLE, strokeWidth: 2, stroke: "#fff" }} />
+                              </AreaChart>
+                            </ResponsiveContainer>
+                            <SourceTag>{t.sourceProjection}</SourceTag>
+                          </div>
+                        )}
+                        {empTrend && (
+                          <div>
+                            <div className="flex items-center gap-2 mb-2">
+                              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">{t.employmentTrend5y}</h3>
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold">{t.projectionEstimated}</span>
+                            </div>
+                            <ResponsiveContainer width="100%" height={200}>
+                              <AreaChart data={empTrend}>
+                                <defs>
+                                  <linearGradient id="empGrad" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor={CYAN} stopOpacity={0.2} />
+                                    <stop offset="95%" stopColor={CYAN} stopOpacity={0.02} />
+                                  </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                                <XAxis dataKey="annee" tick={{ fontSize: 11, fill: "#6B7280" }} axisLine={false} tickLine={false} />
+                                <YAxis tick={{ fontSize: 11, fill: "#9CA3AF" }} axisLine={false} tickLine={false} domain={["dataMin - 100", "dataMax + 100"]} />
+                                <Tooltip formatter={(v: number) => [v.toLocaleString(t.locale), t.estimatedOffers]} labelFormatter={(l) => l} />
+                                <Area type="monotone" dataKey="offres" stroke={CYAN} strokeWidth={2.5} fill="url(#empGrad)" dot={{ r: 4, fill: CYAN, strokeWidth: 2, stroke: "#fff" }} />
+                              </AreaChart>
+                            </ResponsiveContainer>
+                            <SourceTag>{t.sourceProjection}</SourceTag>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
                 {fiche.perspectives && <SourceTag>{t.sourceIa}</SourceTag>}
                 {showTensionGauge && isRegional && <SourceTag>{t.sourceFranceTravail}</SourceTag>}

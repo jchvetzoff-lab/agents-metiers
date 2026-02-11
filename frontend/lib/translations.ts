@@ -202,6 +202,12 @@ const translations: Record<FicheLang, Record<string, string>> = {
     estimationInsee: "Estimation regionale (INSEE 2022)",
     sourceInsee: "Source : Estimation basee sur les ecarts salariaux regionaux (INSEE 2022)",
     regionalEstimation: "Estimation regionale",
+    salaryTrend5y: "Tendance salariale sur 5 ans",
+    employmentTrend5y: "Tendance de l'emploi sur 5 ans",
+    medianSalaryK: "Salaire median (k€)",
+    estimatedOffers: "Offres estimees",
+    projectionEstimated: "Projection estimee",
+    sourceProjection: "Source : Projection estimee basee sur la tendance du marche",
   },
 
   en: {
@@ -385,6 +391,12 @@ const translations: Record<FicheLang, Record<string, string>> = {
     estimationInsee: "Regional estimate (INSEE 2022)",
     sourceInsee: "Source: Estimate based on regional salary gaps (INSEE 2022)",
     regionalEstimation: "Regional estimate",
+    salaryTrend5y: "5-year salary trend",
+    employmentTrend5y: "5-year employment trend",
+    medianSalaryK: "Median salary (k€)",
+    estimatedOffers: "Estimated offers",
+    projectionEstimated: "Estimated projection",
+    sourceProjection: "Source: Estimated projection based on market trend",
   },
 
   es: {
@@ -568,6 +580,12 @@ const translations: Record<FicheLang, Record<string, string>> = {
     estimationInsee: "Estimacion regional (INSEE 2022)",
     sourceInsee: "Fuente: Estimacion basada en diferencias salariales regionales (INSEE 2022)",
     regionalEstimation: "Estimacion regional",
+    salaryTrend5y: "Tendencia salarial a 5 anos",
+    employmentTrend5y: "Tendencia del empleo a 5 anos",
+    medianSalaryK: "Salario mediano (k€)",
+    estimatedOffers: "Ofertas estimadas",
+    projectionEstimated: "Proyeccion estimada",
+    sourceProjection: "Fuente: Proyeccion estimada basada en la tendencia del mercado",
   },
 
   de: {
@@ -751,6 +769,12 @@ const translations: Record<FicheLang, Record<string, string>> = {
     estimationInsee: "Regionale Schatzung (INSEE 2022)",
     sourceInsee: "Quelle: Schatzung basierend auf regionalen Gehaltsunterschieden (INSEE 2022)",
     regionalEstimation: "Regionale Schatzung",
+    salaryTrend5y: "Gehaltsentwicklung uber 5 Jahre",
+    employmentTrend5y: "Beschaftigungsentwicklung uber 5 Jahre",
+    medianSalaryK: "Mediangehalt (k€)",
+    estimatedOffers: "Geschatzte Angebote",
+    projectionEstimated: "Geschatzte Projektion",
+    sourceProjection: "Quelle: Geschatzte Projektion basierend auf Markttrend",
   },
 
   it: {
@@ -934,6 +958,12 @@ const translations: Record<FicheLang, Record<string, string>> = {
     estimationInsee: "Stima regionale (INSEE 2022)",
     sourceInsee: "Fonte: Stima basata sulle differenze salariali regionali (INSEE 2022)",
     regionalEstimation: "Stima regionale",
+    salaryTrend5y: "Tendenza salariale a 5 anni",
+    employmentTrend5y: "Tendenza dell'occupazione a 5 anni",
+    medianSalaryK: "Stipendio mediano (k€)",
+    estimatedOffers: "Offerte stimate",
+    projectionEstimated: "Proiezione stimata",
+    sourceProjection: "Fonte: Proiezione stimata basata sulla tendenza del mercato",
   },
 
   pt: {
@@ -1117,6 +1147,12 @@ const translations: Record<FicheLang, Record<string, string>> = {
     estimationInsee: "Estimativa regional (INSEE 2022)",
     sourceInsee: "Fonte: Estimativa baseada nas diferencas salariais regionais (INSEE 2022)",
     regionalEstimation: "Estimativa regional",
+    salaryTrend5y: "Tendencia salarial em 5 anos",
+    employmentTrend5y: "Tendencia do emprego em 5 anos",
+    medianSalaryK: "Salario mediano (k€)",
+    estimatedOffers: "Ofertas estimadas",
+    projectionEstimated: "Projecao estimada",
+    sourceProjection: "Fonte: Projecao estimada baseada na tendencia do mercado",
   },
 
   ar: {
@@ -1300,6 +1336,12 @@ const translations: Record<FicheLang, Record<string, string>> = {
     estimationInsee: "تقدير إقليمي (INSEE 2022)",
     sourceInsee: "المصدر: تقدير استنادا إلى الفوارق الإقليمية للرواتب (INSEE 2022)",
     regionalEstimation: "تقدير إقليمي",
+    salaryTrend5y: "اتجاه الرواتب على 5 سنوات",
+    employmentTrend5y: "اتجاه التوظيف على 5 سنوات",
+    medianSalaryK: "الراتب المتوسط (آلاف €)",
+    estimatedOffers: "عروض مقدرة",
+    projectionEstimated: "إسقاط تقديري",
+    sourceProjection: "المصدر: إسقاط تقديري استنادًا إلى اتجاه السوق",
   },
 };
 
