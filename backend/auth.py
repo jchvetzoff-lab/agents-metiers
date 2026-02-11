@@ -15,7 +15,11 @@ from sqlalchemy.orm import declarative_base
 
 # ==================== CONFIG ====================
 
-JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "dev-secret-change-in-production")
+JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "")
+if not JWT_SECRET_KEY:
+    import warnings
+    JWT_SECRET_KEY = "dev-secret-change-in-production"
+    warnings.warn("JWT_SECRET_KEY not set! Using insecure default. Set it in production.", stacklevel=1)
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 72
 

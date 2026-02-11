@@ -34,7 +34,11 @@ app = FastAPI(
 # Configuration CORS pour le frontend Next.js
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Autoriser tous les domaines (Netlify, localhost, etc.)
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:3001",
+    ],
+    allow_origin_regex=r"https://.*\.netlify\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -86,6 +90,9 @@ except Exception as e:
 
 
 # ==================== HELPERS ====================
+
+CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-20250514")
+ADMIN_KEY = os.environ.get("ADMIN_KEY", JWT_SECRET_KEY)  # Separate admin key; falls back to JWT secret if not set
 
 import time as _time
 
@@ -392,7 +399,7 @@ class FicheMetierUpdate(BaseModel):
 
 
 @app.patch("/api/fiches/{code_rome}")
-async def update_fiche(code_rome: str, update_data: FicheMetierUpdate):
+async def update_fiche(code_rome: str, update_data: FicheMetierUpdate, user=Depends(get_current_user)):
     """Met à jour une fiche métier existante."""
     try:
         fiche = repo.get_fiche(code_rome)
@@ -617,7 +624,7 @@ def enrich_fiche(code_rome: str, current_user: dict = Depends(get_current_user))
 
         response = claude_call_with_retry(
             client,
-            model="claude-sonnet-4-20250514",
+            model=CLAUDE_MODEL,
             max_tokens=4096,
             messages=[{"role": "user", "content": prompt}],
         )
@@ -854,7 +861,7 @@ def validate_fiche(code_rome: str, current_user: dict = Depends(get_current_user
 
         response = claude_call_with_retry(
             client,
-            model="claude-sonnet-4-20250514",
+            model=CLAUDE_MODEL,
             max_tokens=2048,
             messages=[{"role": "user", "content": prompt}],
         )
@@ -1126,7 +1133,7 @@ def auto_correct_fiche(code_rome: str, rapport: AutoCorrectRequest, current_user
 
         response = claude_call_with_retry(
             client,
-            model="claude-sonnet-4-20250514",
+            model=CLAUDE_MODEL,
             max_tokens=4096,
             messages=[{"role": "user", "content": prompt}],
         )
@@ -1366,7 +1373,7 @@ def generate_variantes(code_rome: str, request: GenerateVariantesRequest, curren
 
             response = claude_call_with_retry(
                 client,
-                model="claude-sonnet-4-20250514",
+                model=CLAUDE_MODEL,
                 max_tokens=4096,
                 messages=[{"role": "user", "content": prompt}],
             )
@@ -2002,11 +2009,8 @@ async def login(user_data: UserLogin):
             {"email": user_data.email}
         ).fetchone()
 
-        if not user:
-            raise HTTPException(status_code=401, detail="Email incorrect")
-
-        if not verify_password(user_data.password, user[3]):
-            raise HTTPException(status_code=401, detail="Mot de passe incorrect")
+        if not user or not verify_password(user_data.password, user[3] if user else ""):
+            raise HTTPException(status_code=401, detail="Identifiants incorrects")
 
         token = create_token(user[0], user[1], user[2])
         return {"token": token, "user": {"id": user[0], "email": user[1], "name": user[2]}}
@@ -2033,8 +2037,8 @@ class ResetPasswordRequest(BaseModel):
 
 @app.post("/api/admin/reset-password")
 async def admin_reset_password(data: ResetPasswordRequest):
-    """Reset un mot de passe utilisateur (protege par admin_key = JWT_SECRET_KEY)."""
-    if data.admin_key != JWT_SECRET_KEY:
+    """Reset un mot de passe utilisateur (protege par ADMIN_KEY)."""
+    if data.admin_key != ADMIN_KEY:
         raise HTTPException(status_code=403, detail="Cle admin invalide")
 
     from sqlalchemy.orm import Session
