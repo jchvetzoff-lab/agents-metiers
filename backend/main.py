@@ -420,6 +420,57 @@ async def create_fiche(fiche_data: FicheMetierCreate, current_user: dict = Depen
         raise HTTPException(status_code=500, detail=f"Erreur lors de la création: {str(e)}")
 
 
+def _enrich_mobilite_with_genres(mobilite: MobiliteMetier) -> dict:
+    """Enrichit les items de mobilité avec les noms féminins et épicènes."""
+    from sqlalchemy import select
+    from database.models import FicheMetierDB
+
+    data = mobilite.model_dump()
+
+    # Collect all unique job names from metiers_proches and evolutions
+    all_names = set()
+    for item in data.get("metiers_proches", []):
+        if item.get("nom"):
+            all_names.add(item["nom"])
+    for item in data.get("evolutions", []):
+        if item.get("nom"):
+            all_names.add(item["nom"])
+
+    if not all_names:
+        return data
+
+    # Look up gendered names in the DB
+    name_map = {}
+    with repo.session() as session:
+        results = session.execute(
+            select(
+                FicheMetierDB.nom_masculin,
+                FicheMetierDB.nom_feminin,
+                FicheMetierDB.nom_epicene,
+            ).where(FicheMetierDB.nom_masculin.in_(list(all_names)))
+        ).all()
+        for row in results:
+            name_map[row.nom_masculin] = {
+                "nom_feminin": row.nom_feminin,
+                "nom_epicene": row.nom_epicene,
+            }
+
+    # Enrich items with gendered names
+    for item in data.get("metiers_proches", []):
+        nom = item.get("nom", "")
+        if nom in name_map:
+            item["nom_feminin"] = name_map[nom]["nom_feminin"]
+            item["nom_epicene"] = name_map[nom]["nom_epicene"]
+
+    for item in data.get("evolutions", []):
+        nom = item.get("nom", "")
+        if nom in name_map:
+            item["nom_feminin"] = name_map[nom]["nom_feminin"]
+            item["nom_epicene"] = name_map[nom]["nom_epicene"]
+
+    return data
+
+
 @app.get("/api/fiches/{code_rome}")
 async def get_fiche_detail(code_rome: str):
     """Récupère le détail complet d'une fiche métier."""
@@ -448,7 +499,7 @@ async def get_fiche_detail(code_rome: str):
             "salaires": fiche.salaires.model_dump() if fiche.salaires else None,
             "perspectives": fiche.perspectives.model_dump() if fiche.perspectives else None,
             "types_contrats": fiche.types_contrats.model_dump() if fiche.types_contrats else None,
-            "mobilite": fiche.mobilite.model_dump() if fiche.mobilite else None,
+            "mobilite": _enrich_mobilite_with_genres(fiche.mobilite) if fiche.mobilite else None,
             "secteurs_activite": fiche.secteurs_activite,
             # Parcoureo-level fields
             "traits_personnalite": getattr(fiche, 'traits_personnalite', None) or [],
