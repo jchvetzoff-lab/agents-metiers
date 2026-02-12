@@ -1156,7 +1156,7 @@ export default function FicheDetailPage() {
             pdf.setFontSize(10);
             pdf.setFont("helvetica", "bold");
             txt(C.dark);
-            pdf.text(m.nom, ML + 14, y + 8);
+            pdf.text(filterGenre === "feminin" && m.nom_feminin ? m.nom_feminin : filterGenre === "epicene" && m.nom_epicene ? m.nom_epicene : m.nom, ML + 14, y + 8);
             if (cLines.length) {
               pdf.setFontSize(8);
               pdf.setFont("helvetica", "normal");
@@ -1190,7 +1190,7 @@ export default function FicheDetailPage() {
             pdf.setFontSize(10);
             pdf.setFont("helvetica", "bold");
             txt(C.dark);
-            pdf.text(e.nom, ML + 15, y + 8);
+            pdf.text(filterGenre === "feminin" && e.nom_feminin ? e.nom_feminin : filterGenre === "epicene" && e.nom_epicene ? e.nom_epicene : e.nom, ML + 15, y + 8);
             if (cLines.length) {
               pdf.setFontSize(8);
               pdf.setFont("helvetica", "normal");
@@ -1302,6 +1302,13 @@ export default function FicheDetailPage() {
   const dSecteurs = v?.secteurs_activite?.length ? v.secteurs_activite : fiche.secteurs_activite;
   const dEvolution5ans = v?.evolution_5ans || fiche.perspectives?.evolution_5ans;
   const effectiveAge = appliedVariante?.tranche_age || "18+";
+
+  // Helper to pick the correct gendered name for mobilité items
+  const getMobiliteNom = (item: { nom: string; nom_feminin?: string; nom_epicene?: string }) => {
+    if (filterGenre === "feminin" && item.nom_feminin) return item.nom_feminin;
+    if (filterGenre === "epicene" && item.nom_epicene) return item.nom_epicene;
+    return item.nom;
+  };
 
   const hasMissions = (dMissions?.length ?? 0) > 0;
   const hasCompetences = (dCompetences?.length ?? 0) > 0;
@@ -2585,7 +2592,7 @@ export default function FicheDetailPage() {
                       <div className="space-y-3">
                         {fiche.mobilite!.metiers_proches.map((m, i) => (
                           <div key={i} className="p-4 rounded-xl border border-gray-200 bg-white hover:border-indigo-400 hover:shadow-sm transition-all">
-                            <div className="font-semibold text-[#1A1A2E] text-[15px]">{m.nom}</div>
+                            <div className="font-semibold text-[#1A1A2E] text-[15px]">{getMobiliteNom(m)}</div>
                             <div className="text-xs text-gray-500 mt-1">{m.contexte}</div>
                           </div>
                         ))}
@@ -2600,7 +2607,7 @@ export default function FicheDetailPage() {
                           <div key={i} className="p-4 rounded-xl border border-[#CCFBF1] bg-[#F0FDFA] hover:shadow-sm transition-all">
                             <div className="flex items-center gap-2">
                               <span className="text-[#00C8C8] font-bold">↗</span>
-                              <span className="font-semibold text-[#1A1A2E] text-[15px]">{e.nom}</span>
+                              <span className="font-semibold text-[#1A1A2E] text-[15px]">{getMobiliteNom(e)}</span>
                             </div>
                             <div className="text-xs text-gray-500 mt-1 ml-6">{e.contexte}</div>
                           </div>

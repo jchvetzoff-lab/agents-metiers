@@ -40,6 +40,8 @@ export interface SalaireNiveau {
 
 export interface MobiliteItem {
   nom: string;
+  nom_feminin?: string;
+  nom_epicene?: string;
   contexte: string;
 }
 
