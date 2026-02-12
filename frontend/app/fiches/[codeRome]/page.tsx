@@ -8,6 +8,11 @@ import { api, FicheDetail, Variante, VarianteDetail, Region, RegionalData, Recru
 import { getTranslations, translateTendance } from "@/lib/translations";
 import { FadeInView } from "@/components/motion";
 import StatusBadge from "@/components/StatusBadge";
+import FormationPathway from "@/components/FormationPathway";
+import dynamic from "next/dynamic";
+
+const CareerMap = dynamic(() => import("@/components/CareerMap"), { ssr: false });
+
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
   PieChart, Pie, Legend,
@@ -1320,9 +1325,11 @@ export default function FicheDetailPage() {
   const hasDomain = !!fiche.domaine_professionnel?.domaine || (dAutresAppellations?.length ?? 0) > 0;
   const hasProfile = (dTraitsPersonnalite?.length ?? 0) > 0 || (fiche.aptitudes?.length ?? 0) > 0 || !!fiche.profil_riasec?.realiste;
   const hasSitesUtiles = (fiche.sites_utiles?.length ?? 0) > 0;
+  const hasFormationsForPathway = (dFormations?.length ?? 0) > 0 || (dCertifications?.length ?? 0) > 0;
 
   const sections = [
     { id: "infos", label: t.secKeyInfo, icon: "📋", show: true },
+    { id: "parcours", label: t.secFormation, icon: "🎓", show: hasFormationsForPathway },
     { id: "video", label: t.secVideo, icon: "🎬", show: true },
     { id: "profil", label: t.secProfile, icon: "🧠", show: hasProfile },
     { id: "competences", label: t.secSkills, icon: "⚡", show: hasCompetences || hasSavoirEtre || hasSavoirs },
@@ -1569,6 +1576,19 @@ export default function FicheDetailPage() {
               )}
               <SourceTag>{t.sourceRomeIa}</SourceTag>
             </SectionAnchor>
+
+            {/* ═══ PARCOURS DE FORMATION ═══ */}
+            {hasFormationsForPathway && (
+              <SectionAnchor id="parcours" title={t.secFormation} icon="🎓" accentColor="#7C3AED">
+                <FormationPathway
+                  formations={dFormations || []}
+                  certifications={dCertifications || []}
+                  niveauFormation={fiche.niveau_formation}
+                  accesMetier={dAcces}
+                  t={t}
+                />
+              </SectionAnchor>
+            )}
 
             {/* ═══ VIDÉO DU MÉTIER ═══ */}
             <SectionAnchor id="video" title={t.secVideo} icon="🎬" accentColor="#8B5CF6">
@@ -2581,40 +2601,25 @@ export default function FicheDetailPage() {
               </div>
             </SectionAnchor>
 
-            {/* ═══ MÉTIERS PROCHES ═══ */}
+            {/* ═══ CARTE DES MÉTIERS (MINI) ═══ */}
             {hasMobilite && (
-              <SectionAnchor id="mobilite" title={t.secRelatedJobs} icon="🔄" accentColor="#06B6D4">
-                <p className="text-sm text-gray-500 mb-5">{t.relatedJobsIntro}</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {fiche.mobilite!.metiers_proches?.length > 0 && (
-                    <div>
-                      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">{t.commonSkillsJobs}</h3>
-                      <div className="space-y-3">
-                        {fiche.mobilite!.metiers_proches.map((m, i) => (
-                          <div key={i} className="p-4 rounded-xl border border-gray-200 bg-white hover:border-indigo-400 hover:shadow-sm transition-all">
-                            <div className="font-semibold text-[#1A1A2E] text-[15px]">{getMobiliteNom(m)}</div>
-                            <div className="text-xs text-gray-500 mt-1">{m.contexte}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {fiche.mobilite!.evolutions?.length > 0 && (
-                    <div>
-                      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">{t.possibleEvolutions}</h3>
-                      <div className="space-y-3">
-                        {fiche.mobilite!.evolutions.map((e, i) => (
-                          <div key={i} className="p-4 rounded-xl border border-[#CCFBF1] bg-[#F0FDFA] hover:shadow-sm transition-all">
-                            <div className="flex items-center gap-2">
-                              <span className="text-[#00C8C8] font-bold">↗</span>
-                              <span className="font-semibold text-[#1A1A2E] text-[15px]">{getMobiliteNom(e)}</span>
-                            </div>
-                            <div className="text-xs text-gray-500 mt-1 ml-6">{e.contexte}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+              <SectionAnchor id="mobilite" title={t.secCareerMap} icon="🔄" accentColor="#06B6D4">
+                <p className="text-sm text-gray-500 mb-4">{t.careerMapIntro}</p>
+                <CareerMap
+                  codeRome={fiche.code_rome}
+                  nomMetier={dNom}
+                  metiersProches={fiche.mobilite!.metiers_proches || []}
+                  evolutions={fiche.mobilite!.evolutions || []}
+                  t={t}
+                  compact
+                />
+                <div className="mt-4 text-center">
+                  <Link
+                    href={`/fiches/${fiche.code_rome}/carte`}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors shadow-sm"
+                  >
+                    {t.viewFullMap} &rarr;
+                  </Link>
                 </div>
               </SectionAnchor>
             )}
