@@ -1322,8 +1322,8 @@ export default function FicheDetailPage() {
     { id: "domaine", label: t.secDomain, icon: "🏷️", show: hasDomain },
     { id: "contextes", label: t.secWorkContexts, icon: "🏢", show: hasContextes },
     { id: "stats", label: t.secStatistics, icon: "📊", show: hasStats },
-    { id: "recrutements", label: t.recruitmentsPerYear, icon: "📅", show: true },
-    { id: "offres", label: t.liveOffers, icon: "💼", show: true },
+    { id: "recrutements", label: t.recruitmentsPerYear, icon: "📅", show: effectiveAge !== "11-15" },
+    { id: "offres", label: t.liveOffers, icon: "💼", show: effectiveAge !== "11-15" },
     { id: "sites", label: t.secUsefulLinks, icon: "🌐", show: hasSitesUtiles },
     { id: "services", label: effectiveAge === "11-15" ? t.secServicesOrientation : effectiveAge === "15-18" ? t.secServicesFormation : t.secServicesAdulte, icon: effectiveAge === "11-15" ? "🧭" : effectiveAge === "15-18" ? "🎓" : "🔗", show: true },
     { id: "mobilite", label: t.secRelatedJobs, icon: "🔄", show: hasMobilite },
@@ -2277,6 +2277,7 @@ export default function FicheDetailPage() {
             )}
 
             {/* ═══ RECRUTEMENTS PAR MOIS ═══ */}
+            {effectiveAge !== "11-15" && (
             <SectionAnchor id="recrutements" title={t.recruitmentsPerYear} icon="📅" accentColor="#4F46E5">
               <p className="text-sm text-gray-500 mb-4">{t.recruitmentsDesc}</p>
               {selectedRegion && recrutements?.region_name && (
@@ -2383,8 +2384,10 @@ export default function FicheDetailPage() {
               )}
               <SourceTag>{t.sourceFtMonthly}</SourceTag>
             </SectionAnchor>
+            )}
 
             {/* ═══ OFFRES D'EMPLOI ═══ */}
+            {effectiveAge !== "11-15" && (
             <SectionAnchor id="offres" title={t.liveOffers} icon="💼" accentColor="#06B6D4">
               <p className="text-sm text-gray-500 mb-4">{t.liveOffersDesc}</p>
 
@@ -2495,6 +2498,7 @@ export default function FicheDetailPage() {
               )}
               <SourceTag>{t.sourceFtOffers}</SourceTag>
             </SectionAnchor>
+            )}
 
             {/* ═══ SITES UTILES ═══ */}
             {hasSitesUtiles && (
