@@ -6,6 +6,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { api, FicheDetail, Variante, VarianteDetail, Region, RegionalData, RecrutementsData } from "@/lib/api";
 import { getTranslations, translateTendance } from "@/lib/translations";
+import { isAuthenticated } from "@/lib/auth";
 import { FadeInView } from "@/components/motion";
 import StatusBadge from "@/components/StatusBadge";
 import FormationPathway from "@/components/FormationPathway";
@@ -207,6 +208,13 @@ export default function FicheDetailPage() {
   const [offresLoading, setOffresLoading] = useState(false);
   const [offresContractFilter, setOffresContractFilter] = useState<string>("all");
 
+  // Action buttons (authenticated only)
+  const [authenticated, setAuthenticated] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [actionMessage, setActionMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  useEffect(() => { setAuthenticated(isAuthenticated()); }, []);
+
   // ── i18n: derive language from applied variante ──
   const lang = appliedVariante?.langue || "fr";
   const t = getTranslations(lang);
@@ -247,6 +255,80 @@ export default function FicheDetailPage() {
     setFilterTranche("18+");
     setFilterFormat("standard");
     setFilterLangue("fr");
+  }
+
+  async function reloadFiche() {
+    try {
+      const [ficheData, variantesData] = await Promise.all([
+        api.getFicheDetail(codeRome),
+        api.getVariantes(codeRome),
+      ]);
+      setFiche(ficheData);
+      setVariantes(variantesData.variantes);
+    } catch (e) { console.error("Erreur rechargement fiche:", e); }
+  }
+
+  function showActionMessage(type: "success" | "error", text: string) {
+    setActionMessage({ type, text });
+    setTimeout(() => setActionMessage(null), 5000);
+  }
+
+  async function handleEnrich() {
+    setActionLoading("enrich");
+    try {
+      const res = await api.enrichFiche(codeRome);
+      showActionMessage("success", `Enrichissement termine (v${res.version})`);
+      await reloadFiche();
+    } catch (err: any) {
+      showActionMessage("error", err.message || "Erreur lors de l'enrichissement");
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function handlePublish() {
+    if (!confirm("Publier cette fiche ? Elle sera visible publiquement.")) return;
+    setActionLoading("publish");
+    try {
+      await api.publishFiche(codeRome);
+      showActionMessage("success", "Fiche publiee avec succes");
+      await reloadFiche();
+    } catch (err: any) {
+      showActionMessage("error", err.message || "Erreur lors de la publication");
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function handleValidate() {
+    setActionLoading("validate");
+    try {
+      const res = await api.validateFiche(codeRome);
+      const { score, verdict } = res.rapport;
+      showActionMessage("success", `Validation IA : score ${score}/100 — ${verdict}`);
+    } catch (err: any) {
+      showActionMessage("error", err.message || "Erreur lors de la validation");
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function handleGenerateVariantes() {
+    setActionLoading("variantes");
+    try {
+      const res = await api.generateVariantes(codeRome, {
+        langues: ["fr"],
+        genres: ["masculin", "feminin", "epicene"],
+        tranches_age: ["18+", "15-18", "11-15"],
+        formats: ["standard", "falc"],
+      });
+      showActionMessage("success", `${res.variantes_generees} variantes generees`);
+      await reloadFiche();
+    } catch (err: any) {
+      showActionMessage("error", err.message || "Erreur lors de la generation de variantes");
+    } finally {
+      setActionLoading(null);
+    }
   }
 
   useEffect(() => {
@@ -1357,7 +1439,22 @@ export default function FicheDetailPage() {
               <div className="flex items-center gap-3 mb-2">
                 <span className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-sm font-bold shadow-sm">{fiche.code_rome}</span>
                 <StatusBadge statut={fiche.statut} />
+                {fiche.rome_update_pending && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-700 border border-orange-300">
+                    MAJ ROME
+                  </span>
+                )}
               </div>
+              {fiche.rome_update_pending && (
+                <div className="flex items-center gap-2 px-4 py-2.5 bg-orange-50 border border-orange-200 rounded-xl text-sm text-orange-800 mb-3">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/>
+                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                  </svg>
+                  <span>Cette fiche a été modifiée dans le référentiel ROME. Vérifiez les changements dans la <Link href="/actions" className="font-semibold underline hover:text-orange-900">page Veille ROME</Link>.</span>
+                </div>
+              )}
               <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#1A1A2E] mb-1">{dNom}</h1>
               {dDescriptionCourte && <p className="text-gray-500 max-w-2xl">{dDescriptionCourte}</p>}
             </div>
@@ -1398,10 +1495,102 @@ export default function FicheDetailPage() {
                 <div>{t.version} {fiche.version}</div>
                 <div>{t.updatedOn} {new Date(fiche.date_maj).toLocaleDateString(t.locale)}</div>
               </div>
+              {/* ── ACTION BUTTONS (authenticated only) ── */}
+              {authenticated && (
+                <div className="flex flex-wrap items-center gap-2">
+                  {fiche.statut === "brouillon" && (
+                    <button
+                      onClick={handleEnrich}
+                      disabled={actionLoading !== null}
+                      className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-indigo-300 text-indigo-600 rounded-full text-xs font-medium hover:bg-indigo-50 transition disabled:opacity-40 disabled:cursor-wait"
+                    >
+                      {actionLoading === "enrich" ? (
+                        <span className="w-3 h-3 border-2 border-indigo-300 border-t-indigo-600 rounded-full animate-spin" />
+                      ) : (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/></svg>
+                      )}
+                      Enrichir
+                    </button>
+                  )}
+                  {fiche.statut === "en_validation" && (
+                    <>
+                      <button
+                        onClick={handlePublish}
+                        disabled={actionLoading !== null}
+                        className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-green-300 text-green-600 rounded-full text-xs font-medium hover:bg-green-50 transition disabled:opacity-40 disabled:cursor-wait"
+                      >
+                        {actionLoading === "publish" ? (
+                          <span className="w-3 h-3 border-2 border-green-300 border-t-green-600 rounded-full animate-spin" />
+                        ) : (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        )}
+                        Publier
+                      </button>
+                      <button
+                        onClick={handleValidate}
+                        disabled={actionLoading !== null}
+                        className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-amber-300 text-amber-600 rounded-full text-xs font-medium hover:bg-amber-50 transition disabled:opacity-40 disabled:cursor-wait"
+                      >
+                        {actionLoading === "validate" ? (
+                          <span className="w-3 h-3 border-2 border-amber-300 border-t-amber-600 rounded-full animate-spin" />
+                        ) : (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+                        )}
+                        Valider
+                      </button>
+                      <button
+                        onClick={handleGenerateVariantes}
+                        disabled={actionLoading !== null}
+                        className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-violet-300 text-violet-600 rounded-full text-xs font-medium hover:bg-violet-50 transition disabled:opacity-40 disabled:cursor-wait"
+                      >
+                        {actionLoading === "variantes" ? (
+                          <span className="w-3 h-3 border-2 border-violet-300 border-t-violet-600 rounded-full animate-spin" />
+                        ) : (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+                        )}
+                        Variantes
+                      </button>
+                    </>
+                  )}
+                  {fiche.statut === "publiee" && (
+                    <button
+                      onClick={handleGenerateVariantes}
+                      disabled={actionLoading !== null}
+                      className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-violet-300 text-violet-600 rounded-full text-xs font-medium hover:bg-violet-50 transition disabled:opacity-40 disabled:cursor-wait"
+                    >
+                      {actionLoading === "variantes" ? (
+                        <span className="w-3 h-3 border-2 border-violet-300 border-t-violet-600 rounded-full animate-spin" />
+                      ) : (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+                      )}
+                      Variantes
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
       </div>
+
+      {/* ── ACTION FEEDBACK TOAST ── */}
+      {actionMessage && (
+        <div className={`border-b ${actionMessage.type === "success" ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"}`}>
+          <div className="max-w-7xl mx-auto px-4 md:px-8 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm">
+              {actionMessage.type === "success" ? (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+              )}
+              <span className={actionMessage.type === "success" ? "text-green-800" : "text-red-800"}>{actionMessage.text}</span>
+            </div>
+            <button onClick={() => setActionMessage(null)} className="text-gray-400 hover:text-gray-600">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── FILTRES VARIANTES ── */}
       {variantes.length > 0 && (

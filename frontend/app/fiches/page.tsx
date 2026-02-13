@@ -206,7 +206,14 @@ export default function FichesPage() {
                           )}
                         </td>
                         <td className="p-4">
-                          <StatusBadge statut={fiche.statut} />
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <StatusBadge statut={fiche.statut} />
+                            {fiche.rome_update_pending && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-700 border border-orange-300">
+                                MAJ ROME
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="p-4 text-center hidden md:table-cell">
                           <span className="text-sm text-text-muted">

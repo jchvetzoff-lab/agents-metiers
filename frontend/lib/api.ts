@@ -22,6 +22,35 @@ export interface FicheMetier {
   has_salaires: boolean;
   has_perspectives: boolean;
   nb_variantes: number;
+  rome_update_pending?: boolean;
+}
+
+export interface RomeChange {
+  id: number;
+  code_rome: string;
+  nom_metier: string;
+  detected_at: string | null;
+  change_type: "new" | "modified" | "deleted";
+  fields_changed: string[];
+  details: Record<string, unknown>;
+  reviewed: boolean;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+}
+
+export interface RomeVeilleStatus {
+  derniere_execution: string | null;
+  derniere_succes: boolean | null;
+  derniere_details: {
+    nouvelles: number;
+    modifiees: number;
+    supprimees: number;
+    inchangees: number;
+    erreurs: number;
+  } | null;
+  fiches_pending: number;
+  changements_non_revues: number;
+  prochaine_execution: string;
 }
 
 export interface Stats {
@@ -134,6 +163,7 @@ export interface FicheDetail extends FicheMetier {
     environnement: string;
     risques: string[];
   } | null;
+  rome_update_pending?: boolean;
 }
 
 export interface Variante {
@@ -468,6 +498,40 @@ class ApiClient {
 
   async syncRome(): Promise<{ message: string; nouvelles: number; mises_a_jour: number; inchangees: number }> {
     return this.request("/api/rome/sync", { method: "POST" });
+  }
+
+  // ==================== VEILLE ROME ====================
+
+  async triggerRomeVeille(): Promise<{
+    total_api: number;
+    nouvelles: number;
+    modifiees: number;
+    supprimees: number;
+    inchangees: number;
+    erreurs: number;
+  }> {
+    return this.request("/api/veille/rome", { method: "POST" });
+  }
+
+  async getRomeChanges(reviewed?: boolean): Promise<{ total: number; changes: RomeChange[] }> {
+    const params = reviewed !== undefined ? `?reviewed=${reviewed}` : "";
+    return this.request(`/api/veille/rome/changes${params}`);
+  }
+
+  async reviewRomeChange(changeId: number, action: "acknowledge" | "re_enrich"): Promise<{
+    message: string;
+    change_id: number;
+    code_rome: string;
+    action: string;
+  }> {
+    return this.request(`/api/veille/rome/changes/${changeId}/review`, {
+      method: "POST",
+      body: JSON.stringify({ action }),
+    });
+  }
+
+  async getRomeVeilleStatus(): Promise<RomeVeilleStatus> {
+    return this.request("/api/veille/rome/status");
   }
 
   // ==================== LOGS ====================
