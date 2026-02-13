@@ -274,6 +274,30 @@ class AuditLog(BaseModel):
     validateur: Optional[str] = None  # Utilisateur ayant validé si applicable
 
 
+class RomeSnapshot(BaseModel):
+    """Snapshot de l'état d'une fiche ROME depuis l'API France Travail."""
+    code_rome: str
+    content_hash: str
+    rome_data: str  # JSON complet de l'API ROME
+    last_checked: datetime = Field(default_factory=datetime.now)
+    last_changed: Optional[datetime] = None
+
+
+class RomeChange(BaseModel):
+    """Changement détecté dans le référentiel ROME."""
+    id: Optional[int] = None
+    code_rome: str
+    detected_at: datetime = Field(default_factory=datetime.now)
+    change_type: str  # 'modified' | 'new' | 'deleted'
+    fields_changed: Optional[str] = None  # JSON: ["competences", "appellations", ...]
+    details: Optional[str] = None  # JSON: résumé lisible des diffs
+    old_hash: Optional[str] = None
+    new_hash: Optional[str] = None
+    reviewed: bool = False
+    reviewed_at: Optional[datetime] = None
+    reviewed_by: Optional[str] = None
+
+
 class DictionnaireGenre(BaseModel):
     """Entrée du dictionnaire de correspondances de genre."""
     masculin: str
@@ -385,6 +409,9 @@ class FicheMetierDB(Base):
     preferences_interets = Column(JSON, default=dict)
     sites_utiles = Column(JSON, default=list)
     conditions_travail_detaillees = Column(JSON, default=dict)
+
+    # Veille ROME
+    rome_update_pending = Column(Boolean, default=False)
 
     # Métadonnées
     statut = Column(String(20), default="brouillon")
@@ -662,3 +689,35 @@ class VarianteFicheDB(Base):
             date_maj=variante.date_maj,
             version=variante.version
         )
+
+
+class RomeSnapshotDB(Base):
+    """Table des snapshots ROME (dernier état connu de chaque fiche)."""
+    __tablename__ = "rome_snapshots"
+
+    code_rome = Column(String(10), primary_key=True)
+    content_hash = Column(String(64), nullable=False)
+    rome_data = Column(Text, nullable=False)  # JSON complet de l'API ROME
+    last_checked = Column(DateTime, nullable=False, default=datetime.now)
+    last_changed = Column(DateTime, nullable=True)
+
+
+class RomeChangeDB(Base):
+    """Table des changements détectés dans le référentiel ROME."""
+    __tablename__ = "rome_changes"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    code_rome = Column(String(10), nullable=False, index=True)
+    detected_at = Column(DateTime, nullable=False, default=datetime.now)
+    change_type = Column(String(20), nullable=False)  # 'modified' | 'new' | 'deleted'
+    fields_changed = Column(Text, nullable=True)  # JSON array
+    details = Column(Text, nullable=True)  # JSON résumé
+    old_hash = Column(String(64), nullable=True)
+    new_hash = Column(String(64), nullable=True)
+    reviewed = Column(Boolean, default=False)
+    reviewed_at = Column(DateTime, nullable=True)
+    reviewed_by = Column(String(100), nullable=True)
+
+    __table_args__ = (
+        Index("idx_rome_changes_reviewed", "reviewed"),
+    )

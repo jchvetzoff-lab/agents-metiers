@@ -87,6 +87,7 @@ def run_migrations():
         "preferences_interets": "JSON DEFAULT '{}'",
         "sites_utiles": "JSON DEFAULT '[]'",
         "conditions_travail_detaillees": "JSON DEFAULT '{}'",
+        "rome_update_pending": "BOOLEAN DEFAULT FALSE",
     }
     with engine.begin() as conn:
         for col_name, col_type in new_columns.items():
@@ -172,6 +173,50 @@ try:
 except Exception as e:
     print(f"Offres cache table migration warning: {e}")
 
+# Migration : créer les tables rome_snapshots et rome_changes
+def create_rome_veille_tables(engine):
+    """Crée les tables pour la veille ROME si elles n'existent pas."""
+    from sqlalchemy import inspect as sa_inspect
+    inspector = sa_inspect(engine)
+    tables = inspector.get_table_names()
+    from sqlalchemy import text
+    with engine.begin() as conn:
+        if "rome_snapshots" not in tables:
+            conn.execute(text("""
+                CREATE TABLE rome_snapshots (
+                    code_rome VARCHAR(10) PRIMARY KEY,
+                    content_hash VARCHAR(64) NOT NULL,
+                    rome_data TEXT NOT NULL,
+                    last_checked TIMESTAMP NOT NULL DEFAULT NOW(),
+                    last_changed TIMESTAMP
+                )
+            """))
+            print("Created rome_snapshots table")
+        if "rome_changes" not in tables:
+            conn.execute(text("""
+                CREATE TABLE rome_changes (
+                    id SERIAL PRIMARY KEY,
+                    code_rome VARCHAR(10) NOT NULL,
+                    detected_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                    change_type VARCHAR(20) NOT NULL,
+                    fields_changed TEXT,
+                    details TEXT,
+                    old_hash VARCHAR(64),
+                    new_hash VARCHAR(64),
+                    reviewed BOOLEAN DEFAULT FALSE,
+                    reviewed_at TIMESTAMP,
+                    reviewed_by VARCHAR(100)
+                )
+            """))
+            conn.execute(text("CREATE INDEX idx_rome_changes_code ON rome_changes (code_rome)"))
+            conn.execute(text("CREATE INDEX idx_rome_changes_reviewed ON rome_changes (reviewed)"))
+            print("Created rome_changes table")
+
+try:
+    create_rome_veille_tables(repo.engine)
+except Exception as e:
+    print(f"Rome veille tables migration warning: {e}")
+
 
 # ==================== HELPERS ====================
 
@@ -229,6 +274,7 @@ class FicheMetierResponse(BaseModel):
     has_salaires: bool = False
     has_perspectives: bool = False
     nb_variantes: int = 0
+    rome_update_pending: bool = False
 
 
 class StatsResponse(BaseModel):
@@ -332,6 +378,7 @@ async def get_fiches(
             for db_fiche in db_fiches:
                 fiche = db_fiche.to_pydantic()
                 nb_variantes = repo.count_variantes(fiche.code_rome)
+                rome_pending = getattr(db_fiche, 'rome_update_pending', False) or False
                 results.append(FicheMetierResponse(
                     code_rome=fiche.code_rome,
                     nom_masculin=fiche.nom_masculin,
@@ -347,7 +394,8 @@ async def get_fiches(
                     has_formations=bool(fiche.formations),
                     has_salaires=bool(fiche.salaires),
                     has_perspectives=bool(fiche.perspectives),
-                    nb_variantes=nb_variantes
+                    nb_variantes=nb_variantes,
+                    rome_update_pending=rome_pending,
                 ))
 
         return {
@@ -516,12 +564,27 @@ async def get_fiche_detail(code_rome: str):
             "date_creation": fiche.metadata.date_creation,
             "date_maj": fiche.metadata.date_maj,
             "version": fiche.metadata.version,
-            "nb_variantes": repo.count_variantes(code_rome)
+            "nb_variantes": repo.count_variantes(code_rome),
+            "rome_update_pending": _get_rome_update_pending(code_rome),
         }
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+def _get_rome_update_pending(code_rome: str) -> bool:
+    """Helper to read rome_update_pending directly from DB."""
+    try:
+        from sqlalchemy import select
+        from database.models import FicheMetierDB
+        with repo.session() as session:
+            val = session.execute(
+                select(FicheMetierDB.rome_update_pending).where(FicheMetierDB.code_rome == code_rome)
+            ).scalar()
+            return bool(val) if val is not None else False
+    except Exception:
+        return False
 
 
 class FicheMetierUpdate(BaseModel):
@@ -2612,6 +2675,344 @@ async def admin_reset_password(data: ResetPasswordRequest):
         raise HTTPException(status_code=500, detail=f"Erreur reset: {str(e)}")
     finally:
         session.close()
+
+
+# ==================== VEILLE ROME ====================
+
+def _get_ft_rome_token():
+    """Obtient un token OAuth2 France Travail pour l'API ROME Métiers v1."""
+    client_id = os.getenv("FT_CLIENT_ID", "")
+    client_secret = os.getenv("FT_CLIENT_SECRET", "")
+    if not client_id or not client_secret:
+        return None
+
+    import httpx as _httpx
+    resp = _httpx.post(
+        "https://entreprise.francetravail.fr/connexion/oauth2/access_token?realm=/partenaire",
+        data={
+            "grant_type": "client_credentials",
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "scope": "api_rome-metiersv1 nomenclatureRome",
+        },
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        timeout=15.0,
+    )
+    if resp.status_code != 200:
+        return None
+    return resp.json().get("access_token")
+
+
+def _run_rome_veille():
+    """Logique principale de la veille ROME — appelée par l'endpoint et le cron."""
+    import httpx as _httpx
+    import hashlib
+
+    token = _get_ft_rome_token()
+    if not token:
+        return {"error": "Credentials France Travail non configurés (FT_CLIENT_ID / FT_CLIENT_SECRET)"}
+
+    # Charger tous les hashes existants en mémoire
+    existing_hashes = repo.get_all_rome_snapshot_hashes()
+
+    # Fetch tous les métiers depuis l'API ROME v4 (pagination)
+    all_metiers = []
+    offset = 0
+    batch_size = 150
+    headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
+
+    while True:
+        try:
+            resp = _httpx.get(
+                f"https://api.francetravail.io/partenaire/rome-metiers/v1/metiers/metier",
+                params={"limit": batch_size, "offset": offset},
+                headers=headers,
+                timeout=30.0,
+            )
+            if resp.status_code == 204:
+                break
+            resp.raise_for_status()
+            data = resp.json()
+            metiers = data if isinstance(data, list) else data.get("metiers", [])
+            if not metiers:
+                break
+            all_metiers.extend(metiers)
+            if len(metiers) < batch_size:
+                break
+            offset += batch_size
+        except Exception as e:
+            print(f"Erreur fetch métiers (offset={offset}): {e}")
+            break
+
+    if not all_metiers:
+        return {"error": "Aucun métier récupéré depuis l'API ROME v4"}
+
+    # Traitement des métiers
+    from database.models import RomeSnapshot, RomeChange, HistoriqueVeille
+    nouvelles = 0
+    modifiees = 0
+    supprimees = 0
+    inchangees = 0
+    erreurs = 0
+    api_codes = set()
+
+    for metier in all_metiers:
+        try:
+            code_rome = metier.get("code") or metier.get("code_rome", "")
+            if not code_rome:
+                continue
+            api_codes.add(code_rome)
+
+            # Hash du contenu
+            content_json = json.dumps(metier, sort_keys=True, ensure_ascii=False)
+            new_hash = hashlib.sha256(content_json.encode("utf-8")).hexdigest()
+            old_hash = existing_hashes.get(code_rome)
+
+            now = datetime.now()
+
+            if old_hash is None:
+                # Nouvelle fiche
+                repo.upsert_rome_snapshot(RomeSnapshot(
+                    code_rome=code_rome,
+                    content_hash=new_hash,
+                    rome_data=content_json,
+                    last_checked=now,
+                    last_changed=now,
+                ))
+                repo.add_rome_change(RomeChange(
+                    code_rome=code_rome,
+                    detected_at=now,
+                    change_type="new",
+                    new_hash=new_hash,
+                    details=json.dumps({"libelle": metier.get("libelle", "")}, ensure_ascii=False),
+                ))
+                # Créer la fiche en brouillon si elle n'existe pas
+                if not repo.get_fiche(code_rome):
+                    from database.models import MetadataFiche
+                    libelle = metier.get("libelle", code_rome)
+                    new_fiche = FicheMetier(
+                        id=code_rome,
+                        code_rome=code_rome,
+                        nom_masculin=libelle,
+                        nom_feminin=libelle,
+                        nom_epicene=libelle,
+                        description="",
+                        metadata=MetadataFiche(statut=StatutFiche.BROUILLON, version=1),
+                    )
+                    repo.create_fiche(new_fiche)
+                nouvelles += 1
+
+            elif new_hash != old_hash:
+                # Modifiée — diff champ par champ
+                old_snap = repo.get_rome_snapshot(code_rome)
+                fields_changed = []
+                if old_snap:
+                    try:
+                        old_data = json.loads(old_snap.rome_data)
+                        all_keys = set(list(old_data.keys()) + list(metier.keys()))
+                        for key in all_keys:
+                            if old_data.get(key) != metier.get(key):
+                                fields_changed.append(key)
+                    except Exception:
+                        fields_changed = ["unknown"]
+
+                repo.upsert_rome_snapshot(RomeSnapshot(
+                    code_rome=code_rome,
+                    content_hash=new_hash,
+                    rome_data=content_json,
+                    last_checked=now,
+                    last_changed=now,
+                ))
+                repo.add_rome_change(RomeChange(
+                    code_rome=code_rome,
+                    detected_at=now,
+                    change_type="modified",
+                    fields_changed=json.dumps(fields_changed, ensure_ascii=False),
+                    old_hash=old_hash,
+                    new_hash=new_hash,
+                    details=json.dumps({
+                        "libelle": metier.get("libelle", ""),
+                        "nb_champs_modifies": len(fields_changed),
+                        "champs": fields_changed[:10],
+                    }, ensure_ascii=False),
+                ))
+                repo.set_rome_update_pending(code_rome, True)
+                modifiees += 1
+
+            else:
+                # Inchangée
+                repo.update_rome_snapshot_checked(code_rome)
+                inchangees += 1
+
+        except Exception as e:
+            print(f"Erreur traitement {metier.get('code', '?')}: {e}")
+            erreurs += 1
+
+    # Détecter les fiches supprimées (codes en DB absents de l'API)
+    for code_rome in existing_hashes:
+        if code_rome not in api_codes:
+            now = datetime.now()
+            repo.add_rome_change(RomeChange(
+                code_rome=code_rome,
+                detected_at=now,
+                change_type="deleted",
+                old_hash=existing_hashes[code_rome],
+                details=json.dumps({"message": "Code ROME absent de l'API"}, ensure_ascii=False),
+            ))
+            repo.set_rome_update_pending(code_rome, True)
+            supprimees += 1
+
+    # Log dans historique_veille
+    repo.add_historique_veille(HistoriqueVeille(
+        type_veille="metiers",
+        source="rome_v4_api",
+        nb_elements_traites=len(all_metiers),
+        nb_mises_a_jour=nouvelles + modifiees + supprimees,
+        nb_erreurs=erreurs,
+        succes=erreurs == 0,
+        details=json.dumps({
+            "nouvelles": nouvelles,
+            "modifiees": modifiees,
+            "supprimees": supprimees,
+            "inchangees": inchangees,
+            "erreurs": erreurs,
+        }),
+    ))
+
+    return {
+        "total_api": len(all_metiers),
+        "nouvelles": nouvelles,
+        "modifiees": modifiees,
+        "supprimees": supprimees,
+        "inchangees": inchangees,
+        "erreurs": erreurs,
+    }
+
+
+@app.post("/api/veille/rome")
+async def trigger_rome_veille(current_user: dict = Depends(get_current_user)):
+    """Déclenche manuellement la veille ROME."""
+    try:
+        result = _run_rome_veille()
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=result["error"])
+        log_action(TypeEvenement.VEILLE_METIERS, f"Veille ROME manuelle: {result}", agent="VeilleROME", validateur=current_user["email"])
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/veille/rome/changes")
+async def get_rome_changes(
+    reviewed: Optional[bool] = Query(None, description="Filtrer par statut review"),
+    limit: int = Query(50, ge=1, le=200),
+    current_user: dict = Depends(get_current_user),
+):
+    """Liste les changements ROME détectés."""
+    try:
+        changes = repo.get_rome_changes(reviewed=reviewed, limit=limit)
+        results = []
+        for c in changes:
+            # Récupérer le nom du métier depuis la fiche
+            fiche = repo.get_fiche(c.code_rome)
+            nom = fiche.nom_masculin if fiche else c.code_rome
+            results.append({
+                "id": c.id,
+                "code_rome": c.code_rome,
+                "nom_metier": nom,
+                "detected_at": c.detected_at.isoformat() if c.detected_at else None,
+                "change_type": c.change_type,
+                "fields_changed": json.loads(c.fields_changed) if c.fields_changed else [],
+                "details": json.loads(c.details) if c.details else {},
+                "reviewed": c.reviewed,
+                "reviewed_at": c.reviewed_at.isoformat() if c.reviewed_at else None,
+                "reviewed_by": c.reviewed_by,
+            })
+        return {"total": len(results), "changes": results}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class ReviewAction(BaseModel):
+    action: str  # "acknowledge" | "re_enrich"
+
+
+@app.post("/api/veille/rome/changes/{change_id}/review")
+async def review_rome_change(
+    change_id: int,
+    data: ReviewAction,
+    current_user: dict = Depends(get_current_user),
+):
+    """Marquer un changement ROME comme reviewé."""
+    try:
+        change = repo.mark_change_reviewed(change_id, current_user["email"])
+        if not change:
+            raise HTTPException(status_code=404, detail=f"Changement {change_id} non trouvé")
+
+        # Remettre rome_update_pending à false
+        repo.set_rome_update_pending(change.code_rome, False)
+
+        # Si re_enrich demandé, lancer l'enrichissement
+        if data.action == "re_enrich":
+            try:
+                import anthropic
+                client = anthropic.Anthropic()
+                # Récupérer la fiche
+                fiche = repo.get_fiche(change.code_rome)
+                if fiche:
+                    # Enrichissement simplifié — même logique que l'endpoint /enrich
+                    log_action(
+                        TypeEvenement.MODIFICATION,
+                        f"Ré-enrichissement demandé suite à changement ROME #{change_id}",
+                        code_rome=change.code_rome,
+                        agent="VeilleROME",
+                        validateur=current_user["email"],
+                    )
+            except Exception as e:
+                print(f"Erreur re-enrichissement {change.code_rome}: {e}")
+
+        return {
+            "message": f"Changement #{change_id} reviewé ({data.action})",
+            "change_id": change_id,
+            "code_rome": change.code_rome,
+            "action": data.action,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/veille/rome/status")
+async def get_rome_veille_status():
+    """Statut de la dernière veille ROME."""
+    try:
+        derniere = repo.get_derniere_veille("metiers")
+        pending_count = 0
+        try:
+            from sqlalchemy import select, func
+            from database.models import FicheMetierDB
+            with repo.session() as session:
+                pending_count = session.execute(
+                    select(func.count(FicheMetierDB.id)).where(FicheMetierDB.rome_update_pending == True)
+                ).scalar() or 0
+        except Exception:
+            pass
+
+        unreviewed_count = len(repo.get_rome_changes(reviewed=False, limit=1000))
+
+        return {
+            "derniere_execution": derniere.date_execution.isoformat() if derniere else None,
+            "derniere_succes": derniere.succes if derniere else None,
+            "derniere_details": json.loads(derniere.details) if derniere and derniere.details else None,
+            "fiches_pending": pending_count,
+            "changements_non_revues": unreviewed_count,
+            "prochaine_execution": "Lundi 02:00 UTC (cron hebdomadaire)",
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":

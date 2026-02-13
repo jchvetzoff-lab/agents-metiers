@@ -14,8 +14,9 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from .models import (
     Base, FicheMetierDB, SalaireDB, HistoriqueVeilleDB, AuditLogDB, DictionnaireGenreDB,
-    VarianteFicheDB,
+    VarianteFicheDB, RomeSnapshotDB, RomeChangeDB,
     FicheMetier, Salaire, HistoriqueVeille, AuditLog, DictionnaireGenre, VarianteFiche,
+    RomeSnapshot, RomeChange,
     TypeEvenement, StatutFiche, NiveauExperience, LangueSupporte, TrancheAge,
     FormatContenu, GenreGrammatical
 )
@@ -627,3 +628,151 @@ class Repository:
                 )
             )
             return result.rowcount
+
+    # =========================================================================
+    # ROME Snapshots & Changes (Veille ROME)
+    # =========================================================================
+
+    def get_rome_snapshot(self, code_rome: str) -> Optional[RomeSnapshot]:
+        """Récupère le snapshot ROME d'une fiche."""
+        with self.session() as session:
+            result = session.execute(
+                select(RomeSnapshotDB).where(RomeSnapshotDB.code_rome == code_rome)
+            ).scalar_one_or_none()
+            if result:
+                return RomeSnapshot(
+                    code_rome=result.code_rome,
+                    content_hash=result.content_hash,
+                    rome_data=result.rome_data,
+                    last_checked=result.last_checked,
+                    last_changed=result.last_changed,
+                )
+            return None
+
+    def upsert_rome_snapshot(self, snapshot: RomeSnapshot) -> RomeSnapshot:
+        """Crée ou met à jour un snapshot ROME."""
+        with self.session() as session:
+            existing = session.execute(
+                select(RomeSnapshotDB).where(RomeSnapshotDB.code_rome == snapshot.code_rome)
+            ).scalar_one_or_none()
+            if existing:
+                existing.content_hash = snapshot.content_hash
+                existing.rome_data = snapshot.rome_data
+                existing.last_checked = snapshot.last_checked
+                existing.last_changed = snapshot.last_changed
+            else:
+                db_snap = RomeSnapshotDB(
+                    code_rome=snapshot.code_rome,
+                    content_hash=snapshot.content_hash,
+                    rome_data=snapshot.rome_data,
+                    last_checked=snapshot.last_checked,
+                    last_changed=snapshot.last_changed,
+                )
+                session.add(db_snap)
+            session.flush()
+            return snapshot
+
+    def get_all_rome_snapshot_hashes(self) -> Dict[str, str]:
+        """Récupère tous les hashes de snapshots ROME en une seule query."""
+        with self.session() as session:
+            results = session.execute(
+                select(RomeSnapshotDB.code_rome, RomeSnapshotDB.content_hash)
+            ).all()
+            return {r[0]: r[1] for r in results}
+
+    def update_rome_snapshot_checked(self, code_rome: str):
+        """Met à jour last_checked sans changer le hash."""
+        with self.session() as session:
+            session.execute(
+                update(RomeSnapshotDB)
+                .where(RomeSnapshotDB.code_rome == code_rome)
+                .values(last_checked=datetime.now())
+            )
+
+    def add_rome_change(self, change: RomeChange) -> RomeChange:
+        """Ajoute un changement ROME détecté."""
+        with self.session() as session:
+            db_change = RomeChangeDB(
+                code_rome=change.code_rome,
+                detected_at=change.detected_at,
+                change_type=change.change_type,
+                fields_changed=change.fields_changed,
+                details=change.details,
+                old_hash=change.old_hash,
+                new_hash=change.new_hash,
+                reviewed=change.reviewed,
+            )
+            session.add(db_change)
+            session.flush()
+            change.id = db_change.id
+            return change
+
+    def get_rome_changes(self, reviewed: Optional[bool] = None, limit: int = 50) -> List[RomeChange]:
+        """Récupère les changements ROME avec filtre optionnel."""
+        with self.session() as session:
+            query = select(RomeChangeDB)
+            if reviewed is not None:
+                query = query.where(RomeChangeDB.reviewed == reviewed)
+            query = query.order_by(RomeChangeDB.detected_at.desc()).limit(limit)
+            results = session.execute(query).scalars().all()
+            return [
+                RomeChange(
+                    id=r.id,
+                    code_rome=r.code_rome,
+                    detected_at=r.detected_at,
+                    change_type=r.change_type,
+                    fields_changed=r.fields_changed,
+                    details=r.details,
+                    old_hash=r.old_hash,
+                    new_hash=r.new_hash,
+                    reviewed=r.reviewed,
+                    reviewed_at=r.reviewed_at,
+                    reviewed_by=r.reviewed_by,
+                )
+                for r in results
+            ]
+
+    def mark_change_reviewed(self, change_id: int, reviewed_by: str) -> Optional[RomeChange]:
+        """Marque un changement comme reviewé."""
+        with self.session() as session:
+            db_change = session.execute(
+                select(RomeChangeDB).where(RomeChangeDB.id == change_id)
+            ).scalar_one_or_none()
+            if not db_change:
+                return None
+            db_change.reviewed = True
+            db_change.reviewed_at = datetime.now()
+            db_change.reviewed_by = reviewed_by
+            session.flush()
+            return RomeChange(
+                id=db_change.id,
+                code_rome=db_change.code_rome,
+                detected_at=db_change.detected_at,
+                change_type=db_change.change_type,
+                fields_changed=db_change.fields_changed,
+                details=db_change.details,
+                old_hash=db_change.old_hash,
+                new_hash=db_change.new_hash,
+                reviewed=True,
+                reviewed_at=db_change.reviewed_at,
+                reviewed_by=db_change.reviewed_by,
+            )
+
+    def set_rome_update_pending(self, code_rome: str, pending: bool = True):
+        """Set rome_update_pending flag on a fiche."""
+        with self.session() as session:
+            from .models import FicheMetierDB
+            session.execute(
+                update(FicheMetierDB)
+                .where(FicheMetierDB.code_rome == code_rome)
+                .values(rome_update_pending=pending)
+            )
+
+    def get_fiches_with_pending_updates(self) -> List[FicheMetier]:
+        """Récupère les fiches avec des mises à jour ROME en attente."""
+        with self.session() as session:
+            from .models import FicheMetierDB
+            results = session.execute(
+                select(FicheMetierDB).where(FicheMetierDB.rome_update_pending == True)
+            ).scalars().all()
+            return [r.to_pydantic() for r in results]
