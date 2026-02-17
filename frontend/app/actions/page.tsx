@@ -578,13 +578,17 @@ function TabHistorique() {
         </div>
       </div>
 
-      {/* Logs list */}
+      {/* Logs — 2 colonnes : Humain | IA */}
       {loading ? (
-        <div className="space-y-3">
-          {[1, 2, 3, 4, 5].map(i => (
-            <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 animate-pulse">
-              <div className="h-4 bg-gray-200 rounded w-3/4 mb-2" />
-              <div className="h-3 bg-gray-100 rounded w-1/2" />
+        <div className="grid md:grid-cols-2 gap-4">
+          {[1, 2].map(col => (
+            <div key={col} className="space-y-3">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 animate-pulse">
+                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-2" />
+                  <div className="h-3 bg-gray-100 rounded w-1/2" />
+                </div>
+              ))}
             </div>
           ))}
         </div>
@@ -593,38 +597,67 @@ function TabHistorique() {
           <div className="text-4xl mb-3">📭</div>
           <p className="text-gray-500">Aucun événement trouvé</p>
         </div>
-      ) : (
-        <div className="space-y-2">
-          {logs.map(log => {
-            const badge = TYPE_BADGES[log.type_evenement] || { label: log.type_evenement, color: "text-gray-700", bg: "bg-gray-100" };
-            return (
-              <div key={log.id} className="bg-white rounded-xl border border-gray-200 p-4 hover:border-indigo-200 transition">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${badge.bg} ${badge.color}`}>
-                        {badge.label}
-                      </span>
-                      {log.code_rome && (
-                        <Link href={`/fiches/${log.code_rome}`}
-                          className="text-xs font-mono text-indigo-600 hover:text-indigo-800 hover:underline">
-                          {log.code_rome}
-                        </Link>
-                      )}
-                      <span className="text-xs text-gray-400">•</span>
-                      <span className="text-xs text-gray-500">{log.agent || "Système"}</span>
-                    </div>
-                    <p className="text-sm text-gray-700 truncate">{log.description}</p>
-                  </div>
-                  <div className="text-xs text-gray-400 whitespace-nowrap">
-                    {log.timestamp ? formatDate(log.timestamp) : "—"}
-                  </div>
-                </div>
+      ) : (() => {
+        const IA_AGENTS = ["agent ia", "agent_ia", "agentredacteurfiche", "agentcorrecteurfiche", "système", "systeme", "system", "ia"];
+        const isIA = (agent: string) => IA_AGENTS.some(a => (agent || "").toLowerCase().includes(a));
+        const humanLogs = logs.filter(l => !isIA(l.agent || ""));
+        const iaLogs = logs.filter(l => isIA(l.agent || ""));
+
+        const renderLog = (log: AuditLog) => {
+          const badge = TYPE_BADGES[log.type_evenement] || { label: log.type_evenement, color: "text-gray-700", bg: "bg-gray-100" };
+          return (
+            <div key={log.id} className="bg-white rounded-xl border border-gray-200 p-4 hover:border-indigo-200 transition">
+              <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${badge.bg} ${badge.color}`}>
+                  {badge.label}
+                </span>
+                {log.code_rome && (
+                  <Link href={`/fiches/${log.code_rome}`}
+                    className="text-xs font-mono text-indigo-600 hover:text-indigo-800 hover:underline">
+                    {log.code_rome}
+                  </Link>
+                )}
               </div>
-            );
-          })}
-        </div>
-      )}
+              <p className="text-sm text-gray-700 truncate mb-1">{log.description}</p>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-500 font-medium">{log.agent || "—"}</span>
+                <span className="text-xs text-gray-400">{log.timestamp ? formatDate(log.timestamp) : "—"}</span>
+              </div>
+            </div>
+          );
+        };
+
+        return (
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Colonne Humain */}
+            <div>
+              <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-200">
+                <span className="text-lg">👤</span>
+                <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Humain</h3>
+                <span className="text-xs text-gray-400 ml-auto">{humanLogs.length} action(s)</span>
+              </div>
+              <div className="space-y-2">
+                {humanLogs.length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center py-6">Aucune action humaine</p>
+                ) : humanLogs.map(renderLog)}
+              </div>
+            </div>
+            {/* Colonne IA */}
+            <div>
+              <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-200">
+                <span className="text-lg">🤖</span>
+                <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Intelligence Artificielle</h3>
+                <span className="text-xs text-gray-400 ml-auto">{iaLogs.length} action(s)</span>
+              </div>
+              <div className="space-y-2">
+                {iaLogs.length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center py-6">Aucune action IA</p>
+                ) : iaLogs.map(renderLog)}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
