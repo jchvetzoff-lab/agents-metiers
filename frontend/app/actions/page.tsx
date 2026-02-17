@@ -84,16 +84,12 @@ function TabActions() {
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState(false);
   const [archiving, setArchiving] = useState(false);
-  const [exporting, setExporting] = useState(false);
-  const [enriching, setEnriching] = useState(false);
   const [correcting, setCorrecting] = useState(false);
-  const [generatingVariantes, setGeneratingVariantes] = useState(false);
   const [creatingFiche, setCreatingFiche] = useState(false);
   const [metierName, setMetierName] = useState("");
-  const [langue, setLangue] = useState("fr");
-  const [batchSize, setBatchSize] = useState(10);
+  const [romeCheckCode, setRomeCheckCode] = useState("");
+  const [romeChecking, setRomeChecking] = useState(false);
   const [results, setResults] = useState<{ type: "success" | "error"; message: string }[]>([]);
-  const [progress, setProgress] = useState({ current: 0, total: 0 });
 
   useEffect(() => {
     api.getStats().then(s => { setStats(s); setLoading(false); }).catch(() => setLoading(false));
@@ -142,47 +138,6 @@ function TabActions() {
     }
   }
 
-  async function handleExportJSON() {
-    setExporting(true);
-    try {
-      const data = await api.getFiches({ limit: 2000 });
-      const blob = new Blob([JSON.stringify(data.results, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `fiches-metiers-${new Date().toISOString().slice(0, 10)}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-      setResults(prev => [{ type: "success", message: `${data.results.length} fiches exportées en JSON` }, ...prev]);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      setResults(prev => [{ type: "error", message }, ...prev]);
-    } finally {
-      setExporting(false);
-    }
-  }
-
-  async function handleEnrichBatch() {
-    setEnriching(true);
-    setProgress({ current: 0, total: 0 });
-    try {
-      const data = await api.getFiches({ statut: "brouillon", limit: batchSize });
-      const fiches = data.results;
-      setProgress({ current: 0, total: fiches.length });
-      let success = 0;
-      for (let i = 0; i < fiches.length; i++) {
-        try { await api.enrichFiche(fiches[i].code_rome); success++; } catch { /* skip */ }
-        setProgress({ current: i + 1, total: fiches.length });
-      }
-      setResults(prev => [{ type: "success", message: `${success}/${fiches.length} fiches enrichies avec succès` }, ...prev]);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      setResults(prev => [{ type: "error", message }, ...prev]);
-    } finally {
-      setEnriching(false);
-    }
-  }
-
   async function handleCorrectAll() {
     setCorrecting(true);
     try {
@@ -200,20 +155,21 @@ function TabActions() {
     }
   }
 
-  async function handleGenerateVariantes() {
-    setGeneratingVariantes(true);
+  async function handleRomeCheck() {
+    setRomeChecking(true);
     try {
-      const data = await api.getFiches({ statut: "publiee", limit: 500 });
-      let generated = 0;
-      for (const fiche of data.results) {
-        try { await api.generateVariantes(fiche.code_rome, { langues: [langue] }); generated++; } catch { /* skip */ }
-      }
-      setResults(prev => [{ type: "success", message: `Variantes générées pour ${generated} fiches (langue: ${langue})` }, ...prev]);
+      const params: Record<string, string> = {};
+      if (romeCheckCode.trim()) params.code_rome = romeCheckCode.trim().toUpperCase();
+      const res = await api.getRomeVeilleStatus();
+      const msg = res.fiches_pending > 0
+        ? `${res.fiches_pending} fiche(s) avec mise à jour ROME détectée — ${res.changements_non_revues} changement(s) non revu(s)`
+        : "Aucune mise à jour ROME détectée — toutes les fiches sont à jour";
+      setResults(prev => [{ type: res.fiches_pending > 0 ? "error" : "success", message: msg }, ...prev]);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       setResults(prev => [{ type: "error", message }, ...prev]);
     } finally {
-      setGeneratingVariantes(false);
+      setRomeChecking(false);
     }
   }
 
@@ -279,19 +235,6 @@ function TabActions() {
         </div>
       )}
 
-      {/* Progress bar */}
-      {enriching && progress.total > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center justify-between text-sm mb-2">
-            <span className="text-gray-600">Enrichissement : {progress.current}/{progress.total}</span>
-            <span className="text-indigo-600 font-medium">{Math.round(progress.current / progress.total * 100)}%</span>
-          </div>
-          <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-            <div className="h-full bg-indigo-600 rounded-full transition-all duration-300" style={{ width: `${(progress.current / progress.total) * 100}%` }} />
-          </div>
-        </div>
-      )}
-
       {/* Section: Actions Utilisateurs */}
       <div>
         <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
@@ -315,14 +258,7 @@ function TabActions() {
             onClick={handleArchiveObsolete}
             disabled={archiving}
           />
-          <ActionCard
-            title="Exporter en JSON"
-            description="Télécharge toutes les fiches au format JSON."
-            icon="📥"
-            buttonLabel={exporting ? "Export..." : "Exporter"}
-            onClick={handleExportJSON}
-            disabled={exporting}
-          />
+          {/* Exporter JSON retiré */}
         </div>
       </div>
 
@@ -331,22 +267,18 @@ function TabActions() {
         <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
           <span>🤖</span> Actions IA
         </h2>
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Enrichir batch */}
+        <div className="grid md:grid-cols-3 gap-6">
+          {/* Créer fiche */}
           <div className="bg-white rounded-2xl border border-gray-200 p-6">
-            <div className="text-3xl mb-3">🧠</div>
-            <h3 className="text-base font-bold text-gray-900 mb-2">Enrichir un lot de fiches brouillon</h3>
-            <p className="text-sm text-gray-500 mb-4">Lance l&apos;enrichissement IA sur un lot de fiches brouillon.</p>
-            <div className="flex items-center gap-3 mb-4">
-              <label className="text-sm text-gray-600">Taille du lot :</label>
-              <select value={batchSize} onChange={e => setBatchSize(Number(e.target.value))}
-                className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500">
-                {[5, 10, 25, 50, 100].map(n => <option key={n} value={n}>{n}</option>)}
-              </select>
-            </div>
-            <button onClick={handleEnrichBatch} disabled={enriching}
+            <div className="text-3xl mb-3">✨</div>
+            <h3 className="text-base font-bold text-gray-900 mb-2">Créer une fiche depuis un nom de métier</h3>
+            <p className="text-sm text-gray-500 mb-4">Crée une nouvelle fiche brouillon à partir d&apos;un nom de métier.</p>
+            <input type="text" placeholder="Ex : Développeur blockchain" value={metierName}
+              onChange={e => setMetierName(e.target.value)}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm mb-4 focus:outline-none focus:border-indigo-500" />
+            <button onClick={handleCreateFiche} disabled={creatingFiche || !metierName.trim()}
               className="w-full px-4 py-2.5 bg-indigo-600 text-white rounded-full text-sm font-medium hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-wait">
-              {enriching ? "Enrichissement en cours..." : "Enrichir"}
+              {creatingFiche ? "Création..." : "Créer"}
             </button>
           </div>
 
@@ -361,37 +293,17 @@ function TabActions() {
             </button>
           </div>
 
-          {/* Générer variantes */}
+          {/* Veille ROME */}
           <div className="bg-white rounded-2xl border border-gray-200 p-6">
-            <div className="text-3xl mb-3">🌍</div>
-            <h3 className="text-base font-bold text-gray-900 mb-2">Générer les variantes</h3>
-            <p className="text-sm text-gray-500 mb-4">Génère les variantes linguistiques pour toutes les fiches publiées.</p>
-            <div className="flex items-center gap-3 mb-4">
-              <label className="text-sm text-gray-600">Langue :</label>
-              <select value={langue} onChange={e => setLangue(e.target.value)}
-                className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500">
-                {[{ v: "fr", l: "Français" }, { v: "en", l: "Anglais" }, { v: "es", l: "Espagnol" },
-                  { v: "de", l: "Allemand" }, { v: "it", l: "Italien" }, { v: "pt", l: "Portugais" }, { v: "ar", l: "Arabe" }]
-                  .map(lang => <option key={lang.v} value={lang.v}>{lang.l}</option>)}
-              </select>
-            </div>
-            <button onClick={handleGenerateVariantes} disabled={generatingVariantes}
-              className="w-full px-4 py-2.5 bg-indigo-600 text-white rounded-full text-sm font-medium hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-wait">
-              {generatingVariantes ? "Génération en cours..." : "Générer"}
-            </button>
-          </div>
-
-          {/* Créer fiche */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-6">
-            <div className="text-3xl mb-3">✨</div>
-            <h3 className="text-base font-bold text-gray-900 mb-2">Créer une fiche depuis un nom de métier</h3>
-            <p className="text-sm text-gray-500 mb-4">Crée une nouvelle fiche brouillon à partir d&apos;un nom de métier.</p>
-            <input type="text" placeholder="Ex : Développeur blockchain" value={metierName}
-              onChange={e => setMetierName(e.target.value)}
+            <div className="text-3xl mb-3">🔍</div>
+            <h3 className="text-base font-bold text-gray-900 mb-2">Veille ROME</h3>
+            <p className="text-sm text-gray-500 mb-4">Vérifie si les codes ROME de vos fiches ont évolué dans le référentiel officiel France Travail.</p>
+            <input type="text" placeholder="Code ROME (ex : M1805) ou laisser vide pour tout vérifier"
+              value={romeCheckCode} onChange={e => setRomeCheckCode(e.target.value)}
               className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm mb-4 focus:outline-none focus:border-indigo-500" />
-            <button onClick={handleCreateFiche} disabled={creatingFiche || !metierName.trim()}
+            <button onClick={handleRomeCheck} disabled={romeChecking}
               className="w-full px-4 py-2.5 bg-indigo-600 text-white rounded-full text-sm font-medium hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-wait">
-              {creatingFiche ? "Création..." : "Créer"}
+              {romeChecking ? "Vérification en cours..." : "Vérifier"}
             </button>
           </div>
         </div>
