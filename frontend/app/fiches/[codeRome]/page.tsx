@@ -1554,30 +1554,48 @@ export default function FicheDetailPage() {
                     )}
                   </div>
 
-                  {/* Workflow: Brouillon → Validation IA → Validation Humaine → Publiée */}
+                  {/* Workflow: Brouillon → Enrichi → Validation IA → Validation humaine → Publiée */}
                   <div className="flex items-center gap-1 text-[10px] text-gray-400">
                     <span className={fiche.statut === "brouillon" ? "text-indigo-600 font-bold" : ""}>Brouillon</span>
                     <span>→</span>
-                    <span className={fiche.statut === "en_validation" ? "text-amber-600 font-bold" : ""}>Validation IA</span>
+                    <span className={fiche.statut === "en_validation" && fiche.validation_ia_score == null ? "text-amber-600 font-bold" : ""}>Enrichi</span>
                     <span>→</span>
-                    <span className={fiche.validation_humaine === "approuvee" ? "text-green-600 font-bold" : ""}>Validation Humaine</span>
+                    <span className={fiche.validation_ia_score != null && fiche.statut !== "publiee" ? "text-amber-600 font-bold" : ""}>Validation IA</span>
+                    <span>→</span>
+                    <span className={fiche.validation_humaine === "approuvee" && fiche.statut !== "publiee" ? "text-green-600 font-bold" : ""}>Validation humaine</span>
                     <span>→</span>
                     <span className={fiche.statut === "publiee" ? "text-green-600 font-bold" : ""}>Publiée</span>
                   </div>
 
-                  {/* Action buttons */}
+                  {/* Action buttons — Workflow: Brouillon → Enrichi → Validation IA → Validation humaine → Publiée */}
                   <div className="flex flex-wrap items-center gap-2">
-                    {/* Valider (IA) - always available for brouillon/en_validation */}
-                    {(fiche.statut === "brouillon" || fiche.statut === "en_validation") && (
-                      <button onClick={handleValidate} disabled={actionLoading !== null}
-                        className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-amber-300 text-amber-600 rounded-full text-xs font-medium hover:bg-amber-50 transition disabled:opacity-40 disabled:cursor-wait">
-                        {actionLoading === "validate" ? <span className="w-3 h-3 border-2 border-amber-300 border-t-amber-600 rounded-full animate-spin" /> : "🤖"}
-                        Valider (IA)
+                    {/* Brouillon : uniquement Enrichir */}
+                    {fiche.statut === "brouillon" && (
+                      <button onClick={handleEnrich} disabled={actionLoading !== null}
+                        className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-indigo-300 text-indigo-600 rounded-full text-xs font-medium hover:bg-indigo-50 transition disabled:opacity-40 disabled:cursor-wait">
+                        {actionLoading === "enrich" ? <span className="w-3 h-3 border-2 border-indigo-300 border-t-indigo-600 rounded-full animate-spin" /> : "✨"}
+                        Enrichir
                       </button>
                     )}
 
-                    {/* Approuver / Rejeter - if validation IA >= 70 */}
-                    {fiche.validation_ia_score != null && fiche.validation_ia_score >= 70 && fiche.statut !== "publiee" && (
+                    {/* En validation (enrichi) : Valider (IA) + Ré-enrichir */}
+                    {fiche.statut === "en_validation" && (fiche.validation_ia_score == null || fiche.validation_ia_score < 70) && fiche.validation_humaine !== "approuvee" && (
+                      <>
+                        <button onClick={handleValidate} disabled={actionLoading !== null}
+                          className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-amber-300 text-amber-600 rounded-full text-xs font-medium hover:bg-amber-50 transition disabled:opacity-40 disabled:cursor-wait">
+                          {actionLoading === "validate" ? <span className="w-3 h-3 border-2 border-amber-300 border-t-amber-600 rounded-full animate-spin" /> : "🤖"}
+                          Valider (IA)
+                        </button>
+                        <button onClick={handleEnrich} disabled={actionLoading !== null}
+                          className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-indigo-300 text-indigo-600 rounded-full text-xs font-medium hover:bg-indigo-50 transition disabled:opacity-40 disabled:cursor-wait">
+                          {actionLoading === "enrich" ? <span className="w-3 h-3 border-2 border-indigo-300 border-t-indigo-600 rounded-full animate-spin" /> : "✨"}
+                          Ré-enrichir
+                        </button>
+                      </>
+                    )}
+
+                    {/* Après validation IA >= 70 : Approuver + Rejeter (validation humaine) */}
+                    {fiche.validation_ia_score != null && fiche.validation_ia_score >= 70 && fiche.statut !== "publiee" && fiche.validation_humaine !== "approuvee" && (
                       <>
                         <button onClick={async () => {
                           setActionLoading("approve");
@@ -1609,16 +1627,7 @@ export default function FicheDetailPage() {
                       </>
                     )}
 
-                    {/* Ré-enrichir if score < 70 */}
-                    {(fiche.score_completude != null && fiche.score_completude < 70) && (
-                      <button onClick={handleEnrich} disabled={actionLoading !== null}
-                        className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-indigo-300 text-indigo-600 rounded-full text-xs font-medium hover:bg-indigo-50 transition disabled:opacity-40 disabled:cursor-wait">
-                        {actionLoading === "enrich" ? <span className="w-3 h-3 border-2 border-indigo-300 border-t-indigo-600 rounded-full animate-spin" /> : "✨"}
-                        Ré-enrichir
-                      </button>
-                    )}
-
-                    {/* Publier - only if both validations passed */}
+                    {/* Publier - après validation humaine approuvée */}
                     {fiche.statut === "en_validation" && fiche.validation_humaine === "approuvee" && (
                       <button onClick={handlePublish} disabled={actionLoading !== null}
                         className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-green-600 text-white rounded-full text-xs font-medium hover:bg-green-700 transition disabled:opacity-40 disabled:cursor-wait">
@@ -1627,12 +1636,14 @@ export default function FicheDetailPage() {
                       </button>
                     )}
 
-                    {/* Variantes */}
-                    <button onClick={handleGenerateVariantes} disabled={actionLoading !== null}
-                      className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-violet-300 text-violet-600 rounded-full text-xs font-medium hover:bg-violet-50 transition disabled:opacity-40 disabled:cursor-wait">
-                      {actionLoading === "variantes" ? <span className="w-3 h-3 border-2 border-violet-300 border-t-violet-600 rounded-full animate-spin" /> : "🌐"}
-                      Variantes
-                    </button>
+                    {/* Publié : uniquement Variantes */}
+                    {fiche.statut === "publiee" && (
+                      <button onClick={handleGenerateVariantes} disabled={actionLoading !== null}
+                        className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-violet-300 text-violet-600 rounded-full text-xs font-medium hover:bg-violet-50 transition disabled:opacity-40 disabled:cursor-wait">
+                        {actionLoading === "variantes" ? <span className="w-3 h-3 border-2 border-violet-300 border-t-violet-600 rounded-full animate-spin" /> : "🌐"}
+                        Variantes
+                      </button>
+                    )}
                   </div>
                 </div>
               )}

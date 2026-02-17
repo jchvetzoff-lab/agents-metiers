@@ -85,7 +85,7 @@ export default function Home() {
                 <div className="absolute inset-0 bg-gradient-to-r from-violet-600 to-pink-600 transition-all group-hover:from-violet-500 group-hover:to-pink-500" />
                 <span className="relative">Lancer des actions</span>
               </Link>
-              <Link href="/brouillons"
+              <Link href="/fiches"
                 className="px-8 py-3.5 rounded-full text-white/70 font-semibold text-sm border border-white/10 hover:border-white/30 hover:text-white hover:bg-white/5 transition-all">
                 Explorer les fiches
               </Link>
@@ -136,28 +136,16 @@ export default function Home() {
                 glow: "shadow-violet-500/20",
               },
               {
-                href: "/brouillons",
+                href: "/fiches",
                 icon: (
                   <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 ),
-                title: "Brouillons",
-                desc: "Fiches en cours, triées par score de priorité.",
+                title: "Fiches",
+                desc: "Toutes les fiches métiers du référentiel ROME.",
                 gradient: "from-pink-600 to-rose-600",
                 glow: "shadow-pink-500/20",
-              },
-              {
-                href: "/fiches-validees",
-                icon: (
-                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                ),
-                title: "Fiches validées",
-                desc: "Référentiel publié et fiches en validation.",
-                gradient: "from-emerald-600 to-teal-600",
-                glow: "shadow-emerald-500/20",
               },
             ].map((card, i) => (
               <StaggerItem key={i}>
@@ -188,8 +176,7 @@ export default function Home() {
             <div className="font-bold text-lg bg-gradient-to-r from-violet-400 to-pink-400 bg-clip-text text-transparent">Agents Métiers</div>
             <div className="flex gap-8 text-sm">
               <Link href="/actions" className="text-white/30 hover:text-white/70 transition-colors font-medium">Actions</Link>
-              <Link href="/brouillons" className="text-white/30 hover:text-white/70 transition-colors font-medium">Brouillons</Link>
-              <Link href="/fiches-validees" className="text-white/30 hover:text-white/70 transition-colors font-medium">Fiches validées</Link>
+              <Link href="/fiches" className="text-white/30 hover:text-white/70 transition-colors font-medium">Fiches</Link>
             </div>
           </div>
           <div className="text-center text-xs text-white/15 mt-4">
