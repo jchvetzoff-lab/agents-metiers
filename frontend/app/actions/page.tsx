@@ -84,7 +84,6 @@ function TabActions() {
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState(false);
   const [archiving, setArchiving] = useState(false);
-  const [correcting, setCorrecting] = useState(false);
   const [creatingFiche, setCreatingFiche] = useState(false);
   const [metierName, setMetierName] = useState("");
   const [romeCheckCode, setRomeCheckCode] = useState("");
@@ -135,23 +134,6 @@ function TabActions() {
       setResults(prev => [{ type: "error", message }, ...prev]);
     } finally {
       setArchiving(false);
-    }
-  }
-
-  async function handleCorrectAll() {
-    setCorrecting(true);
-    try {
-      const data = await api.getFiches({ statut: "en_validation", limit: 500 });
-      let corrected = 0;
-      for (const fiche of data.results) {
-        try { await api.autoCorrectFiche(fiche.code_rome, [], []); corrected++; } catch { /* skip */ }
-      }
-      setResults(prev => [{ type: "success", message: `${corrected} fiches corrigées` }, ...prev]);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      setResults(prev => [{ type: "error", message }, ...prev]);
-    } finally {
-      setCorrecting(false);
     }
   }
 
@@ -279,17 +261,6 @@ function TabActions() {
             <button onClick={handleCreateFiche} disabled={creatingFiche || !metierName.trim()}
               className="w-full px-4 py-2.5 bg-indigo-600 text-white rounded-full text-sm font-medium hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-wait">
               {creatingFiche ? "Création..." : "Créer"}
-            </button>
-          </div>
-
-          {/* Corriger */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-6">
-            <div className="text-3xl mb-3">🔧</div>
-            <h3 className="text-base font-bold text-gray-900 mb-2">Corriger toutes les fiches</h3>
-            <p className="text-sm text-gray-500 mb-4">Lance la correction automatique sur toutes les fiches en validation.</p>
-            <button onClick={handleCorrectAll} disabled={correcting}
-              className="w-full px-4 py-2.5 bg-indigo-600 text-white rounded-full text-sm font-medium hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-wait">
-              {correcting ? "Correction en cours..." : "Corriger tout"}
             </button>
           </div>
 
