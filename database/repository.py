@@ -366,7 +366,10 @@ class Repository:
         self,
         code_rome: Optional[str] = None,
         type_evenement: Optional[TypeEvenement] = None,
-        limit: int = 100
+        limit: int = 100,
+        search: Optional[str] = None,
+        agent: Optional[str] = None,
+        since: Optional[str] = None,
     ) -> List[AuditLog]:
         """Récupère les logs d'audit avec filtres optionnels."""
         with self.session() as session:
@@ -375,6 +378,20 @@ class Repository:
                 query = query.where(AuditLogDB.code_rome == code_rome)
             if type_evenement:
                 query = query.where(AuditLogDB.type_evenement == type_evenement.value)
+            if agent:
+                query = query.where(AuditLogDB.agent.ilike(f"%{agent}%"))
+            if search:
+                pattern = f"%{search}%"
+                query = query.where(
+                    (AuditLogDB.code_rome.ilike(pattern)) | (AuditLogDB.description.ilike(pattern))
+                )
+            if since:
+                from datetime import datetime as dt
+                try:
+                    since_dt = dt.fromisoformat(since.replace("Z", "+00:00"))
+                    query = query.where(AuditLogDB.timestamp >= since_dt)
+                except ValueError:
+                    pass
             query = query.order_by(AuditLogDB.timestamp.desc()).limit(limit)
 
             results = session.execute(query).scalars().all()

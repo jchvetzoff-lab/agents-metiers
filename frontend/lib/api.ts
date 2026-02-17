@@ -556,10 +556,23 @@ class ApiClient {
 
   // ==================== LOGS ====================
 
-  async getAuditLogs(limit: number = 15): Promise<{ total: number; logs: AuditLog[] }> {
-    return this.request<{ total: number; logs: AuditLog[] }>(
-      `/api/audit-logs?limit=${limit}`
-    );
+  async getAuditLogs(params?: {
+    limit?: number;
+    code_rome?: string;
+    search?: string;
+    type_evenement?: string;
+    agent?: string;
+    since?: string;
+  }): Promise<{ total: number; logs: AuditLog[] }> {
+    const searchParams = new URLSearchParams();
+    if (params?.limit != null) searchParams.set("limit", params.limit.toString());
+    if (params?.code_rome) searchParams.set("code_rome", params.code_rome);
+    if (params?.search) searchParams.set("search", params.search);
+    if (params?.type_evenement) searchParams.set("type_evenement", params.type_evenement);
+    if (params?.agent) searchParams.set("agent", params.agent);
+    if (params?.since) searchParams.set("since", params.since);
+    const query = searchParams.toString() ? `?${searchParams.toString()}` : "";
+    return this.request<{ total: number; logs: AuditLog[] }>(`/api/audit-logs${query}`);
   }
 
   // ==================== AUTH ====================

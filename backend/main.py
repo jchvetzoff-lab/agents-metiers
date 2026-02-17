@@ -723,10 +723,32 @@ async def get_variante_detail(code_rome: str, variante_id: int):
 
 
 @app.get("/api/audit-logs")
-async def get_audit_logs(limit: int = Query(15, ge=1, le=100)):
-    """Récupère les logs d'audit."""
+async def get_audit_logs(
+    limit: int = Query(15, ge=1, le=100),
+    code_rome: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),
+    type_evenement: Optional[str] = Query(None),
+    agent: Optional[str] = Query(None),
+    since: Optional[str] = Query(None),
+):
+    """Récupère les logs d'audit avec filtres."""
     try:
-        logs = repo.get_audit_logs(limit=limit)
+        from database.models import TypeEvenement as TE
+        te = None
+        if type_evenement:
+            try:
+                te = TE(type_evenement)
+            except ValueError:
+                pass
+
+        logs = repo.get_audit_logs(
+            limit=limit,
+            code_rome=code_rome,
+            type_evenement=te,
+            search=search,
+            agent=agent,
+            since=since,
+        )
 
         return {
             "total": len(logs),
@@ -736,13 +758,32 @@ async def get_audit_logs(limit: int = Query(15, ge=1, le=100)):
                     "type_evenement": log.type_evenement.value,
                     "description": log.description,
                     "code_rome": log.code_rome,
-                    "timestamp": log.timestamp
+                    "agent": log.agent or "Système",
+                    "validateur": log.validateur,
+                    "timestamp": log.timestamp.isoformat() if log.timestamp else None,
                 }
                 for log in logs
             ]
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+def _add_audit(type_evt: str, code_rome: str, agent: str, description: str, validateur: str = None):
+    """Helper to add audit log."""
+    from database.models import AuditLog as AL, TypeEvenement as TE
+    try:
+        te = TE(type_evt)
+    except ValueError:
+        te = TE.MODIFICATION
+    repo.add_audit_log(AL(
+        timestamp=datetime.now(),
+        type_evenement=te,
+        code_rome=code_rome,
+        agent=agent,
+        description=description,
+        validateur=validateur,
+    ))
 
 
 # ==================== ACTIONS IA ====================
@@ -795,6 +836,9 @@ async def validate_fiche(code_rome: str):
                 {"score": score_final, "date": now, "details": json.dumps(rapport), "statut": new_statut, "cr": code_rome}
             )
 
+        _add_audit("validation_ia", code_rome, "Agent IA",
+                   f"Validation IA : {verdict} ({score_final}/100) pour {fiche.nom_epicene}")
+
         return {
             "message": f"Validation IA terminée — {verdict}",
             "code_rome": code_rome,
@@ -842,6 +886,10 @@ async def review_fiche(code_rome: str, body: ReviewRequest):
                  "statut": new_statut, "cr": code_rome}
             )
 
+        _add_audit("validation_humaine", code_rome, "admin",
+                   f"Validation humaine : {body.decision} pour {fiche.nom_epicene}",
+                   validateur="admin")
+
         return {
             "message": f"Fiche {'approuvée' if body.decision == 'approuver' else 'rejetée'}",
             "code_rome": code_rome,
@@ -870,6 +918,9 @@ async def enrich_fiche(code_rome: str):
                 text("UPDATE fiches_metiers SET version = :v, date_maj = :d WHERE code_rome = :cr"),
                 {"v": new_version, "d": datetime.now(), "cr": code_rome}
             )
+
+        _add_audit("enrichissement", code_rome, "Agent IA",
+                   f"Enrichissement de {fiche.nom_epicene} (v{new_version})")
 
         return {
             "message": "Enrichissement terminé (stub)",
@@ -913,6 +964,9 @@ async def publish_fiche(code_rome: str):
                 text("UPDATE fiches_metiers SET statut = 'publiee' WHERE code_rome = :cr"),
                 {"cr": code_rome}
             )
+
+        _add_audit("publication", code_rome, "Système",
+                   f"Publication de {fiche.nom_epicene}")
 
         return {"message": "Fiche publiée", "code_rome": code_rome}
     except HTTPException:
