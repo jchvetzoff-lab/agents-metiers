@@ -1495,77 +1495,145 @@ export default function FicheDetailPage() {
                 <div>{t.version} {fiche.version}</div>
                 <div>{t.updatedOn} {new Date(fiche.date_maj).toLocaleDateString(t.locale)}</div>
               </div>
-              {/* ── ACTION BUTTONS (authenticated only) ── */}
+              {/* ── SCORE & VALIDATION PANEL (authenticated only) ── */}
               {authenticated && (
-                <div className="flex flex-wrap items-center gap-2">
-                  {fiche.statut === "brouillon" && (
-                    <button
-                      onClick={handleEnrich}
-                      disabled={actionLoading !== null}
-                      className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-indigo-300 text-indigo-600 rounded-full text-xs font-medium hover:bg-indigo-50 transition disabled:opacity-40 disabled:cursor-wait"
-                    >
-                      {actionLoading === "enrich" ? (
-                        <span className="w-3 h-3 border-2 border-indigo-300 border-t-indigo-600 rounded-full animate-spin" />
-                      ) : (
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/></svg>
-                      )}
-                      Enrichir
-                    </button>
-                  )}
-                  {fiche.statut === "en_validation" && (
-                    <>
-                      <button
-                        onClick={handlePublish}
-                        disabled={actionLoading !== null}
-                        className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-green-300 text-green-600 rounded-full text-xs font-medium hover:bg-green-50 transition disabled:opacity-40 disabled:cursor-wait"
-                      >
-                        {actionLoading === "publish" ? (
-                          <span className="w-3 h-3 border-2 border-green-300 border-t-green-600 rounded-full animate-spin" />
-                        ) : (
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                <div className="w-full md:w-auto space-y-3">
+                  {/* Score de complétude */}
+                  {fiche.score_completude != null && (() => {
+                    const sc = fiche.score_completude!;
+                    const color = sc >= 80 ? "#16A34A" : sc >= 50 ? "#EAB308" : "#DC2626";
+                    const colorBg = sc >= 80 ? "bg-green-50" : sc >= 50 ? "bg-amber-50" : "bg-red-50";
+                    return (
+                      <div className={`rounded-xl border p-4 ${colorBg}`}>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Complétude</span>
+                          <span className="text-2xl font-bold" style={{ color }}>{sc}%</span>
+                        </div>
+                        <div className="w-full h-2.5 bg-gray-200 rounded-full overflow-hidden mb-3">
+                          <motion.div className="h-full rounded-full" style={{ backgroundColor: color }}
+                            initial={{ width: 0 }} animate={{ width: `${sc}%` }}
+                            transition={{ duration: 0.8, ease: "easeOut" }} />
+                        </div>
+                        {/* Score details (expandable) */}
+                        {fiche.score_details && (
+                          <details className="text-xs">
+                            <summary className="cursor-pointer text-gray-500 hover:text-gray-700 font-medium">Détail par critère</summary>
+                            <div className="mt-2 space-y-1">
+                              {Object.entries(fiche.score_details).map(([key, val]) => (
+                                <div key={key} className="flex items-center justify-between">
+                                  <span className="text-gray-600 capitalize">{key.replace(/_/g, " ")}</span>
+                                  <span className="font-bold" style={{ color: val.score >= val.max ? "#16A34A" : val.score > 0 ? "#EAB308" : "#DC2626" }}>
+                                    {val.score}/{val.max}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </details>
                         )}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Validation badges */}
+                  <div className="flex flex-wrap gap-2">
+                    {fiche.validation_ia_score != null && (
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${
+                        fiche.validation_ia_score >= 70 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                      }`}>
+                        🤖 IA : {fiche.validation_ia_score}/100
+                        {fiche.validation_ia_date && <span className="font-normal text-[10px] opacity-70">({new Date(fiche.validation_ia_date).toLocaleDateString("fr-FR")})</span>}
+                      </span>
+                    )}
+                    {fiche.validation_humaine && (
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${
+                        fiche.validation_humaine === "approuvee" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                      }`}>
+                        👤 {fiche.validation_humaine === "approuvee" ? "Approuvée" : "Rejetée"}
+                        {fiche.validation_humaine_date && <span className="font-normal text-[10px] opacity-70">({new Date(fiche.validation_humaine_date).toLocaleDateString("fr-FR")})</span>}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Workflow: Brouillon → Validation IA → Validation Humaine → Publiée */}
+                  <div className="flex items-center gap-1 text-[10px] text-gray-400">
+                    <span className={fiche.statut === "brouillon" ? "text-indigo-600 font-bold" : ""}>Brouillon</span>
+                    <span>→</span>
+                    <span className={fiche.statut === "en_validation" ? "text-amber-600 font-bold" : ""}>Validation IA</span>
+                    <span>→</span>
+                    <span className={fiche.validation_humaine === "approuvee" ? "text-green-600 font-bold" : ""}>Validation Humaine</span>
+                    <span>→</span>
+                    <span className={fiche.statut === "publiee" ? "text-green-600 font-bold" : ""}>Publiée</span>
+                  </div>
+
+                  {/* Action buttons */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Valider (IA) - always available for brouillon/en_validation */}
+                    {(fiche.statut === "brouillon" || fiche.statut === "en_validation") && (
+                      <button onClick={handleValidate} disabled={actionLoading !== null}
+                        className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-amber-300 text-amber-600 rounded-full text-xs font-medium hover:bg-amber-50 transition disabled:opacity-40 disabled:cursor-wait">
+                        {actionLoading === "validate" ? <span className="w-3 h-3 border-2 border-amber-300 border-t-amber-600 rounded-full animate-spin" /> : "🤖"}
+                        Valider (IA)
+                      </button>
+                    )}
+
+                    {/* Approuver / Rejeter - if validation IA >= 70 */}
+                    {fiche.validation_ia_score != null && fiche.validation_ia_score >= 70 && fiche.statut !== "publiee" && (
+                      <>
+                        <button onClick={async () => {
+                          setActionLoading("approve");
+                          try {
+                            const res = await api.reviewFiche(codeRome, "approuver");
+                            showActionMessage("success", `Fiche approuvée — statut : ${res.nouveau_statut}`);
+                            await reloadFiche();
+                          } catch (e: any) { showActionMessage("error", e.message); }
+                          finally { setActionLoading(null); }
+                        }} disabled={actionLoading !== null}
+                          className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-green-300 text-green-600 rounded-full text-xs font-medium hover:bg-green-50 transition disabled:opacity-40 disabled:cursor-wait">
+                          {actionLoading === "approve" ? <span className="w-3 h-3 border-2 border-green-300 border-t-green-600 rounded-full animate-spin" /> : "✅"}
+                          Approuver
+                        </button>
+                        <button onClick={async () => {
+                          const com = prompt("Commentaire de rejet (optionnel) :");
+                          setActionLoading("reject");
+                          try {
+                            const res = await api.reviewFiche(codeRome, "rejeter", com || undefined);
+                            showActionMessage("success", `Fiche rejetée — statut : ${res.nouveau_statut}`);
+                            await reloadFiche();
+                          } catch (e: any) { showActionMessage("error", e.message); }
+                          finally { setActionLoading(null); }
+                        }} disabled={actionLoading !== null}
+                          className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-red-300 text-red-600 rounded-full text-xs font-medium hover:bg-red-50 transition disabled:opacity-40 disabled:cursor-wait">
+                          {actionLoading === "reject" ? <span className="w-3 h-3 border-2 border-red-300 border-t-red-600 rounded-full animate-spin" /> : "❌"}
+                          Rejeter
+                        </button>
+                      </>
+                    )}
+
+                    {/* Ré-enrichir if score < 70 */}
+                    {(fiche.score_completude != null && fiche.score_completude < 70) && (
+                      <button onClick={handleEnrich} disabled={actionLoading !== null}
+                        className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-indigo-300 text-indigo-600 rounded-full text-xs font-medium hover:bg-indigo-50 transition disabled:opacity-40 disabled:cursor-wait">
+                        {actionLoading === "enrich" ? <span className="w-3 h-3 border-2 border-indigo-300 border-t-indigo-600 rounded-full animate-spin" /> : "✨"}
+                        Ré-enrichir
+                      </button>
+                    )}
+
+                    {/* Publier - only if both validations passed */}
+                    {fiche.statut === "en_validation" && fiche.validation_humaine === "approuvee" && (
+                      <button onClick={handlePublish} disabled={actionLoading !== null}
+                        className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-green-600 text-white rounded-full text-xs font-medium hover:bg-green-700 transition disabled:opacity-40 disabled:cursor-wait">
+                        {actionLoading === "publish" ? <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "🚀"}
                         Publier
                       </button>
-                      <button
-                        onClick={handleValidate}
-                        disabled={actionLoading !== null}
-                        className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-amber-300 text-amber-600 rounded-full text-xs font-medium hover:bg-amber-50 transition disabled:opacity-40 disabled:cursor-wait"
-                      >
-                        {actionLoading === "validate" ? (
-                          <span className="w-3 h-3 border-2 border-amber-300 border-t-amber-600 rounded-full animate-spin" />
-                        ) : (
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-                        )}
-                        Valider
-                      </button>
-                      <button
-                        onClick={handleGenerateVariantes}
-                        disabled={actionLoading !== null}
-                        className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-violet-300 text-violet-600 rounded-full text-xs font-medium hover:bg-violet-50 transition disabled:opacity-40 disabled:cursor-wait"
-                      >
-                        {actionLoading === "variantes" ? (
-                          <span className="w-3 h-3 border-2 border-violet-300 border-t-violet-600 rounded-full animate-spin" />
-                        ) : (
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
-                        )}
-                        Variantes
-                      </button>
-                    </>
-                  )}
-                  {fiche.statut === "publiee" && (
-                    <button
-                      onClick={handleGenerateVariantes}
-                      disabled={actionLoading !== null}
-                      className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-violet-300 text-violet-600 rounded-full text-xs font-medium hover:bg-violet-50 transition disabled:opacity-40 disabled:cursor-wait"
-                    >
-                      {actionLoading === "variantes" ? (
-                        <span className="w-3 h-3 border-2 border-violet-300 border-t-violet-600 rounded-full animate-spin" />
-                      ) : (
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
-                      )}
+                    )}
+
+                    {/* Variantes */}
+                    <button onClick={handleGenerateVariantes} disabled={actionLoading !== null}
+                      className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-violet-300 text-violet-600 rounded-full text-xs font-medium hover:bg-violet-50 transition disabled:opacity-40 disabled:cursor-wait">
+                      {actionLoading === "variantes" ? <span className="w-3 h-3 border-2 border-violet-300 border-t-violet-600 rounded-full animate-spin" /> : "🌐"}
                       Variantes
                     </button>
-                  )}
+                  </div>
                 </div>
               )}
             </div>

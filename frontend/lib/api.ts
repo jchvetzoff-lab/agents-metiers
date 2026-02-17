@@ -23,6 +23,7 @@ export interface FicheMetier {
   has_perspectives: boolean;
   nb_variantes: number;
   rome_update_pending?: boolean;
+  score_completude?: number;
 }
 
 export interface RomeChange {
@@ -164,6 +165,23 @@ export interface FicheDetail extends FicheMetier {
     risques: string[];
   } | null;
   rome_update_pending?: boolean;
+  score_completude?: number;
+  score_details?: Record<string, { score: number; max: number; commentaire: string }>;
+  validation_ia_score?: number | null;
+  validation_ia_date?: string | null;
+  validation_ia_details?: {
+    score: number;
+    verdict: string;
+    resume: string;
+    criteres: Record<string, { score: number; commentaire: string }>;
+    problemes: string[];
+    suggestions: string[];
+    details_completude?: Record<string, { score: number; max: number; commentaire: string }>;
+  } | null;
+  validation_humaine?: string | null;
+  validation_humaine_date?: string | null;
+  validation_humaine_par?: string | null;
+  validation_humaine_commentaire?: string | null;
 }
 
 export interface Variante {
@@ -339,12 +357,14 @@ class ApiClient {
   async getFiches(params?: {
     statut?: string;
     search?: string;
+    search_competences?: string;
     limit?: number;
     offset?: number;
   }): Promise<{ total: number; results: FicheMetier[] }> {
     const searchParams = new URLSearchParams();
     if (params?.statut) searchParams.set("statut", params.statut);
     if (params?.search) searchParams.set("search", params.search);
+    if (params?.search_competences) searchParams.set("search_competences", params.search_competences);
     if (params?.limit != null) searchParams.set("limit", params.limit.toString());
     if (params?.offset != null) searchParams.set("offset", params.offset.toString());
 

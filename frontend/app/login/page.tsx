@@ -138,7 +138,7 @@ export default function LoginPage() {
         {/* Form Card */}
         <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-white/40 shadow-float px-6 py-5">
           <h2 className="text-base font-semibold text-gray-900 mb-4 text-center">
-            {phase === "login" ? "Connexion" : "Creer un compte"}
+            {phase === "login" ? "Connexion" : "Créer un compte"}
           </h2>
 
           {success && (
@@ -212,7 +212,7 @@ export default function LoginPage() {
               ) : phase === "login" ? (
                 "Se connecter"
               ) : (
-                "Creer mon compte"
+                "Créer mon compte"
               )}
             </button>
           </form>

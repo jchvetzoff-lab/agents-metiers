@@ -151,7 +151,7 @@ export default {
       backgroundImage: {
         "gradient-purple-pink": "linear-gradient(135deg, #4A39C0 0%, #FF3254 100%)",
         "gradient-primary": "linear-gradient(135deg, #4F46E5 0%, #7C3AED 50%, #EC4899 100%)",
-        "gradient-hero": "linear-gradient(135deg, #EEF2FF 0%, #ECFEFF 50%, #FFF7ED 100%)",
+        "gradient-hero": "linear-gradient(135deg, #0F0A1A 0%, #1A1145 40%, #2D1B69 70%, #1A0A2E 100%)",
         "gradient-cta": "linear-gradient(135deg, #312E81 0%, #0891B2 100%)",
         "gradient-glass": "linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.6) 100%)",
         "gradient-radial": "radial-gradient(circle at center, var(--tw-gradient-stops))",

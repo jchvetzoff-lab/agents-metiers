@@ -1,294 +1,199 @@
 "use client";
 
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { FadeInView, StaggerContainer, StaggerItem, TiltCard } from "@/components/motion";
+
+function FloatingOrb({ className, delay = 0 }: { className: string; delay?: number }) {
+  return (
+    <motion.div
+      className={`absolute rounded-full blur-3xl opacity-20 ${className}`}
+      animate={{
+        y: [0, -30, 0, 20, 0],
+        x: [0, 15, -10, 5, 0],
+        scale: [1, 1.1, 0.95, 1.05, 1],
+      }}
+      transition={{
+        duration: 8,
+        repeat: Infinity,
+        delay,
+        ease: "easeInOut",
+      }}
+    />
+  );
+}
 
 export default function Home() {
   return (
-    <main className="min-h-screen">
-      {/* Hero - Premium */}
-      <section className="py-32 md:py-40 px-6 bg-gradient-hero relative overflow-hidden">
+    <main className="min-h-screen bg-[#0A0A0A]">
+      {/* Hero - Dark premium */}
+      <section className="relative min-h-[85vh] flex items-center justify-center px-6 overflow-hidden"
+        style={{ background: "linear-gradient(135deg, #0F0A1A 0%, #1A1145 40%, #2D1B69 70%, #1A0A2E 100%)" }}>
+        
+        {/* Floating orbs */}
+        <FloatingOrb className="w-[500px] h-[500px] bg-violet-600 top-1/4 -left-32" delay={0} />
+        <FloatingOrb className="w-[400px] h-[400px] bg-pink-600 bottom-1/4 -right-24" delay={2} />
+        <FloatingOrb className="w-[300px] h-[300px] bg-indigo-500 top-1/2 left-1/2" delay={4} />
+        
+        {/* Grid pattern overlay */}
+        <div className="absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage: "linear-gradient(rgba(255,255,255,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px)",
+            backgroundSize: "60px 60px",
+          }}
+        />
+
+        {/* Content */}
         <div className="max-w-4xl mx-auto text-center relative z-10">
           <FadeInView delay={0.1}>
-            <h1 className="text-4xl md:text-6xl font-bold mb-2 text-gray-900 leading-tight">
-              Agents Metiers
-            </h1>
+            <motion.div
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-sm mb-8"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.6 }}
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-sm text-white/60">Système opérationnel</span>
+            </motion.div>
           </FadeInView>
+
           <FadeInView delay={0.2}>
-            <p className="text-base text-gray-500 mb-6">By JAE Fondation</p>
+            <h1 className="text-5xl md:text-7xl font-bold mb-3 leading-tight">
+              <span className="text-white">Agents</span>{" "}
+              <span className="bg-gradient-to-r from-violet-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">Métiers</span>
+            </h1>
           </FadeInView>
 
           <FadeInView delay={0.3}>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-10 leading-relaxed">
-              Systeme multi-agents <span className="gradient-text font-semibold">IA</span> pour generer, enrichir et gerer automatiquement
-              les <span className="text-indigo-600 font-semibold">1 584 fiches metiers</span> du referentiel ROME
-            </p>
+            <p className="text-sm text-white/30 mb-8 tracking-widest uppercase">By JAE Fondation</p>
           </FadeInView>
 
           <FadeInView delay={0.4}>
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
-              <Link href="/dashboard" className="btn btn-primary">
-                Voir le Dashboard →
+            <p className="text-lg md:text-xl text-white/50 max-w-2xl mx-auto mb-12 leading-relaxed">
+              Système multi-agents{" "}
+              <span className="text-violet-400 font-semibold">IA</span>{" "}
+              pour générer, enrichir et gérer les{" "}
+              <span className="text-white font-semibold">1 584 fiches métiers</span>{" "}
+              du référentiel ROME
+            </p>
+          </FadeInView>
+
+          <FadeInView delay={0.5}>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link href="/actions"
+                className="group relative px-8 py-3.5 rounded-full text-white font-semibold text-sm overflow-hidden transition-all hover:scale-105 hover:shadow-2xl hover:shadow-violet-500/25">
+                <div className="absolute inset-0 bg-gradient-to-r from-violet-600 to-pink-600 transition-all group-hover:from-violet-500 group-hover:to-pink-500" />
+                <span className="relative">Lancer des actions</span>
               </Link>
-              <Link href="/fiches" className="btn btn-secondary">
-                Explorer les Fiches
+              <Link href="/brouillons"
+                className="px-8 py-3.5 rounded-full text-white/70 font-semibold text-sm border border-white/10 hover:border-white/30 hover:text-white hover:bg-white/5 transition-all">
+                Explorer les fiches
               </Link>
             </div>
           </FadeInView>
+
+          {/* Stats row */}
+          <FadeInView delay={0.7}>
+            <div className="flex justify-center gap-12 mt-16">
+              {[
+                { value: "1 584", label: "Fiches ROME" },
+                { value: "5", label: "Agents IA" },
+                { value: "90", label: "Variantes/fiche" },
+              ].map((stat, i) => (
+                <div key={i} className="text-center">
+                  <div className="text-2xl md:text-3xl font-bold text-white">{stat.value}</div>
+                  <div className="text-xs text-white/30 mt-1">{stat.label}</div>
+                </div>
+              ))}
+            </div>
+          </FadeInView>
         </div>
+
+        {/* Bottom fade */}
+        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#0A0A0A] to-transparent" />
       </section>
 
-      {/* 5 Agents */}
-      <section className="py-24 px-6 bg-white/60 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-20">
-            <FadeInView>
-              <span className="badge badge-purple mb-6 text-sm">Comment ca marche</span>
-            </FadeInView>
-            <FadeInView delay={0.1}>
-              <h2 className="text-3xl md:text-4xl font-bold mb-6 text-gray-900 leading-tight">
-                5 Agents IA Specialises
-              </h2>
-            </FadeInView>
-            <FadeInView delay={0.2}>
-              <p className="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
-                Chaque agent a un role precis dans le pipeline de traitement des fiches metiers
-              </p>
-            </FadeInView>
-          </div>
+      {/* 3 Cards */}
+      <section className="py-24 px-6 bg-[#0A0A0A] relative">
+        <div className="max-w-5xl mx-auto">
+          <FadeInView>
+            <h2 className="text-center text-3xl font-bold text-white mb-4">Tout commence ici</h2>
+            <p className="text-center text-white/40 mb-16 max-w-lg mx-auto">Trois espaces pour piloter l&apos;ensemble du référentiel métiers.</p>
+          </FadeInView>
 
-          <StaggerContainer stagger={0.12} className="grid md:grid-cols-5 gap-6 mb-12">
+          <StaggerContainer stagger={0.12} className="grid md:grid-cols-3 gap-6">
             {[
-              { num: "1", icon: "📝", name: "Redacteur", desc: "Enrichit les fiches avec descriptions, competences et formations" },
-              { num: "2", icon: "🔧", name: "Correcteur", desc: "Corrige l'orthographe et la grammaire automatiquement" },
-              { num: "3", icon: "⚧️", name: "Genre", desc: "Genere les versions masculin, feminin et epicene" },
-              { num: "4", icon: "💰", name: "Salaires", desc: "Collecte les donnees salariales du marche" },
-              { num: "5", icon: "📈", name: "Tendances", desc: "Analyse l'evolution et la tension des metiers" },
-            ].map((agent, i) => (
+              {
+                href: "/actions",
+                icon: (
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                ),
+                title: "Actions",
+                desc: "Enrichissements IA, publications en masse, exports.",
+                gradient: "from-violet-600 to-indigo-600",
+                glow: "shadow-violet-500/20",
+              },
+              {
+                href: "/brouillons",
+                icon: (
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                ),
+                title: "Brouillons",
+                desc: "Fiches en cours, triées par score de priorité.",
+                gradient: "from-pink-600 to-rose-600",
+                glow: "shadow-pink-500/20",
+              },
+              {
+                href: "/fiches-validees",
+                icon: (
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                ),
+                title: "Fiches validées",
+                desc: "Référentiel publié et fiches en validation.",
+                gradient: "from-emerald-600 to-teal-600",
+                glow: "shadow-emerald-500/20",
+              },
+            ].map((card, i) => (
               <StaggerItem key={i}>
-                <div className="relative">
+                <Link href={card.href}>
                   <TiltCard className="group">
-                    <div className="sojai-card text-center h-full min-h-[280px] flex flex-col justify-center">
-                      <div className="w-16 h-16 rounded-2xl text-white flex items-center justify-center text-3xl mx-auto mb-6 shadow-lg shadow-indigo-500/20"
-                        style={{ background: "linear-gradient(135deg, #4F46E5, #7C3AED, #EC4899)" }}>
-                        {agent.icon}
+                    <div className={`relative p-8 rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm min-h-[240px] flex flex-col justify-center text-center transition-all duration-500 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-2xl ${card.glow}`}>
+                      <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${card.gradient} flex items-center justify-center mx-auto mb-5 text-white shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                        {card.icon}
                       </div>
-                      <div className="text-sm font-bold text-indigo-600 mb-3">Agent {agent.num}</div>
-                      <h3 className="text-lg font-bold mb-4">{agent.name}</h3>
-                      <p className="text-sm text-gray-600 leading-relaxed">{agent.desc}</p>
+                      <h3 className="text-lg font-bold text-white mb-2 group-hover:text-violet-300 transition-colors">{card.title}</h3>
+                      <p className="text-sm text-white/40 leading-relaxed">{card.desc}</p>
+                      <div className="mt-4 text-xs text-white/20 group-hover:text-white/40 transition-colors">
+                        Ouvrir →
+                      </div>
                     </div>
                   </TiltCard>
-                  {i < 4 && (
-                    <div className="hidden md:block absolute top-1/2 -right-3 transform -translate-y-1/2 text-indigo-400 text-2xl font-bold z-10">
-                      →
-                    </div>
-                  )}
-                </div>
-              </StaggerItem>
-            ))}
-          </StaggerContainer>
-
-          <FadeInView>
-            <div className="glass-card p-8 text-center max-w-3xl mx-auto">
-              <p className="text-base text-gray-600 leading-relaxed">
-                <span className="font-semibold text-indigo-600">Pipeline automatique :</span> Chaque fiche
-                passe par ces 5 agents de maniere sequentielle pour garantir qualite et coherence
-              </p>
-            </div>
-          </FadeInView>
-        </div>
-      </section>
-
-      {/* Manuel */}
-      <section className="py-24 px-6 bg-indigo-50/50">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-20">
-            <FadeInView>
-              <span className="badge bg-coral-100 text-coral-600 mb-6 text-sm">Manuel d&apos;utilisation</span>
-            </FadeInView>
-            <FadeInView delay={0.1}>
-              <h2 className="text-3xl md:text-4xl font-bold mb-6 text-gray-900 leading-tight">
-                Comment utiliser la plateforme
-              </h2>
-            </FadeInView>
-            <FadeInView delay={0.2}>
-              <p className="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
-                Guide complet pour gerer vos fiches metiers efficacement
-              </p>
-            </FadeInView>
-          </div>
-
-          <div className="space-y-8">
-            {[
-              {
-                step: "01", title: "Consultez le Dashboard",
-                desc: "Vue d'ensemble avec statistiques en temps reel : nombre de fiches par statut, graphiques de repartition, top 10 metiers en tension, et logs d'activite.",
-                icon: (
-                  <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
-                ),
-                link: "/dashboard",
-              },
-              {
-                step: "02", title: "Explorez les Fiches",
-                desc: "Recherchez parmi 1 584 fiches ROME, filtrez par statut, consultez les details complets avec competences, formations, salaires et variantes multilingues.",
-                icon: (
-                  <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                ),
-                link: "/fiches",
-              },
-              {
-                step: "03", title: "Lancez les Actions IA",
-                desc: "Enrichissez automatiquement vos fiches (descriptions, competences), corrigez l'orthographe, generez les variantes multilingues, ou publiez en masse.",
-                icon: (
-                  <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                ),
-                link: "/actions",
-              },
-              {
-                step: "04", title: "Consultez le Guide",
-                desc: "Documentation complete avec tutoriels detailles, FAQ interactive, et explications sur le systeme de variantes (90 versions par fiche).",
-                icon: (
-                  <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                  </svg>
-                ),
-                link: "/guide",
-              },
-            ].map((item, i) => (
-              <FadeInView key={i} delay={i * 0.1}>
-                <div className="group sojai-card hover:border-indigo-200 transition-all">
-                  <div className="flex gap-8">
-                    <div className="flex-shrink-0">
-                      <div className="w-20 h-20 rounded-2xl text-white flex items-center justify-center font-bold text-xl shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform"
-                        style={{ background: "linear-gradient(135deg, #4F46E5, #7C3AED, #EC4899)" }}>
-                        {item.step}
-                      </div>
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between mb-4">
-                        <h3 className="text-2xl font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">
-                          {item.title}
-                        </h3>
-                        <div className="text-indigo-600 opacity-60 group-hover:opacity-100 transition-opacity">
-                          {item.icon}
-                        </div>
-                      </div>
-                      <p className="text-base text-gray-600 mb-6 leading-relaxed">{item.desc}</p>
-                      <Link
-                        href={item.link}
-                        className="inline-flex items-center gap-2 text-indigo-600 font-semibold hover:gap-3 transition-all text-base"
-                      >
-                        <span>Acceder</span>
-                        <span>→</span>
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              </FadeInView>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Features */}
-      <section className="py-24 px-6 bg-gradient-to-b from-transparent to-white/80">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-20">
-            <FadeInView>
-              <span className="badge badge-purple mb-6 text-sm">Fonctionnalites</span>
-            </FadeInView>
-            <FadeInView delay={0.1}>
-              <h2 className="text-3xl md:text-4xl font-bold mb-6 text-gray-900 leading-tight">
-                Ce que vous pouvez faire
-              </h2>
-            </FadeInView>
-          </div>
-
-          <StaggerContainer stagger={0.12} className="grid md:grid-cols-3 gap-8">
-            {[
-              {
-                icon: (
-                  <svg className="w-14 h-14 text-indigo-600 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
-                  </svg>
-                ),
-                title: "90 Variantes par Fiche",
-                desc: "5 langues × 3 ages × 2 formats × 3 genres = adaptation automatique pour tous les publics",
-              },
-              {
-                icon: (
-                  <svg className="w-14 h-14 text-indigo-600 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
-                  </svg>
-                ),
-                title: "Donnees du Marche",
-                desc: "Salaires moyens, tensions de recrutement, tendances d'evolution pour chaque metier",
-              },
-              {
-                icon: (
-                  <svg className="w-14 h-14 text-indigo-600 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                ),
-                title: "Export PDF Pro",
-                desc: "Telechargez vos fiches au format PDF professionnel avec mise en page elegante",
-              },
-            ].map((f, i) => (
-              <StaggerItem key={i}>
-                <TiltCard className="group">
-                  <div className="sojai-card text-center min-h-[280px] flex flex-col justify-center">
-                    <div className="mb-6">{f.icon}</div>
-                    <h3 className="text-xl font-bold mb-4">{f.title}</h3>
-                    <p className="text-base text-gray-600 leading-relaxed">{f.desc}</p>
-                  </div>
-                </TiltCard>
+                </Link>
               </StaggerItem>
             ))}
           </StaggerContainer>
         </div>
-      </section>
-
-      {/* CTA */}
-      <section className="py-24 px-6" style={{ background: "linear-gradient(135deg, #312E81 0%, #0891B2 100%)" }}>
-        <FadeInView>
-          <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-3xl md:text-4xl font-bold mb-6 leading-tight text-white">
-              Commencez des maintenant
-            </h2>
-            <p className="text-lg text-white/70 mb-10 leading-relaxed">
-              Explorez le dashboard pour voir toutes les statistiques en temps reel
-            </p>
-            <Link href="/dashboard" className="inline-flex items-center justify-center gap-2 px-10 py-4 rounded-full text-base font-semibold bg-white/10 text-white border border-white/20 backdrop-blur-sm hover:bg-white/20 transition-all shadow-lg hover:shadow-xl">
-              Acceder au Dashboard →
-            </Link>
-          </div>
-        </FadeInView>
       </section>
 
       {/* Footer */}
-      <footer className="py-12 bg-white relative">
-        <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, transparent, #4F46E5, transparent)" }} />
+      <footer className="py-8 bg-[#0A0A0A] border-t border-white/[0.04]">
         <div className="max-w-6xl mx-auto px-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-6">
-            <div>
-              <div className="font-bold text-lg gradient-text mb-1">Agents Metiers</div>
-              <p className="text-sm text-gray-600">Propulse par Claude Opus 4.5</p>
-            </div>
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="font-bold text-lg bg-gradient-to-r from-violet-400 to-pink-400 bg-clip-text text-transparent">Agents Métiers</div>
             <div className="flex gap-8 text-sm">
-              <Link href="/dashboard" className="text-gray-600 hover:text-indigo-600 transition-colors font-medium">Dashboard</Link>
-              <Link href="/fiches" className="text-gray-600 hover:text-indigo-600 transition-colors font-medium">Fiches</Link>
-              <Link href="/actions" className="text-gray-600 hover:text-indigo-600 transition-colors font-medium">Actions</Link>
-              <Link href="/guide" className="text-gray-600 hover:text-indigo-600 transition-colors font-medium">Guide</Link>
+              <Link href="/actions" className="text-white/30 hover:text-white/70 transition-colors font-medium">Actions</Link>
+              <Link href="/brouillons" className="text-white/30 hover:text-white/70 transition-colors font-medium">Brouillons</Link>
+              <Link href="/fiches-validees" className="text-white/30 hover:text-white/70 transition-colors font-medium">Fiches validées</Link>
             </div>
           </div>
-          <div className="text-center text-xs text-gray-500">
-            © 2026 Agents Metiers • Tous droits reserves
+          <div className="text-center text-xs text-white/15 mt-4">
+            © 2026 JAE Fondation • Agents Métiers
           </div>
         </div>
       </footer>
