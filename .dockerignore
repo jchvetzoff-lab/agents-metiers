@@ -1,12 +1,67 @@
+# Frontend (not needed in backend container)
 frontend/
 node_modules/
 .next/
+out/
+build/
+
+# Documentation
 *.md
+README*
+docs/
 !backend/requirements.txt
 !requirements.txt
+
+# Development tools
 scripts/
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Version control
 .git/
+.gitignore
+.gitattributes
+
+# Python cache & virtual environments
 __pycache__/
 *.pyc
-.env
+*.pyo
+*.pyd
+.Python
 .venv/
+venv/
+ENV/
+env/
+
+# Environment & secrets
+.env
+.env.*
+*.env
+
+# Database files (will be handled by external DB in production)
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# Tests
+.pytest_cache/
+.coverage
+.tox/
+.nox/
+htmlcov/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+.cache/
+.tmp/
+.temp/

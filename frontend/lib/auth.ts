@@ -20,7 +20,15 @@ export function removeToken(): void {
   localStorage.removeItem(TOKEN_KEY);
 }
 
-export function parseToken(token: string): { sub: number; email: string; name: string; exp: number; iat: number } | null {
+interface TokenPayload {
+  sub: number;
+  email: string;
+  name: string;
+  exp: number;
+  iat: number;
+}
+
+export function parseToken(token: string): TokenPayload | null {
   try {
     const payload = token.split(".")[1];
     // JWT uses Base64URL encoding (- instead of +, _ instead of /, no padding)

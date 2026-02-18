@@ -6,7 +6,13 @@ import { usePathname, useRouter } from "next/navigation";
 import { removeToken } from "@/lib/auth";
 import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
 
-const NAV_ITEMS = [
+interface NavItem {
+  href: string;
+  label: string;
+  icon: JSX.Element;
+}
+
+const NAV_ITEMS: NavItem[] = [
   {
     href: "/actions",
     label: "Actions",

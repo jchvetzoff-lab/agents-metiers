@@ -6,7 +6,14 @@ interface StatusBadgeProps {
   statut: string;
 }
 
-const STATUS_CONFIG: Record<string, { label: string; className: string; icon: string; pulse?: boolean }> = {
+interface StatusConfig {
+  label: string;
+  className: string;
+  icon: string;
+  pulse?: boolean;
+}
+
+const STATUS_CONFIG: Record<string, StatusConfig> = {
   brouillon: {
     label: "Brouillon",
     className: "bg-stone-100 text-stone-600",

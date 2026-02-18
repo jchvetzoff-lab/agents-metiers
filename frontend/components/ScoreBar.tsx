@@ -32,7 +32,11 @@ export function scoreColor(score: number): string {
   return "#16A34A";
 }
 
-export default function ScoreBar({ score }: { score: number }) {
+interface ScoreBarProps {
+  score: number;
+}
+
+export default function ScoreBar({ score }: ScoreBarProps) {
   const color = scoreColor(score);
   return (
     <div className="flex items-center gap-2 min-w-[120px]">

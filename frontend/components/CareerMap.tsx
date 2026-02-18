@@ -14,10 +14,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { type MobiliteItem } from "@/lib/api";
-import {
-  resolveMobiliteItems,
-  buildCareerGraph,
-} from "@/lib/career-graph";
+import { resolveMobiliteItems, buildCareerGraph } from "@/lib/career-graph";
 
 // ── Node Component ──
 

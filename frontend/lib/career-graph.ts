@@ -10,6 +10,10 @@ export interface ResolvedMobiliteItem extends Omit<MobiliteItem, 'code_rome'> {
   code_rome: string | null;
 }
 
+interface SatelliteItem extends ResolvedMobiliteItem {
+  type: "evolution" | "proche";
+}
+
 export function resolveMobiliteItems(items: MobiliteItem[]): ResolvedMobiliteItem[] {
   return items.map((item) => ({
     ...item,
@@ -37,7 +41,7 @@ export function buildCareerGraph(
   const radius = compact ? 200 : 300;
 
   // All satellite items
-  const allItems = [
+  const allItems: SatelliteItem[] = [
     ...evolutions.map(e => ({ ...e, type: "evolution" as const })),
     ...proches.map(p => ({ ...p, type: "proche" as const })),
   ];

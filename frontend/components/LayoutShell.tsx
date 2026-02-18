@@ -6,7 +6,11 @@ import BackgroundAnimation from "@/components/BackgroundAnimation";
 import ScrollToTop from "@/components/ScrollToTop";
 import { PageTransition } from "@/components/motion";
 
-export default function LayoutShell({ children }: { children: React.ReactNode }) {
+interface LayoutShellProps {
+  children: React.ReactNode;
+}
+
+export default function LayoutShell({ children }: LayoutShellProps) {
   const pathname = usePathname();
   const isLogin = pathname === "/login";
 

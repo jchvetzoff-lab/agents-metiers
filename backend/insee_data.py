@@ -3,15 +3,14 @@ Module d'intégration des données INSEE pour les statistiques nationales.
 Remplace les données simulées par de vraies données socio-économiques.
 """
 import asyncio
-import json
 import logging
 from typing import Dict, List, Optional, Any
-from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
 import os
 import csv as csv_module
 import httpx
+from dataclasses import dataclass
 
 
 logger = logging.getLogger(__name__)
@@ -251,14 +250,19 @@ class InseeDataIntegrator:
             if response.status_code == 200:
                 # Traitement du CSV
                 import io
-                df = pd.read_csv(io.StringIO(response.text), sep=";")
-                
-                # Filtrer par secteur NAF et région si spécifiée
-                filtered = df[df["NAF"] == secteur_naf]
-                if region:
-                    filtered = filtered[filtered["REGION"] == region]
-                
-                return int(filtered["EMPLOI"].sum()) if not filtered.empty else 10000
+                try:
+                    import pandas as pd
+                    df = pd.read_csv(io.StringIO(response.text), sep=";")
+                    
+                    # Filtrer par secteur NAF et région si spécifiée
+                    filtered = df[df["NAF"] == secteur_naf]
+                    if region:
+                        filtered = filtered[filtered["REGION"] == region]
+                    
+                    return int(filtered["EMPLOI"].sum()) if not filtered.empty else 10000
+                except ImportError:
+                    logger.warning("pandas non disponible, utilisation des données de fallback")
+                    return 10000
             
         except Exception as e:
             logger.warning(f"Erreur récupération emplois secteur {secteur_naf}: {e}")
@@ -330,19 +334,23 @@ class InseeDataIntegrator:
             response = await self.session.get(url)
             if response.status_code == 200:
                 import io
-                df = pd.read_csv(io.StringIO(response.text), sep=";")
-                
-                # Filtrer par secteur
-                filtered = df[df["SECTEUR_NAF"] == secteur_naf]
-                if not filtered.empty:
-                    row = filtered.iloc[0]
-                    return {
-                        "cdi": float(row.get("CDI_PCT", 55)),
-                        "cdd": float(row.get("CDD_PCT", 25)), 
-                        "interim": float(row.get("INTERIM_PCT", 12)),
-                        "alternance": float(row.get("ALTERNANCE_PCT", 5)),
-                        "autre": float(row.get("AUTRE_PCT", 3))
-                    }
+                try:
+                    import pandas as pd
+                    df = pd.read_csv(io.StringIO(response.text), sep=";")
+                    
+                    # Filtrer par secteur
+                    filtered = df[df["SECTEUR_NAF"] == secteur_naf]
+                    if not filtered.empty:
+                        row = filtered.iloc[0]
+                        return {
+                            "cdi": float(row.get("CDI_PCT", 55)),
+                            "cdd": float(row.get("CDD_PCT", 25)), 
+                            "interim": float(row.get("INTERIM_PCT", 12)),
+                            "alternance": float(row.get("ALTERNANCE_PCT", 5)),
+                            "autre": float(row.get("AUTRE_PCT", 3))
+                        }
+                except ImportError:
+                    logger.warning("pandas non disponible, utilisation des données de fallback")
                     
         except Exception as e:
             logger.warning(f"Erreur récupération contrats secteur {secteur_naf}: {e}")

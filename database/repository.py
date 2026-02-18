@@ -1,11 +1,10 @@
 """
 Repository pour l'accès aux données des fiches métiers.
 """
-import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional, Dict, Any
+from typing import List, Optional
 from contextlib import contextmanager
 
 from sqlalchemy import create_engine, select, update, delete, func, or_

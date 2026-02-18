@@ -3,7 +3,7 @@ import os
 from types import SimpleNamespace
 from pathlib import Path
 
-def get_config():
+def get_config() -> SimpleNamespace:
     database_url = os.environ.get("DATABASE_URL", "")
     db_path = str(Path(__file__).parent / "database" / "fiches_metiers.db")
     

@@ -4,9 +4,7 @@ Modèles de données pour le système de fiches métiers.
 from datetime import datetime
 from enum import Enum
 from typing import Optional, Dict, List, Any
-from dataclasses import dataclass, field
 from pydantic import BaseModel, Field
-import json
 
 
 class TendanceMetier(str, Enum):

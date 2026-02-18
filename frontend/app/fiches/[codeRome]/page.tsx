@@ -11,6 +11,8 @@ import { toLabel, getDisplayName } from "@/lib/utils";
 import { FadeInView } from "@/components/motion";
 import StatusBadge from "@/components/StatusBadge";
 import FormationPathway from "@/components/FormationPathway";
+import SalarySection from "@/components/SalarySection";
+import RecruitementsSection from "@/components/RecruitementsSection";
 import dynamic from "next/dynamic";
 
 const CareerMap = dynamic(() => import("@/components/CareerMap"), { ssr: false });
@@ -2753,51 +2755,67 @@ export default function FicheDetailPage() {
 
             {/* ═══ STATISTIQUES ═══ */}
             {hasStats && (
-              <SectionAnchor id="stats" title={t.statsTitle} icon="📊" accentColor="#00C8C8">
-                {/* ── Region selector ── */}
-                {regions.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-3 mb-6 p-4 bg-[#F9F8FF] rounded-xl border border-indigo-200">
-                    <label className="text-sm font-semibold text-indigo-600">{t.filterByRegion || "Filtrer par région"} :</label>
-                    <select
-                      value={selectedRegion}
-                      onChange={(e) => setSelectedRegion(e.target.value)}
-                      className="px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                    >
-                      <option value="">{t.allFrance || "France entière"}</option>
-                      {regions.filter(r => parseInt(r.code) >= 11).map(r => (
-                        <option key={r.code} value={r.code}>{r.libelle}</option>
-                      ))}
-                      <optgroup label="Outre-mer">
-                        {regions.filter(r => parseInt(r.code) < 11).map(r => (
-                          <option key={r.code} value={r.code}>{r.libelle}</option>
-                        ))}
-                      </optgroup>
-                    </select>
-                    {regionalLoading && (
-                      <div className="w-5 h-5 border-2 border-indigo-100 border-t-indigo-600 rounded-full animate-spin" />
-                    )}
-                    {selectedRegion && regionalData && (
-                      <span className={`text-sm text-gray-500 transition-opacity ${regionalLoading ? "opacity-50" : ""}`}>
-                        {regionalData.nb_offres} {t.offersInRegion || "offres dans cette région"}
-                      </span>
-                    )}
-                  </div>
-                )}
+              <SalarySection
+                fiche={fiche}
+                t={t}
+                regions={regions}
+                selectedRegion={selectedRegion}
+                setSelectedRegion={setSelectedRegion}
+                regionalData={regionalData}
+                regionalLoading={regionalLoading}
+                onRegionChange={setSelectedRegion}
+              />
+            )}
 
-                {/* ── Regional badge indicator ── */}
-                {isRegional && (
-                  <div className="flex items-center gap-2 mb-4">
-                    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${isEstimation ? "bg-amber-100 text-amber-700" : "bg-indigo-100 text-indigo-600"}`}>
-                      <span>📍</span> {regionalData!.region_name} — {isEstimation ? t.estimationInsee : `${t.regionalLive} France Travail`}
-                    </span>
-                    {!isEstimation && regionalData!.nb_offres === 0 && (
-                      <span className="text-sm text-gray-400 italic">{t.noOffersRegion}</span>
-                    )}
-                    {isEstimation && regionalData!.coefficient_regional && (
-                      <span className="text-xs text-gray-400">Coeff. {regionalData!.coefficient_regional.toFixed(2)}</span>
-                    )}
+            {/* ═══ RECRUTEMENTS PAR MOIS ═══ */}
+            <RecruitementsSection
+              recrutements={recrutements}
+              recrutementsLoading={recrutementsLoading}
+              selectedRegion={selectedRegion}
+              t={t}
+              effectiveAge={effectiveAge}
+              chartKey={chartKey}
+            />
+
+            {/* ═══ OFFRES D'EMPLOI ═══ */}
+            {effectiveAge !== "11-15" && (
+            <SectionAnchor id="offres" title={t.liveOffers} icon="💼" accentColor="#06B6D4">
+              <p className="text-sm text-gray-500 mb-4">{t.liveOffersDesc}</p>
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-100 text-indigo-600 text-xs font-semibold">
+                    <span>📍</span> {recrutements.region_name} — {t.regionalLive}
+                  </span>
+                </div>
+              )}
+              {recrutementsLoading && !recrutements ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-8 h-8 rounded-full border-3 border-indigo-100 border-t-indigo-600 animate-spin" />
+                    <span className="text-sm text-gray-400">{t.recruitmentsLoading}</span>
                   </div>
-                )}
+                </div>
+              ) : recrutements && recrutements.recrutements.length > 0 ? (
+                <>
+                  {/* Month pills */}
+                  <div className="flex flex-wrap gap-1.5 mb-6">
+                    {recrutements.recrutements.map(r => {
+                      const [y, m] = r.mois.split("-");
+                      const shortLabel = new Date(Number(y), Number(m) - 1).toLocaleDateString(t.locale, { month: "short", year: "2-digit" });
+                      return (
+                        <button
+                          key={r.mois}
+                          onClick={() => setSelectedMonth(r.mois)}
+                          className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                            selectedMonth === r.mois
+                              ? "bg-indigo-600 text-white shadow-sm"
+                              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                          }`}
+                        >
+                          {shortLabel}
+                        </button>
+                      );
+                    })}
+                  </div>
 
                 {/* ── Stat cards (region-aware) ── */}
                 {isRegional ? (
@@ -3084,16 +3102,57 @@ export default function FicheDetailPage() {
                     );
                   })()}
                 </div>
-                {fiche.perspectives && <SourceTag>{t.sourceIa}</SourceTag>}
-                {showTensionGauge && isRegional && <SourceTag>{t.sourceFranceTravail}</SourceTag>}
-              </SectionAnchor>
-            )}
+                  {/* Bar chart */}
+                  <ResponsiveContainer key={`recr-${chartKey}`} width="100%" height={260}>
+                    <BarChart data={recrutements.recrutements.map(r => {
+                      const [y, m] = r.mois.split("-");
+                      const label = new Date(Number(y), Number(m) - 1).toLocaleDateString(t.locale, { month: "short" });
+                      return { mois: r.mois, label, offres: r.nb_offres };
+                    })} barCategoryGap="12%">
+                      <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#6B7280" }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 11, fill: "#9CA3AF" }} axisLine={false} tickLine={false} tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)} />
+                      <Tooltip
+                        formatter={(value: number) => [value.toLocaleString(t.locale), t.offers]}
+                        labelFormatter={(label: string, payload) => {
+                          if (!payload?.[0]?.payload?.mois) return label;
+                          const [y, m] = payload[0].payload.mois.split("-");
+                          return new Date(Number(y), Number(m) - 1).toLocaleDateString(t.locale, { month: "long", year: "numeric" });
+                        }}
+                        contentStyle={{ borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 13 }}
+                      />
+                      <Bar dataKey="offres" fill={PURPLE} radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
 
-            {/* ═══ RECRUTEMENTS PAR MOIS ═══ */}
-            {effectiveAge !== "11-15" && (
-            <SectionAnchor id="recrutements" title={t.recruitmentsPerYear} icon="📅" accentColor="#4F46E5">
-              <p className="text-sm text-gray-500 mb-4">{t.recruitmentsDesc}</p>
-              {selectedRegion && recrutements?.region_name && (
+                  {/* Selected month info */}
+                  {selectedMonth && (() => {
+                    const monthData = recrutements.recrutements.find(r => r.mois === selectedMonth);
+                    if (!monthData) return null;
+                    return (
+                      <div className="mt-4 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-indigo-100">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="text-sm font-semibold text-indigo-600">
+                              {new Date(Number(selectedMonth.split("-")[0]), Number(selectedMonth.split("-")[1]) - 1).toLocaleDateString(t.locale, { month: "long", year: "numeric" })}
+                            </span>
+                            <p className="text-2xl font-bold text-gray-900 mt-1">
+                              {monthData.nb_offres.toLocaleString(t.locale)} {t.offers.toLowerCase()}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </>
+              ) : (
+                <div className="text-center py-12">
+                  <div className="text-4xl mb-3">📅</div>
+                  <p className="text-gray-400 text-sm">{t.noRecruitmentsData}</p>
+                </div>
+              )}
+              <SourceTag>{t.sourceFranceTravail}</SourceTag>
+            </SectionAnchor>
+            )}
                 <div className="flex items-center gap-2 mb-4">
                   <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-100 text-indigo-600 text-xs font-semibold">
                     <span>📍</span> {recrutements.region_name} — {t.regionalLive}
