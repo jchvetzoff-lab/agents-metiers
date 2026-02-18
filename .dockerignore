@@ -1,0 +1,12 @@
+frontend/
+node_modules/
+.next/
+*.md
+!backend/requirements.txt
+!requirements.txt
+scripts/
+.git/
+__pycache__/
+*.pyc
+.env
+.venv/
