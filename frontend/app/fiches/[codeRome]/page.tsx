@@ -1508,7 +1508,7 @@ export default function FicheDetailPage() {
 
   const sections = [
     { id: "infos", label: t.secKeyInfo, icon: "📋", show: true },
-    { id: "validation", label: "Validation", icon: "✅", show: authenticated && fiche?.statut !== "publiee" },
+    { id: "validation", label: "Validation", icon: "✅", show: authenticated && fiche?.statut !== "publiee" && fiche?.statut !== "brouillon" },
     { id: "parcours", label: t.secFormation, icon: "🎓", show: hasFormationsForPathway },
     { id: "video", label: t.secVideo, icon: "🎬", show: true },
     { id: "profil", label: t.secProfile, icon: "🧠", show: hasProfile },
@@ -1969,8 +1969,8 @@ export default function FicheDetailPage() {
               <SourceTag>{t.sourceRomeIa}</SourceTag>
             </SectionAnchor>
 
-            {/* ═══ SECTION VALIDATION (Authentifiée + non publiée) ═══ */}
-            {authenticated && fiche.statut !== "publiee" && (
+            {/* ═══ SECTION VALIDATION (Authentifiée + enrichie minimum + non publiée) ═══ */}
+            {authenticated && fiche.statut !== "publiee" && fiche.statut !== "brouillon" && (
               <SectionAnchor id="validation" title="Validation IA + Humaine" icon="✅" accentColor="#10B981">
                 <p className="text-sm text-gray-500 mb-6">
                   Système de validation en deux étapes : validation automatique par IA puis validation humaine pour assurer la qualité du contenu.
