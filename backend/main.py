@@ -61,21 +61,41 @@ _TEST_ACCOUNTS = {
 def _hash_password(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
 
-def _make_token(user_id: int, email: str, name: str) -> str:
-    """Simple base64 token with expiry."""
+def _b64url_encode(data: bytes) -> str:
     import base64
-    payload = json.dumps({"id": user_id, "email": email, "name": name, "exp": (datetime.now() + timedelta(days=7)).isoformat(), "secret": JWT_SECRET[:16]})
-    return base64.b64encode(payload.encode()).decode()
+    return base64.urlsafe_b64encode(data).rstrip(b"=").decode()
+
+def _b64url_decode(s: str) -> bytes:
+    import base64
+    s += "=" * (4 - len(s) % 4)
+    return base64.urlsafe_b64decode(s)
+
+def _make_token(user_id: int, email: str, name: str) -> str:
+    """JWT-like token (header.payload.signature) compatible with frontend parseToken."""
+    header = _b64url_encode(json.dumps({"alg": "HS256", "typ": "JWT"}).encode())
+    exp = int((datetime.now() + timedelta(days=7)).timestamp())
+    iat = int(datetime.now().timestamp())
+    payload_data = {"sub": user_id, "email": email, "name": name, "exp": exp, "iat": iat}
+    payload = _b64url_encode(json.dumps(payload_data).encode())
+    sig_input = f"{header}.{payload}.{JWT_SECRET[:16]}"
+    signature = _b64url_encode(hashlib.sha256(sig_input.encode()).digest())
+    return f"{header}.{payload}.{signature}"
 
 def _verify_token(token: str) -> Optional[dict]:
-    import base64
     try:
-        payload = json.loads(base64.b64decode(token).decode())
-        if payload.get("secret") != JWT_SECRET[:16]:
+        parts = token.split(".")
+        if len(parts) != 3:
             return None
-        if datetime.fromisoformat(payload["exp"]) < datetime.now():
+        header, payload, signature = parts
+        # Verify signature
+        sig_input = f"{header}.{payload}.{JWT_SECRET[:16]}"
+        expected_sig = _b64url_encode(hashlib.sha256(sig_input.encode()).digest())
+        if signature != expected_sig:
             return None
-        return payload
+        payload_data = json.loads(_b64url_decode(payload))
+        if payload_data.get("exp", 0) < int(datetime.now().timestamp()):
+            return None
+        return payload_data
     except Exception:
         return None
 
