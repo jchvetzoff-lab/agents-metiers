@@ -2760,7 +2760,7 @@ export default function FicheDetailPage() {
                   {/* Header avec compteur + filtre contrat */}
                   <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                     <span className="text-sm font-semibold text-gray-700">
-                      {offres.total} {t.liveOffersCount}
+                      {offresContractFilter === "all" ? offres.offres.length : offres.offres.filter(o => offresContractFilter === "all" || (o.type_contrat && o.type_contrat.includes(offresContractFilter === "MIS" ? "intérim" : offresContractFilter))).length} {t.liveOffersCount}
                     </span>
                     <div className="flex gap-1.5 flex-wrap">
                       {[

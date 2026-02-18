@@ -1806,7 +1806,8 @@ async def get_offres(code_rome: str, region: Optional[str] = Query(None), limit:
             )
             if token_resp.status_code == 200:
                 token = token_resp.json()["access_token"]
-                url = f"https://api.francetravail.io/partenaire/offresdemploi/v2/offres/search?codeROME={code_rome}&range=0-{limit-1}"
+                min_date = (datetime.now() - timedelta(days=20)).strftime("%Y-%m-%dT00:00:00Z")
+                url = f"https://api.francetravail.io/partenaire/offresdemploi/v2/offres/search?codeROME={code_rome}&range=0-{limit-1}&minCreationDate={min_date}"
                 if region:
                     url += f"&region={region}"
                 offres_resp = httpx.get(url,
@@ -1816,7 +1817,17 @@ async def get_offres(code_rome: str, region: Optional[str] = Query(None), limit:
                 if offres_resp.status_code == 200:
                     data = offres_resp.json()
                     offres = []
+                    cutoff = datetime.now() - timedelta(days=20)
                     for o in data.get("resultats", [])[:limit]:
+                        # Filter out offers older than 20 days
+                        date_str = o.get("dateCreation")
+                        if date_str:
+                            try:
+                                pub_date = datetime.fromisoformat(date_str.replace("Z", "+00:00")).replace(tzinfo=None)
+                                if pub_date < cutoff:
+                                    continue
+                            except Exception:
+                                pass
                         lieu = o.get("lieuTravail", {})
                         entreprise = o.get("entreprise", {})
                         salaire = o.get("salaire", {})
@@ -1828,10 +1839,10 @@ async def get_offres(code_rome: str, region: Optional[str] = Query(None), limit:
                             "type_contrat": o.get("typeContratLibelle", o.get("typeContrat", "")),
                             "salaire": salaire.get("libelle", "") if salaire else "",
                             "experience": o.get("experienceLibelle", o.get("experienceExige", "")),
-                            "date_publication": o.get("dateCreation"),
+                            "date_publication": date_str,
                             "url": o.get("origineOffre", {}).get("urlOrigine", f"https://candidat.francetravail.fr/offres/recherche/detail/{o.get('id', '')}"),
                         })
-                    total = data.get("contentRange", {}).get("maxResults", len(offres)) if isinstance(data.get("contentRange"), dict) else len(offres)
+                    total = len(offres)
                     return {
                         "code_rome": code_rome,
                         "region": region,
@@ -1876,10 +1887,10 @@ async def get_offres(code_rome: str, region: Optional[str] = Query(None), limit:
         seed_str = code_rome + (region or "") + datetime.now().strftime("%Y-%m-%d")
         random.seed(hash(seed_str))
 
-        nb_offres = min(limit, random.randint(8, 15))
+        nb_offres = min(limit, random.randint(12, 25))
         offres = []
         for i in range(nb_offres):
-            days_ago = random.randint(1, 25)
+            days_ago = random.randint(0, 19)
             # Choisir contrat par poids
             contrat = random.choices(list(contrats_weights.keys()), weights=list(contrats_weights.values()))[0]
             # Salaire réaliste basé sur le niveau
