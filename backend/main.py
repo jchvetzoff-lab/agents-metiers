@@ -1177,9 +1177,27 @@ Environnements: {json.dumps(fiche.environnements or [], ensure_ascii=False)}
 
 {f'Instruction supplementaire: {commentaire}' if commentaire else ''}
 
-Genere un JSON avec TOUS les champs suivants. Sois precis et realiste pour le marche francais:
+Genere un JSON avec TOUS les champs suivants. Remplis TOUT, meme si des donnees existantes sont fournies ci-dessus. Sois precis et realiste pour le marche francais:
 
 {{
+  "competences": [{{"nom": "Nom competence", "niveau": "avance", "categorie": "technique"}}],
+  "competences_transversales": [{{"nom": "Nom", "importance": "haute"}}],
+  "formations": [{{"nom": "Nom formation", "niveau": "Bac+3", "duree": "3 ans", "etablissements": ["Nom etablissement"]}}],
+  "certifications": [{{"nom": "Nom certification", "organisme": "Organisme", "obligatoire": false}}],
+  "conditions_travail": ["condition 1", "condition 2"],
+  "environnements": [{{"nom": "Type environnement", "description": "Description"}}],
+  "salaires": {{
+    "junior": {{"min": 25000, "max": 32000, "median": 28000}},
+    "confirme": {{"min": 35000, "max": 48000, "median": 40000}},
+    "senior": {{"min": 48000, "max": 70000, "median": 55000}}
+  }},
+  "perspectives": {{
+    "tension": 0.65,
+    "tendance": "hausse",
+    "evolution_5ans": "Description evolution",
+    "nombre_offres": 5000,
+    "taux_insertion": 0.85
+  }},
   "missions_principales": ["5-8 missions principales du metier"],
   "acces_metier": "Texte decrivant comment acceder a ce metier (diplomes, experience, etc.)",
   "savoirs": ["5-10 savoirs theoriques necessaires"],
@@ -1224,7 +1242,7 @@ IMPORTANT:
         client = anthropic.Anthropic(api_key=api_key)
         message = client.messages.create(
             model="claude-sonnet-4-20250514",
-            max_tokens=4000,
+            max_tokens=8000,
             messages=[{"role": "user", "content": prompt}]
         )
 
@@ -1246,7 +1264,10 @@ IMPORTANT:
                        "traits_personnalite", "aptitudes", "profil_riasec",
                        "autres_appellations", "statuts_professionnels",
                        "domaine_professionnel", "sites_utiles", "conditions_travail_detaillees",
-                       "competences_dimensions", "preferences_interets", "secteurs_activite"]
+                       "competences_dimensions", "preferences_interets", "secteurs_activite",
+                       "competences", "competences_transversales", "formations",
+                       "certifications", "conditions_travail", "environnements",
+                       "salaires", "perspectives"]
 
         for field_name in json_fields:
             if field_name in enriched:
