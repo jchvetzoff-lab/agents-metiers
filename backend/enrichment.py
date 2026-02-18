@@ -109,25 +109,62 @@ async def enrich_fiche(code_rome: str, request: Request) -> Dict[str, Any]:
                         pass
                 current[col] = val
 
+        # Build current data snapshot for Claude
+        all_current = {
+            "description": fiche.description or "",
+            "competences": fiche.competences or [],
+            "competences_transversales": fiche.competences_transversales or [],
+            "formations": fiche.formations or [],
+            "certifications": fiche.certifications or [],
+            "conditions_travail": fiche.conditions_travail or [],
+            "environnements": fiche.environnements or [],
+            "secteurs_activite": fiche.secteurs_activite or [],
+        }
+        # Add enriched fields from DB
+        for col in column_names:
+            if col not in all_current and current.get(col):
+                all_current[col] = current[col]
+
+        current_json = json.dumps(all_current, ensure_ascii=False, indent=2)
+
         # Build prompt for Claude
-        prompt = f"""Tu es un expert des métiers en France. Enrichis cette fiche métier ROME avec des données précises et réalistes.
+        if commentaire:
+            prompt = f"""Tu es un expert des métiers en France. Voici une fiche métier ROME existante qui doit être AMÉLIORÉE selon les instructions de l'utilisateur.
+
+Code ROME: {code_rome}
+Nom: {fiche.nom_epicene}
+
+═══ DONNÉES ACTUELLES DE LA FICHE ═══
+{current_json}
+
+═══ INSTRUCTION DE L'UTILISATEUR ═══
+{commentaire}
+
+Tu DOIS :
+1. LIRE attentivement les données actuelles ci-dessus
+2. APPLIQUER les modifications demandées par l'utilisateur
+3. AMÉLIORER les champs concernés — ne PAS simplement régénérer les mêmes données
+4. Garder les données existantes qui ne sont pas concernées par la demande
+5. Chercher des informations plus précises, plus complètes, plus à jour
+
+Génère le JSON COMPLET avec TOUS les champs ci-dessous. Les champs modifiés doivent refléter les instructions. Les champs non concernés peuvent être repris tels quels ou légèrement améliorés :"""
+        else:
+            prompt = f"""Tu es un expert des métiers en France. Enrichis cette fiche métier ROME avec des données précises et réalistes.
 
 Code ROME: {code_rome}
 Nom: {fiche.nom_epicene}
 Description: {fiche.description or 'N/A'}
-Compétences existantes: {json.dumps(fiche.competences or [], ensure_ascii=False)}
-Formations existantes: {json.dumps(fiche.formations or [], ensure_ascii=False)}
-Conditions travail: {json.dumps(fiche.conditions_travail or [], ensure_ascii=False)}
-Environnements: {json.dumps(fiche.environnements or [], ensure_ascii=False)}
 
-{f"""⚠️ INSTRUCTION PRIORITAIRE DE L'UTILISATEUR — A RESPECTER IMPERATIVEMENT :
-{commentaire}
+═══ DONNÉES ACTUELLES (à améliorer/compléter) ═══
+{current_json}
 
-Tu DOIS modifier les champs concernes selon cette instruction. Ne regenere pas les memes donnees — CHANGE ce qui est demande.""" if commentaire else ''}
+Génère un JSON avec TOUS les champs suivants. Améliore et complète les données existantes. Sois précis et réaliste pour le marché français :"""
 
-Génère un JSON avec TOUS les champs suivants. {f"ATTENTION : l'utilisateur a demandé des modifications specifiques (voir instruction ci-dessus). Applique-les." if commentaire else "Remplis TOUT, même si des données existantes sont fournies ci-dessus."} Sois précis et réaliste pour le marché français:
+        prompt += f"""
 
 {{
+  "description": "Description complète du métier (200+ caractères)",
+  "description_courte": "Résumé en 1-2 phrases (max 150 caractères)",
   "competences": [{{"nom": "Nom compétence", "niveau": "avance", "categorie": "technique"}}],
   "competences_transversales": [{{"nom": "Nom", "importance": "haute"}}],
   "formations": [{{"nom": "Nom formation", "niveau": "Bac+3", "duree": "3 ans", "etablissements": ["Nom etablissement"]}}],
@@ -246,7 +283,7 @@ IMPORTANT:
                 update_params[field_name] = json.dumps(enriched[field_name], ensure_ascii=False)
 
         # String fields
-        for field_name in ["acces_metier", "niveau_formation"]:
+        for field_name in ["acces_metier", "niveau_formation", "description", "description_courte"]:
             if field_name in enriched and enriched[field_name]:
                 update_parts.append(f"{field_name} = :{field_name}")
                 update_params[field_name] = enriched[field_name]
