@@ -114,15 +114,16 @@ class Repository:
     def get_all_fiches(
         self,
         statut: Optional[StatutFiche] = None,
-        limit: int = 100,
+        limit: int = 0,
         offset: int = 0
     ) -> List[FicheMetier]:
-        """Récupère toutes les fiches, avec filtrage optionnel."""
+        """Récupère toutes les fiches, avec filtrage optionnel. limit=0 = pas de limite."""
         with self.session() as session:
             query = select(FicheMetierDB)
             if statut:
                 query = query.where(FicheMetierDB.statut == statut.value)
-            query = query.limit(limit).offset(offset)
+            if limit > 0:
+                query = query.limit(limit).offset(offset)
             results = session.execute(query).scalars().all()
             return [r.to_pydantic() for r in results]
 

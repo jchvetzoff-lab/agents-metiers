@@ -9,7 +9,7 @@ import { api, Stats, AuditLog, FicheMetier } from "@/lib/api";
 function KPICard({ label, value, icon, color }: { label: string; value: number | string; icon: string; color: string }) {
   return (
     <FadeInView>
-      <div className={`sojai-card p-6 border-l-4 ${color}`}>
+      <div className={`bg-white rounded-2xl border border-gray-200 shadow-sm p-6 border-l-4 ${color}`}>
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm text-gray-500 font-medium">{label}</p>
@@ -74,21 +74,60 @@ export default function Home() {
     return (
       <main className="min-h-screen py-12 px-4">
         <div className="max-w-6xl mx-auto">
-          <div className="animate-shimmer h-96 rounded-card"></div>
+          <div className="h-96 bg-gray-100 rounded-2xl animate-pulse"></div>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen py-12 px-4">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
+    <main className="min-h-screen">
+      {/* Hero */}
+      <div className="bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 text-white">
+        <div className="max-w-6xl mx-auto px-4 py-16 md:py-20">
+          <FadeInView>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-8">
+              <div>
+                <h1 className="text-3xl md:text-5xl font-bold mb-3">Agents Métiers</h1>
+                <p className="text-lg text-indigo-200 max-w-lg">
+                  Référentiel intelligent de {stats?.total ?? "..."} fiches métiers ROME, enrichies et validées par IA.
+                </p>
+                <div className="flex gap-3 mt-6">
+                  <Link href="/fiches" className="px-6 py-2.5 bg-white text-indigo-700 rounded-full text-sm font-semibold hover:bg-indigo-50 transition">
+                    Explorer les fiches
+                  </Link>
+                  <Link href="/actions" className="px-6 py-2.5 bg-white/15 text-white border border-white/30 rounded-full text-sm font-semibold hover:bg-white/25 transition">
+                    Actions
+                  </Link>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center border border-white/10">
+                  <div className="text-3xl font-bold">{stats?.total ?? "—"}</div>
+                  <div className="text-xs text-indigo-200 mt-1">Fiches totales</div>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center border border-white/10">
+                  <div className="text-3xl font-bold">{stats?.publiees ?? "—"}</div>
+                  <div className="text-xs text-indigo-200 mt-1">Publiées</div>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center border border-white/10">
+                  <div className="text-3xl font-bold">{stats?.en_validation ?? "—"}</div>
+                  <div className="text-xs text-indigo-200 mt-1">Enrichies</div>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center border border-white/10">
+                  <div className="text-3xl font-bold">{avgScore ?? "—"}%</div>
+                  <div className="text-xs text-indigo-200 mt-1">Score moyen</div>
+                </div>
+              </div>
+            </div>
+          </FadeInView>
+        </div>
+      </div>
+
+      <div className="max-w-6xl mx-auto px-4 py-10">
+        {/* Section titre */}
         <FadeInView>
-          <div className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl font-serif font-bold gradient-text mb-3">Tableau de bord</h1>
-            <p className="text-lg text-gray-500">Vue d&apos;ensemble du référentiel Agents Métiers</p>
-          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Tableau de bord</h2>
         </FadeInView>
 
         {/* KPI Cards */}
@@ -102,7 +141,7 @@ export default function Home() {
         {/* Score moyen + répartition */}
         <div className="grid md:grid-cols-2 gap-6 mb-8">
           <FadeInView>
-            <div className="sojai-card p-6">
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Score moyen de complétude</h3>
               <div className="flex items-center gap-4">
                 <div className="relative w-28 h-28">
@@ -129,7 +168,7 @@ export default function Home() {
           </FadeInView>
 
           <FadeInView>
-            <div className="sojai-card p-6">
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Répartition par statut</h3>
               <div className="space-y-3">
                 <StatBar label="Brouillons" value={stats?.brouillons ?? 0} total={stats?.total ?? 1} color="bg-stone-400" />
@@ -144,7 +183,7 @@ export default function Home() {
         {/* Recent activity + quick links */}
         <div className="grid md:grid-cols-3 gap-6">
           <FadeInView>
-            <div className="sojai-card p-6 md:col-span-2">
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 md:col-span-2">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Dernières actions</h3>
               {logs.length === 0 ? (
                 <p className="text-gray-500 text-sm">Aucune action récente.</p>
@@ -174,7 +213,7 @@ export default function Home() {
           </FadeInView>
 
           <FadeInView>
-            <div className="sojai-card p-6">
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Accès rapide</h3>
               <div className="space-y-3">
                 <Link href="/fiches" className="flex items-center gap-3 p-3 rounded-lg hover:bg-indigo-50 transition-colors group">
