@@ -1694,7 +1694,7 @@ export default function FicheDetailPage() {
                           {validationIALoading ? <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "🤖"}
                           Lancer la validation IA
                         </button>
-                        <button onClick={() => setShowEnrichComment(!showEnrichComment)}
+                        <button onClick={() => setShowEnrichComment(true)}
                           className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-indigo-300 text-indigo-600 rounded-full text-xs font-medium hover:bg-indigo-50 transition">
                           ✨ Re-enrichir avec commentaire
                         </button>
@@ -1709,7 +1709,7 @@ export default function FicheDetailPage() {
                           {validationHumaneLoading ? <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "✅"}
                           Valider et publier
                         </button>
-                        <button onClick={() => setShowEnrichComment(!showEnrichComment)}
+                        <button onClick={() => setShowEnrichComment(true)}
                           className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-indigo-300 text-indigo-600 rounded-full text-xs font-medium hover:bg-indigo-50 transition">
                           ✨ Re-enrichir avec commentaire
                         </button>
@@ -1734,8 +1734,8 @@ export default function FicheDetailPage() {
                     )}
 
                     {/* Zone commentaire re-enrichissement */}
-                    {showEnrichComment && fiche.statut !== "publiee" && (
-                      <div className="w-full mt-3 p-4 bg-indigo-50 border border-indigo-200 rounded-xl">
+                    <div className={`w-full overflow-hidden transition-all duration-300 ease-in-out ${showEnrichComment && fiche.statut !== "publiee" ? "max-h-[300px] opacity-100 mt-3" : "max-h-0 opacity-0 mt-0"}`}>
+                      <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-xl">
                         <label className="block text-xs font-semibold text-indigo-700 mb-2">
                           Que doit corriger ou ajouter l&apos;IA ?
                         </label>
@@ -1758,7 +1758,7 @@ export default function FicheDetailPage() {
                           </button>
                         </div>
                       </div>
-                    )}
+                    </div>
 
                     {/* Publié : uniquement Variantes */}
                     {fiche.statut === "publiee" && (
