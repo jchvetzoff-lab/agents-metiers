@@ -361,15 +361,21 @@ export default function FicheDetailPage() {
   }
 
   async function handleValidateHuman(approved: boolean) {
-    if (!validatorName.trim()) {
-      showActionMessage("error", "Veuillez saisir votre nom");
-      return;
+    let name = validatorName.trim();
+    if (!name) {
+      const prompted = window.prompt("Votre nom (pour tracer la validation) :");
+      if (!prompted?.trim()) return;
+      name = prompted.trim();
+      setValidatorName(name);
     }
 
     if (approved) {
       const confirmed = window.confirm(
-        "Etes-vous sur de vouloir valider cette fiche ?\n\nCela entrainera sa publication et elle deviendra visible pour tous les utilisateurs."
+        "Etes-vous sur de vouloir valider cette fiche ?\n\nCette action entrainera sa publication immediate. La fiche deviendra visible pour tous les utilisateurs."
       );
+      if (!confirmed) return;
+    } else {
+      const confirmed = window.confirm("Rejeter cette fiche ? Elle sera renvoyee en brouillon pour re-enrichissement.");
       if (!confirmed) return;
     }
 
@@ -1645,101 +1651,97 @@ export default function FicheDetailPage() {
                     )}
                   </div>
 
-                  {/* Workflow: Brouillon → Enrichi → Validation IA → Validation humaine → Publiée */}
-                  <div className="flex items-center gap-1 text-[10px] text-gray-400">
-                    <span className={fiche.statut === "brouillon" ? "text-indigo-600 font-bold" : ""}>Brouillon</span>
-                    <span>→</span>
-                    <span className={fiche.statut === "en_validation" && fiche.validation_ia_score == null ? "text-amber-600 font-bold" : ""}>Enrichi</span>
-                    <span>→</span>
-                    <span className={fiche.validation_ia_score != null && fiche.statut !== "publiee" ? "text-amber-600 font-bold" : ""}>Validation IA</span>
-                    <span>→</span>
-                    <span className={fiche.validation_humaine === "approuvee" && fiche.statut !== "publiee" ? "text-green-600 font-bold" : ""}>Validation humaine</span>
-                    <span>→</span>
-                    <span className={fiche.statut === "publiee" ? "text-green-600 font-bold" : ""}>Publiée</span>
+                  {/* Pipeline: Brouillon → Enrichi → Valide IA → Publiee */}
+                  <div className="flex items-center gap-1.5 text-[10px]">
+                    {[
+                      { label: "Brouillon", active: fiche.statut === "brouillon", color: "gray" },
+                      { label: "Enrichi", active: fiche.statut === "enrichi", color: "blue" },
+                      { label: "Valide IA", active: fiche.statut === "valide" || fiche.statut === "en_validation", color: "amber" },
+                      { label: "Publiee", active: fiche.statut === "publiee", color: "green" },
+                    ].map((step, i, arr) => (
+                      <span key={step.label} className="flex items-center gap-1.5">
+                        <span className={`px-2 py-0.5 rounded-full font-medium ${
+                          step.active
+                            ? step.color === "gray" ? "bg-gray-200 text-gray-700"
+                            : step.color === "blue" ? "bg-blue-100 text-blue-700"
+                            : step.color === "amber" ? "bg-amber-100 text-amber-700"
+                            : "bg-green-100 text-green-700"
+                            : "text-gray-400"
+                        }`}>{step.label}</span>
+                        {i < arr.length - 1 && <span className="text-gray-300">→</span>}
+                      </span>
+                    ))}
                   </div>
 
-                  {/* Action buttons — Workflow: Brouillon → Enrichi → Validation IA → Validation humaine → Publiée */}
+                  {/* Action buttons */}
                   <div className="flex flex-wrap items-center gap-2">
-                    {/* Brouillon : uniquement Enrichir */}
+
+                    {/* BROUILLON : Enrichir */}
                     {fiche.statut === "brouillon" && (
                       <button onClick={() => handleEnrich(false)} disabled={actionLoading !== null}
-                        className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-indigo-300 text-indigo-600 rounded-full text-xs font-medium hover:bg-indigo-50 transition disabled:opacity-40 disabled:cursor-wait">
-                        {actionLoading === "enrich" ? <span className="w-3 h-3 border-2 border-indigo-300 border-t-indigo-600 rounded-full animate-spin" /> : "✨"}
-                        Enrichir
+                        className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-indigo-600 text-white rounded-full text-xs font-medium hover:bg-indigo-700 transition disabled:opacity-40 disabled:cursor-wait">
+                        {actionLoading === "enrich" ? <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "✨"}
+                        Enrichir par IA
                       </button>
                     )}
 
-                    {/* En validation (enrichi) : Valider (IA) + Ré-enrichir avec commentaire */}
-                    {fiche.statut === "en_validation" && (fiche.validation_ia_score == null || fiche.validation_ia_score < 70) && fiche.validation_humaine !== "approuvee" && (
+                    {/* ENRICHI : Lancer validation IA + Re-enrichir avec commentaire */}
+                    {fiche.statut === "enrichi" && (
                       <>
-                        <button onClick={handleValidate} disabled={actionLoading !== null}
-                          className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-amber-300 text-amber-600 rounded-full text-xs font-medium hover:bg-amber-50 transition disabled:opacity-40 disabled:cursor-wait">
-                          {actionLoading === "validate" ? <span className="w-3 h-3 border-2 border-amber-300 border-t-amber-600 rounded-full animate-spin" /> : "🤖"}
-                          Valider (IA)
+                        <button onClick={handleValidateIA} disabled={actionLoading !== null || validationIALoading}
+                          className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-amber-500 text-white rounded-full text-xs font-medium hover:bg-amber-600 transition disabled:opacity-40 disabled:cursor-wait">
+                          {validationIALoading ? <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "🤖"}
+                          Lancer la validation IA
                         </button>
                         <button onClick={() => setShowEnrichComment(!showEnrichComment)}
                           className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-indigo-300 text-indigo-600 rounded-full text-xs font-medium hover:bg-indigo-50 transition">
-                          ✨ Ré-enrichir
+                          ✨ Re-enrichir avec commentaire
                         </button>
                       </>
                     )}
 
-                    {/* Après validation IA >= 70 : Approuver + Rejeter + Ré-enrichir */}
-                    {fiche.validation_ia_score != null && fiche.validation_ia_score >= 70 && fiche.statut !== "publiee" && fiche.validation_humaine !== "approuvee" && (
+                    {/* VALIDE (IA OK) : Validation humaine (approuver = publier) + Re-enrichir */}
+                    {(fiche.statut === "valide" || (fiche.statut === "en_validation" && fiche.validation_ia_score != null && fiche.validation_ia_score >= 70)) && fiche.statut !== "publiee" && (
                       <>
-                        <button onClick={async () => {
-                          setActionLoading("approve");
-                          try {
-                            const res = await api.reviewFiche(codeRome, "approuver");
-                            showActionMessage("success", `Fiche approuvée — statut : ${res.nouveau_statut}`);
-                            await reloadFiche();
-                          } catch (e: any) { showActionMessage("error", e.message); }
-                          finally { setActionLoading(null); }
-                        }} disabled={actionLoading !== null}
-                          className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-green-300 text-green-600 rounded-full text-xs font-medium hover:bg-green-50 transition disabled:opacity-40 disabled:cursor-wait">
-                          {actionLoading === "approve" ? <span className="w-3 h-3 border-2 border-green-300 border-t-green-600 rounded-full animate-spin" /> : "✅"}
-                          Approuver
+                        <button onClick={() => handleValidateHuman(true)} disabled={actionLoading !== null || validationHumaneLoading}
+                          className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-green-600 text-white rounded-full text-xs font-medium hover:bg-green-700 transition disabled:opacity-40 disabled:cursor-wait">
+                          {validationHumaneLoading ? <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "✅"}
+                          Valider et publier
                         </button>
                         <button onClick={() => setShowEnrichComment(!showEnrichComment)}
                           className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-indigo-300 text-indigo-600 rounded-full text-xs font-medium hover:bg-indigo-50 transition">
-                          ✨ Ré-enrichir
+                          ✨ Re-enrichir avec commentaire
                         </button>
-                        <button onClick={async () => {
-                          const com = prompt("Commentaire de rejet (optionnel) :");
-                          setActionLoading("reject");
-                          try {
-                            const res = await api.reviewFiche(codeRome, "rejeter", com || undefined);
-                            showActionMessage("success", `Fiche rejetée — statut : ${res.nouveau_statut}`);
-                            await reloadFiche();
-                          } catch (e: any) { showActionMessage("error", e.message); }
-                          finally { setActionLoading(null); }
-                        }} disabled={actionLoading !== null}
+                        <button onClick={() => handleValidateHuman(false)} disabled={actionLoading !== null || validationHumaneLoading}
                           className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-red-300 text-red-600 rounded-full text-xs font-medium hover:bg-red-50 transition disabled:opacity-40 disabled:cursor-wait">
-                          {actionLoading === "reject" ? <span className="w-3 h-3 border-2 border-red-300 border-t-red-600 rounded-full animate-spin" /> : "❌"}
-                          Rejeter
+                          ❌ Rejeter
                         </button>
                       </>
                     )}
 
-                    {/* Publier - après validation humaine approuvée */}
-                    {fiche.statut === "en_validation" && fiche.validation_humaine === "approuvee" && (
-                      <button onClick={handlePublish} disabled={actionLoading !== null}
-                        className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-green-600 text-white rounded-full text-xs font-medium hover:bg-green-700 transition disabled:opacity-40 disabled:cursor-wait">
-                        {actionLoading === "publish" ? <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "🚀"}
-                        Publier
-                      </button>
+                    {/* IA validation failed (score < 70) : Re-enrichir */}
+                    {fiche.statut === "en_validation" && fiche.validation_ia_score != null && fiche.validation_ia_score < 70 && (
+                      <>
+                        <div className="w-full text-xs text-red-600 font-medium mb-1">
+                          Score IA : {fiche.validation_ia_score}/100 — La fiche necessite un re-enrichissement
+                        </div>
+                        <button onClick={() => setShowEnrichComment(true)}
+                          className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-indigo-600 text-white rounded-full text-xs font-medium hover:bg-indigo-700 transition">
+                          ✨ Re-enrichir avec instructions
+                        </button>
+                      </>
                     )}
 
-                    {/* Zone commentaire ré-enrichissement */}
+                    {/* Zone commentaire re-enrichissement */}
                     {showEnrichComment && fiche.statut !== "publiee" && (
                       <div className="w-full mt-3 p-4 bg-indigo-50 border border-indigo-200 rounded-xl">
                         <label className="block text-xs font-semibold text-indigo-700 mb-2">
-                          Instructions pour le ré-enrichissement (optionnel)
+                          Que doit corriger ou ajouter l&apos;IA ?
                         </label>
                         <textarea
                           value={enrichComment}
                           onChange={(e) => setEnrichComment(e.target.value)}
-                          placeholder="Ex : il manque les diplômes requis, ajouter les conditions de travail spécifiques..."
+                          placeholder="Ex : les diplomes requis sont incomplets, ajouter les conditions de travail en exterieur, les salaires semblent trop bas..."
                           rows={3}
                           className="w-full px-3 py-2 border border-indigo-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 resize-none"
                         />
@@ -1747,7 +1749,7 @@ export default function FicheDetailPage() {
                           <button onClick={() => handleEnrich(true)} disabled={actionLoading !== null}
                             className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white rounded-full text-xs font-semibold hover:bg-indigo-700 transition disabled:opacity-40 disabled:cursor-wait">
                             {actionLoading === "enrich" ? <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "✨"}
-                            Lancer le ré-enrichissement
+                            Re-enrichir
                           </button>
                           <button onClick={() => { setShowEnrichComment(false); setEnrichComment(""); }}
                             className="px-4 py-2 text-gray-500 text-xs font-medium hover:text-gray-700 transition">

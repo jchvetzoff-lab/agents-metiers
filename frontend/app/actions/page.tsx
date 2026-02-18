@@ -192,10 +192,10 @@ function TabActions() {
         <div className="bg-white rounded-2xl border border-gray-200 p-6">
           <div className="flex items-center justify-between gap-2 overflow-x-auto">
             {[
-              { label: "Brouillon", count: stats?.brouillons || 0, color: "gray", href: "/fiches?statut=brouillon" },
-              { label: "Enrichie", count: (stats as Record<string, number>)?.enrichis || 0, color: "blue", href: "/fiches?statut=enrichi" },
-              { label: "Validee IA", count: stats?.en_validation || 0, color: "amber", href: "/fiches?statut=en_validation" },
-              { label: "Publiee", count: stats?.publiees || 0, color: "green", href: "/fiches?statut=publiee" },
+              { label: "Brouillon", count: stats?.brouillons || 0, color: "gray", href: "/fiches?statut=brouillon", desc: "A enrichir" },
+              { label: "Enrichie", count: (stats as Record<string, number>)?.enrichis || 0, color: "blue", href: "/fiches?statut=enrichi", desc: "En attente de validation IA" },
+              { label: "Validee IA", count: ((stats as Record<string, number>)?.valides || 0) + (stats?.en_validation || 0), color: "amber", href: "/fiches?statut=valide", desc: "A valider par un humain" },
+              { label: "Publiee", count: stats?.publiees || 0, color: "green", href: "/fiches?statut=publiee", desc: "Visible publiquement" },
             ].map((step, i, arr) => (
               <div key={step.label} className="flex items-center gap-2 flex-1 min-w-0">
                 <Link href={step.href} className="flex-1 min-w-0 group">
@@ -207,6 +207,7 @@ function TabActions() {
                   `}>
                     <div className="text-xl font-bold">{step.count}</div>
                     <div className="text-xs font-medium text-gray-600 truncate">{step.label}</div>
+                    <div className="text-[10px] text-gray-400 truncate">{step.desc}</div>
                   </div>
                 </Link>
                 {i < arr.length - 1 && (

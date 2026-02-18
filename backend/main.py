@@ -1291,7 +1291,7 @@ IMPORTANT:
 
         new_version = fiche.metadata.version + 1
         update_parts.extend([
-            "version = :v", "date_maj = :d",
+            "version = :v", "date_maj = :d", "statut = 'enrichi'",
             "validation_ia_score = NULL", "validation_ia_date = NULL",
             "validation_ia_details = NULL", "validation_humaine = NULL",
             "validation_humaine_date = NULL", "validation_humaine_par = NULL",
@@ -1497,9 +1497,9 @@ Sois rigoureux et exigeant. Cette validation détermine si la fiche peut être p
         
         # Changer le statut selon le score
         if score >= 70:
-            new_statut = "enrichi"  # Prêt pour validation humaine
+            new_statut = "valide"  # Validee par IA, prete pour validation humaine
         else:
-            new_statut = "brouillon"  # Nécessite des corrections
+            new_statut = "enrichi"  # Score insuffisant, reste en enrichi pour re-enrichissement
 
         with repo.session() as session:
             session.execute(
@@ -1553,10 +1553,10 @@ async def validate_fiche_human(code_rome: str, body: ValidationHumaineRequest, r
         user = _get_user_name(request)
         
         if body.approved:
-            new_statut = "valide"
+            new_statut = "publiee"  # Validation humaine = publication directe
             validation_humaine = True
         else:
-            new_statut = "brouillon"
+            new_statut = "enrichi"  # Rejet = retour en enrichi pour re-enrichissement
             validation_humaine = False
 
         with repo.session() as session:
