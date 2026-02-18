@@ -10,8 +10,8 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
 import os
+import csv as csv_module
 import httpx
-import pandas as pd
 
 
 logger = logging.getLogger(__name__)
@@ -65,21 +65,18 @@ class InseeDataIntegrator:
             csv_path = Path(__file__).parent / "rome_pcs_mapping.csv"
             
             if csv_path.exists():
-                # Charger depuis le CSV
-                import pandas as pd
-                df = pd.read_csv(csv_path)
-                
-                for _, row in df.iterrows():
-                    code_rome = row['code_rome']
-                    pcs_code = row['pcs_code']
-                    correspondance = row['correspondance_force']
-                    
-                    # Filtrer seulement les correspondances fortes et moyennes
-                    if correspondance in ['forte', 'moyenne']:
-                        if code_rome not in mapping:
-                            mapping[code_rome] = []
-                        if pcs_code not in mapping[code_rome]:
-                            mapping[code_rome].append(pcs_code)
+                with open(csv_path, 'r', encoding='utf-8') as f:
+                    reader = csv_module.DictReader(f)
+                    for row in reader:
+                        code_rome = row['code_rome']
+                        pcs_code = row['pcs_code']
+                        correspondance = row['correspondance_force']
+                        
+                        if correspondance in ['forte', 'moyenne']:
+                            if code_rome not in mapping:
+                                mapping[code_rome] = []
+                            if pcs_code not in mapping[code_rome]:
+                                mapping[code_rome].append(pcs_code)
                 
                 logger.info(f"Table ROME->PCS chargée: {len(mapping)} métiers mappés")
                 
