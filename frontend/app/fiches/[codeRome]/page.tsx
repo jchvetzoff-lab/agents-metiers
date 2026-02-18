@@ -1653,7 +1653,7 @@ export default function FicheDetailPage() {
                   </div>
 
                   {/* Pipeline: Brouillon → Enrichi → Valide IA → Publiee */}
-                  <div className="flex items-center gap-1.5 text-[10px]">
+                  <div className="flex items-center gap-1 sm:gap-1.5 text-[9px] sm:text-[10px] flex-wrap">
                     {[
                       { label: "Brouillon", active: fiche.statut === "brouillon", color: "gray" },
                       { label: "Enrichi", active: fiche.statut === "enrichi", color: "blue" },
@@ -1675,12 +1675,12 @@ export default function FicheDetailPage() {
                   </div>
 
                   {/* Action buttons */}
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 w-full">
 
                     {/* BROUILLON : Enrichir */}
                     {fiche.statut === "brouillon" && (
                       <button onClick={() => handleEnrich(false)} disabled={actionLoading !== null}
-                        className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-indigo-600 text-white rounded-full text-xs font-medium hover:bg-indigo-700 transition disabled:opacity-40 disabled:cursor-wait">
+                        className="inline-flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 sm:py-1.5 w-full sm:w-auto bg-indigo-600 text-white rounded-full text-xs font-medium hover:bg-indigo-700 transition disabled:opacity-40 disabled:cursor-wait">
                         {actionLoading === "enrich" ? <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "✨"}
                         Enrichir par IA
                       </button>
@@ -1690,12 +1690,12 @@ export default function FicheDetailPage() {
                     {fiche.statut === "enrichi" && (
                       <>
                         <button onClick={handleValidateIA} disabled={actionLoading !== null || validationIALoading}
-                          className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-amber-500 text-white rounded-full text-xs font-medium hover:bg-amber-600 transition disabled:opacity-40 disabled:cursor-wait">
+                          className="inline-flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 sm:py-1.5 w-full sm:w-auto bg-amber-500 text-white rounded-full text-xs font-medium hover:bg-amber-600 transition disabled:opacity-40 disabled:cursor-wait">
                           {validationIALoading ? <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "🤖"}
                           Lancer la validation IA
                         </button>
                         <button onClick={() => setShowEnrichComment(true)}
-                          className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-indigo-300 text-indigo-600 rounded-full text-xs font-medium hover:bg-indigo-50 transition">
+                          className="inline-flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 sm:py-1.5 w-full sm:w-auto border border-indigo-300 text-indigo-600 rounded-full text-xs font-medium hover:bg-indigo-50 transition">
                           ✨ Re-enrichir avec commentaire
                         </button>
                       </>
@@ -1705,16 +1705,16 @@ export default function FicheDetailPage() {
                     {(fiche.statut === "valide" || (fiche.statut === "en_validation" && fiche.validation_ia_score != null && fiche.validation_ia_score >= 70)) && (
                       <>
                         <button onClick={() => handleValidateHuman(true)} disabled={actionLoading !== null || validationHumaneLoading}
-                          className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-green-600 text-white rounded-full text-xs font-medium hover:bg-green-700 transition disabled:opacity-40 disabled:cursor-wait">
+                          className="inline-flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 sm:py-1.5 w-full sm:w-auto bg-green-600 text-white rounded-full text-xs font-medium hover:bg-green-700 transition disabled:opacity-40 disabled:cursor-wait">
                           {validationHumaneLoading ? <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "✅"}
                           Valider et publier
                         </button>
                         <button onClick={() => setShowEnrichComment(true)}
-                          className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-indigo-300 text-indigo-600 rounded-full text-xs font-medium hover:bg-indigo-50 transition">
+                          className="inline-flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 sm:py-1.5 w-full sm:w-auto border border-indigo-300 text-indigo-600 rounded-full text-xs font-medium hover:bg-indigo-50 transition">
                           ✨ Re-enrichir avec commentaire
                         </button>
                         <button onClick={() => handleValidateHuman(false)} disabled={actionLoading !== null || validationHumaneLoading}
-                          className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-red-300 text-red-600 rounded-full text-xs font-medium hover:bg-red-50 transition disabled:opacity-40 disabled:cursor-wait">
+                          className="inline-flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 sm:py-1.5 w-full sm:w-auto border border-red-300 text-red-600 rounded-full text-xs font-medium hover:bg-red-50 transition disabled:opacity-40 disabled:cursor-wait">
                           ❌ Rejeter
                         </button>
                       </>
@@ -1727,15 +1727,15 @@ export default function FicheDetailPage() {
                           Score IA : {fiche.validation_ia_score}/100 — La fiche necessite un re-enrichissement
                         </div>
                         <button onClick={() => setShowEnrichComment(true)}
-                          className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-indigo-600 text-white rounded-full text-xs font-medium hover:bg-indigo-700 transition">
+                          className="inline-flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 sm:py-1.5 w-full sm:w-auto bg-indigo-600 text-white rounded-full text-xs font-medium hover:bg-indigo-700 transition">
                           ✨ Re-enrichir avec instructions
                         </button>
                       </>
                     )}
 
                     {/* Zone commentaire re-enrichissement */}
-                    <div className={`w-full overflow-hidden transition-all duration-300 ease-in-out ${showEnrichComment && fiche.statut !== "publiee" ? "max-h-[300px] opacity-100 mt-3" : "max-h-0 opacity-0 mt-0"}`}>
-                      <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-xl">
+                    <div className={`w-full min-w-0 overflow-hidden transition-all duration-300 ease-in-out ${showEnrichComment && fiche.statut !== "publiee" ? "max-h-[300px] opacity-100 mt-3" : "max-h-0 opacity-0 mt-0"}`}>
+                      <div className="p-3 sm:p-4 bg-indigo-50 border border-indigo-200 rounded-xl">
                         <label className="block text-xs font-semibold text-indigo-700 mb-2">
                           Que doit corriger ou ajouter l&apos;IA ?
                         </label>
@@ -1763,7 +1763,7 @@ export default function FicheDetailPage() {
                     {/* Publié : uniquement Variantes */}
                     {fiche.statut === "publiee" && (
                       <button onClick={handleGenerateVariantes} disabled={actionLoading !== null}
-                        className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-violet-300 text-violet-600 rounded-full text-xs font-medium hover:bg-violet-50 transition disabled:opacity-40 disabled:cursor-wait">
+                        className="inline-flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 sm:py-1.5 w-full sm:w-auto border border-violet-300 text-violet-600 rounded-full text-xs font-medium hover:bg-violet-50 transition disabled:opacity-40 disabled:cursor-wait">
                         {actionLoading === "variantes" ? <span className="w-3 h-3 border-2 border-violet-300 border-t-violet-600 rounded-full animate-spin" /> : "🌐"}
                         Variantes
                       </button>
