@@ -12,8 +12,8 @@ function KPICard({ label, value, icon, color }: { label: string; value: number |
       <div className={`sojai-card p-6 border-l-4 ${color}`}>
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-text-muted font-medium">{label}</p>
-            <p className="text-3xl font-bold text-text-dark mt-1">{value}</p>
+            <p className="text-sm text-gray-500 font-medium">{label}</p>
+            <p className="text-3xl font-bold text-gray-900 mt-1">{value}</p>
           </div>
           <span className="text-3xl">{icon}</span>
         </div>
@@ -26,11 +26,11 @@ function StatBar({ label, value, total, color }: { label: string; value: number;
   const pct = total > 0 ? Math.round((value / total) * 100) : 0;
   return (
     <div className="flex items-center gap-3">
-      <span className="text-sm text-text-muted w-28 text-right">{label}</span>
+      <span className="text-sm text-gray-500 w-28 text-right">{label}</span>
       <div className="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden">
         <div className={`h-full rounded-full ${color} transition-all duration-700`} style={{ width: `${pct}%` }} />
       </div>
-      <span className="text-sm font-semibold text-text-dark w-20">{value} ({pct}%)</span>
+      <span className="text-sm font-semibold text-gray-900 w-20">{value} ({pct}%)</span>
     </div>
   );
 }
@@ -87,7 +87,7 @@ export default function Home() {
         <FadeInView>
           <div className="text-center mb-12">
             <h1 className="text-4xl md:text-5xl font-serif font-bold gradient-text mb-3">Tableau de bord</h1>
-            <p className="text-lg text-text-muted">Vue d&apos;ensemble du référentiel Agents Métiers</p>
+            <p className="text-lg text-gray-500">Vue d&apos;ensemble du référentiel Agents Métiers</p>
           </div>
         </FadeInView>
 
@@ -103,7 +103,7 @@ export default function Home() {
         <div className="grid md:grid-cols-2 gap-6 mb-8">
           <FadeInView>
             <div className="sojai-card p-6">
-              <h3 className="text-lg font-semibold text-text-dark mb-4">Score moyen de complétude</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Score moyen de complétude</h3>
               <div className="flex items-center gap-4">
                 <div className="relative w-28 h-28">
                   <svg className="w-28 h-28 -rotate-90" viewBox="0 0 120 120">
@@ -113,10 +113,10 @@ export default function Home() {
                       strokeWidth="10" strokeDasharray={`${(avgScore ?? 0) * 3.27} 327`} strokeLinecap="round" />
                   </svg>
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-2xl font-bold text-text-dark">{avgScore ?? "—"}%</span>
+                    <span className="text-2xl font-bold text-gray-900">{avgScore ?? "—"}%</span>
                   </div>
                 </div>
-                <div className="text-sm text-text-muted">
+                <div className="text-sm text-gray-500">
                   <p>Score moyen calculé sur l&apos;ensemble des fiches du référentiel.</p>
                   <p className="mt-2">
                     {avgScore != null && avgScore >= 80 && "🟢 Excellent niveau de complétude"}
@@ -130,7 +130,7 @@ export default function Home() {
 
           <FadeInView>
             <div className="sojai-card p-6">
-              <h3 className="text-lg font-semibold text-text-dark mb-4">Répartition par statut</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Répartition par statut</h3>
               <div className="space-y-3">
                 <StatBar label="Brouillons" value={stats?.brouillons ?? 0} total={stats?.total ?? 1} color="bg-stone-400" />
                 <StatBar label="En validation" value={stats?.en_validation ?? 0} total={stats?.total ?? 1} color="bg-amber-500" />
@@ -145,23 +145,23 @@ export default function Home() {
         <div className="grid md:grid-cols-3 gap-6">
           <FadeInView>
             <div className="sojai-card p-6 md:col-span-2">
-              <h3 className="text-lg font-semibold text-text-dark mb-4">Dernières actions</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Dernières actions</h3>
               {logs.length === 0 ? (
-                <p className="text-text-muted text-sm">Aucune action récente.</p>
+                <p className="text-gray-500 text-sm">Aucune action récente.</p>
               ) : (
                 <div className="space-y-3">
                   {logs.map((log) => (
                     <div key={log.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
                       <span className="text-xl">{EVT_ICONS[log.type_evenement] || "📌"}</span>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-text-dark truncate">{log.description}</p>
+                        <p className="text-sm font-medium text-gray-900 truncate">{log.description}</p>
                         <div className="flex items-center gap-2 mt-1">
                           {log.code_rome && (
                             <Link href={`/fiches/${log.code_rome}`} className="text-xs text-indigo-600 hover:underline font-semibold">
                               {log.code_rome}
                             </Link>
                           )}
-                          <span className="text-xs text-text-muted">
+                          <span className="text-xs text-gray-500">
                             {log.timestamp ? new Date(log.timestamp).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : ""}
                           </span>
                         </div>
@@ -175,7 +175,7 @@ export default function Home() {
 
           <FadeInView>
             <div className="sojai-card p-6">
-              <h3 className="text-lg font-semibold text-text-dark mb-4">Accès rapide</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Accès rapide</h3>
               <div className="space-y-3">
                 <Link href="/fiches" className="flex items-center gap-3 p-3 rounded-lg hover:bg-indigo-50 transition-colors group">
                   <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600 group-hover:bg-indigo-200 transition-colors">
@@ -184,8 +184,8 @@ export default function Home() {
                     </svg>
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-text-dark">Fiches métiers</p>
-                    <p className="text-xs text-text-muted">{stats?.total ?? 0} fiches</p>
+                    <p className="text-sm font-semibold text-gray-900">Fiches métiers</p>
+                    <p className="text-xs text-gray-500">{stats?.total ?? 0} fiches</p>
                   </div>
                 </Link>
                 <Link href="/actions" className="flex items-center gap-3 p-3 rounded-lg hover:bg-purple-50 transition-colors group">
@@ -195,8 +195,8 @@ export default function Home() {
                     </svg>
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-text-dark">Actions IA</p>
-                    <p className="text-xs text-text-muted">Enrichir, valider, publier</p>
+                    <p className="text-sm font-semibold text-gray-900">Actions IA</p>
+                    <p className="text-xs text-gray-500">Enrichir, valider, publier</p>
                   </div>
                 </Link>
               </div>
