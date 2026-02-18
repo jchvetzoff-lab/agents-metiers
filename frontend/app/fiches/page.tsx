@@ -183,7 +183,7 @@ export default function FichesPage() {
     setBatchProgress({ done: 0, total: codes.length, action: labels[action] });
     for (let i = 0; i < codes.length; i++) {
       try {
-        if (action === "validate") await api.validateFiche(codes[i]);
+        if (action === "validate") await api.validateIA(codes[i]);
         else if (action === "review") await api.reviewFiche(codes[i], "approuver");
         else if (action === "enrich") await api.enrichFiche(codes[i]);
       } catch { /* continue */ }
@@ -337,6 +337,7 @@ export default function FichesPage() {
                         onClick={() => { setSortOption(sortOption === "date_desc" ? "date_asc" : "date_desc"); setPage(0); }}>
                         Statut {sortOption === "date_desc" ? "↓" : sortOption === "date_asc" ? "↑" : ""}
                       </th>
+                      <th className="text-left p-4 text-xs font-semibold text-text-muted uppercase">Validation</th>
                       <th className="text-left p-4 text-xs font-semibold text-text-muted uppercase cursor-pointer hover:text-indigo-600 transition-colors select-none"
                         onClick={() => { setSortOption(sortOption === "score_desc" ? "score_asc" : "score_desc"); setPage(0); }}>
                         Complétude {sortOption === "score_desc" ? "↓" : sortOption === "score_asc" ? "↑" : ""}
@@ -346,7 +347,7 @@ export default function FichesPage() {
                   </thead>
                   <tbody>
                     {fiches.length === 0 && (
-                      <tr><td colSpan={6} className="p-8 text-center text-text-muted">Aucune fiche trouvée{search ? ` pour "${search}"` : ""}</td></tr>
+                      <tr><td colSpan={7} className="p-8 text-center text-text-muted">Aucune fiche trouvée{search ? ` pour "${search}"` : ""}</td></tr>
                     )}
                     {fiches.map((fiche) => {
                       const score = computeScore(fiche);
@@ -367,6 +368,34 @@ export default function FichesPage() {
                               <StatusBadge statut={fiche.statut} />
                               {fiche.rome_update_pending && (
                                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-700 border border-orange-300">MAJ ROME</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <div className="flex items-center gap-1">
+                              {fiche.validation_ia_score != null ? (
+                                <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold ${
+                                  fiche.validation_ia_score >= 80 ? 'bg-green-100 text-green-700' :
+                                  fiche.validation_ia_score >= 60 ? 'bg-yellow-100 text-yellow-700' : 
+                                  'bg-red-100 text-red-700'
+                                }`}>
+                                  🤖 {fiche.validation_ia_score}
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-500">
+                                  🤖 -
+                                </div>
+                              )}
+                              {fiche.validation_humaine != null ? (
+                                <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold ${
+                                  fiche.validation_humaine ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                }`}>
+                                  👤 {fiche.validation_humaine ? '✓' : '✗'}
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-500">
+                                  👤 -
+                                </div>
                               )}
                             </div>
                           </td>
@@ -430,7 +459,24 @@ export default function FichesPage() {
                 <div className="flex items-center gap-3">
                   <button onClick={() => runBatch("validate")}
                     className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors">
-                    🔍 Valider IA ({selected.size})
+                    🤖 Valider IA ({selected.size})
+                  </button>
+                  <button onClick={async () => {
+                    if (!confirm(`Validation IA en masse de ${selected.size} fiche(s) ?`)) return;
+                    setBatchRunning(true);
+                    setBatchProgress({ done: 0, total: 1, action: "Validation IA en masse" });
+                    try {
+                      await api.batchValidateIA();
+                      loadFiches();
+                    } catch (e: any) {
+                      alert(`Erreur: ${e.message}`);
+                    } finally {
+                      setBatchRunning(false);
+                      setSelected(new Set());
+                    }
+                  }}
+                    className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors">
+                    🤖 Validation IA globale
                   </button>
                   <button onClick={() => runBatch("review")}
                     className="px-4 py-2 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 transition-colors">

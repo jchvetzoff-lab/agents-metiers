@@ -1364,6 +1364,340 @@ async def publish_fiche(code_rome: str, request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==================== NOUVEAUX ENDPOINTS VALIDATION IA + HUMAINE ====================
+
+@app.post("/api/fiches/{code_rome}/validate-ia")
+async def validate_fiche_ia(code_rome: str, request: Request):
+    """Validation IA avec Claude : audit complet de la fiche."""
+    import os
+    try:
+        fiche = repo.get_fiche(code_rome)
+        if not fiche:
+            raise HTTPException(status_code=404, detail=f"Fiche {code_rome} non trouvée")
+
+        # Construire le prompt strict de validation pour Claude
+        prompt = f"""Tu es un expert en validation de fiches métiers ROME. Analyse cette fiche de manière stricte et exigeante.
+
+Code ROME: {code_rome}
+Nom: {fiche.nom_epicene}
+Description: {fiche.description or 'VIDE'}
+Description courte: {fiche.description_courte or 'VIDE'}
+Compétences: {json.dumps(fiche.competences or [], ensure_ascii=False)}
+Compétences transversales: {json.dumps(fiche.competences_transversales or [], ensure_ascii=False)}
+Formations: {json.dumps(fiche.formations or [], ensure_ascii=False)}
+Certifications: {json.dumps(fiche.certifications or [], ensure_ascii=False)}
+Conditions de travail: {json.dumps(fiche.conditions_travail or [], ensure_ascii=False)}
+Environnements: {json.dumps(fiche.environnements or [], ensure_ascii=False)}
+Secteurs d'activité: {json.dumps(fiche.secteurs_activite or [], ensure_ascii=False)}
+Salaires: {json.dumps(fiche.salaires.model_dump() if fiche.salaires else {}, ensure_ascii=False)}
+Perspectives: {json.dumps(fiche.perspectives.model_dump() if fiche.perspectives else {}, ensure_ascii=False)}
+
+MISSION : Audite cette fiche avec rigueur et exigence. Vérifie :
+
+1. COHÉRENCE DES DONNÉES :
+   - Salaires réalistes pour ce métier en France (junior 15k-45k, senior 30k-120k selon le métier)
+   - Progression logique junior < confirmé < senior
+   - Compétences pertinentes au métier (pas générique)
+   - Formations cohérentes avec le niveau requis
+   - Secteurs d'activité appropriés
+
+2. COMPLÉTUDE :
+   - Description suffisamment détaillée (min 150 caractères)
+   - Au moins 5 compétences techniques
+   - Formations spécifiques au métier
+   - Données de salaires présentes
+   - Perspectives d'emploi renseignées
+
+3. QUALITÉ DU CONTENU :
+   - Pas de placeholder ou de texte générique
+   - Informations précises et spécialisées
+   - Vocabulaire professionnel approprié
+   - Absence de doublons ou incohérences
+
+ÉVALUATION STRICTE :
+- Score < 60 = PROBLÈMES MAJEURS (fiche non validable)
+- Score 60-79 = ACCEPTABLE AVEC RÉSERVES (améliorations nécessaires) 
+- Score 80+ = BONNE QUALITÉ (validable)
+
+Retourne UNIQUEMENT ce JSON :
+{{
+  "score_global": 75,
+  "verdict": "acceptable_reserves",
+  "problemes": [
+    {{
+      "severite": "erreur",
+      "message": "Salaire senior (25k€) inférieur au junior (30k€)"
+    }},
+    {{
+      "severite": "warning", 
+      "message": "Seulement 3 compétences listées, recommandé 5+"
+    }},
+    {{
+      "severite": "info",
+      "message": "Description courte manquante"
+    }}
+  ],
+  "points_forts": [
+    "Formations bien définies",
+    "Secteurs d'activité précis"
+  ],
+  "ameliorations_requises": [
+    "Corriger la progression salariale",
+    "Ajouter 2-3 compétences spécialisées",
+    "Enrichir la description (actuel: 89 caractères)"
+  ],
+  "criteres_detailles": {{
+    "coherence_salaires": {{"score": 30, "max": 40, "commentaire": "Progression illogique"}},
+    "completude_competences": {{"score": 12, "max": 20, "commentaire": "3 sur 5+ requis"}},
+    "qualite_description": {{"score": 15, "max": 20, "commentaire": "Trop courte"}},
+    "pertinence_formations": {{"score": 18, "max": 20, "commentaire": "Bien ciblées"}}
+  }}
+}}
+
+Sois rigoureux et exigeant. Cette validation détermine si la fiche peut être publiée."""
+
+        # Appel à Claude API
+        api_key = os.environ.get("ANTHROPIC_API_KEY", config.api.anthropic_api_key if hasattr(config.api, 'anthropic_api_key') else None)
+        if not api_key:
+            raise HTTPException(status_code=500, detail="Clé API Anthropic non configurée")
+
+        import anthropic
+        client = anthropic.Anthropic(api_key=api_key)
+        message = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=2000,
+            messages=[{"role": "user", "content": prompt}]
+        )
+
+        response_text = message.content[0].text.strip()
+        # Nettoyer la réponse (enlever les blocs markdown éventuels)
+        if response_text.startswith("```"):
+            response_text = response_text.split("```")[1]
+            if response_text.startswith("json"):
+                response_text = response_text[4:]
+        response_text = response_text.strip()
+
+        try:
+            validation_result = json.loads(response_text)
+        except json.JSONDecodeError:
+            raise HTTPException(status_code=500, detail="Erreur parsing réponse Claude")
+
+        score = validation_result.get("score_global", 0)
+        verdict = validation_result.get("verdict", "erreur")
+
+        # Sauvegarder en base
+        from sqlalchemy import text
+        now = datetime.now()
+        
+        # Changer le statut selon le score
+        if score >= 70:
+            new_statut = "enrichi"  # Prêt pour validation humaine
+        else:
+            new_statut = "brouillon"  # Nécessite des corrections
+
+        with repo.session() as session:
+            session.execute(
+                text("UPDATE fiches_metiers SET validation_ia_score = :score, validation_ia_date = :date, "
+                     "validation_ia_details = :details, statut = :statut WHERE code_rome = :cr"),
+                {
+                    "score": score,
+                    "date": now,
+                    "details": json.dumps(validation_result, ensure_ascii=False),
+                    "statut": new_statut,
+                    "cr": code_rome
+                }
+            )
+
+        # Log d'audit
+        user = _get_user_name(request)
+        _add_audit("validation_ia", code_rome, user,
+                   f"Validation IA par {user} : score {score}/100 ({verdict}) pour {fiche.nom_epicene}")
+
+        return {
+            "message": f"Validation IA terminée - Score: {score}/100",
+            "code_rome": code_rome,
+            "score": score,
+            "verdict": verdict,
+            "statut": new_statut,
+            "details": validation_result
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur validation IA: {str(e)}")
+
+
+class ValidationHumaineRequest(BaseModel):
+    approved: bool
+    commentaire: Optional[str] = None
+    validated_by: str
+
+
+@app.post("/api/fiches/{code_rome}/validate-human")
+async def validate_fiche_human(code_rome: str, body: ValidationHumaineRequest, request: Request):
+    """Validation humaine : approuver ou rejeter."""
+    try:
+        fiche = repo.get_fiche(code_rome)
+        if not fiche:
+            raise HTTPException(status_code=404, detail=f"Fiche {code_rome} non trouvée")
+
+        from sqlalchemy import text
+        now = datetime.now()
+        user = _get_user_name(request)
+        
+        if body.approved:
+            new_statut = "valide"
+            validation_humaine = True
+        else:
+            new_statut = "brouillon"
+            validation_humaine = False
+
+        with repo.session() as session:
+            session.execute(
+                text("UPDATE fiches_metiers SET validation_humaine = :vh, validation_humaine_date = :date, "
+                     "validation_humaine_par = :par, validation_humaine_commentaire = :com, "
+                     "statut = :statut WHERE code_rome = :cr"),
+                {
+                    "vh": validation_humaine,
+                    "date": now,
+                    "par": body.validated_by,
+                    "com": body.commentaire or "",
+                    "statut": new_statut,
+                    "cr": code_rome
+                }
+            )
+
+        _add_audit("validation_humaine", code_rome, user,
+                   f"Validation humaine par {body.validated_by} : {'approuvée' if body.approved else 'rejetée'} pour {fiche.nom_epicene}",
+                   validateur=body.validated_by)
+
+        return {
+            "message": f"Fiche {'approuvée' if body.approved else 'rejetée'}",
+            "code_rome": code_rome,
+            "approved": body.approved,
+            "commentaire": body.commentaire,
+            "validated_by": body.validated_by,
+            "nouveau_statut": new_statut
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/fiches/{code_rome}/publish-final")
+async def publish_fiche_final(code_rome: str, request: Request):
+    """Publication finale : nécessite validation IA score >= 70 ET validation humaine approuvée."""
+    try:
+        fiche = repo.get_fiche(code_rome)
+        if not fiche:
+            raise HTTPException(status_code=404, detail=f"Fiche {code_rome} non trouvée")
+
+        # Vérifier les prérequis
+        from sqlalchemy import text
+        with repo.session() as session:
+            row = session.execute(
+                text("SELECT validation_ia_score, validation_humaine FROM fiches_metiers WHERE code_rome = :cr"),
+                {"cr": code_rome}
+            ).fetchone()
+
+            ia_score = row[0] if row else None
+            humaine = row[1] if row else None
+
+            # Vérifications strictes
+            if not ia_score or ia_score < 70:
+                raise HTTPException(status_code=400, 
+                    detail=f"Validation IA insuffisante. Score actuel: {ia_score or 0}/100. Minimum requis: 70/100.")
+            
+            if not humaine:
+                raise HTTPException(status_code=400, 
+                    detail="Validation humaine requise avant publication.")
+
+            # Publication
+            session.execute(
+                text("UPDATE fiches_metiers SET statut = 'publie' WHERE code_rome = :cr"),
+                {"cr": code_rome}
+            )
+
+        user = _get_user_name(request)
+        _add_audit("publication", code_rome, user,
+                   f"Publication de {fiche.nom_epicene} par {user} (IA: {ia_score}/100, Humaine: approuvée)")
+
+        return {
+            "message": "Fiche publiée avec succès",
+            "code_rome": code_rome,
+            "ia_score": ia_score,
+            "validation_humaine": humaine
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/fiches/batch-validate-ia")
+async def batch_validate_ia(request: Request):
+    """Validation IA en masse : toutes les fiches enrichies non validées IA."""
+    try:
+        # Récupérer toutes les fiches enrichies sans validation IA
+        from sqlalchemy import text
+        
+        with repo.session() as session:
+            result = session.execute(
+                text("SELECT code_rome, nom_epicene FROM fiches_metiers WHERE statut = 'enrichi' AND (validation_ia_score IS NULL OR validation_ia_date IS NULL)")
+            ).fetchall()
+
+        if not result:
+            return {
+                "message": "Aucune fiche à valider",
+                "total": 0,
+                "rapport": []
+            }
+
+        rapport = []
+        user = _get_user_name(request)
+
+        for row in result:
+            code_rome, nom = row[0], row[1]
+            try:
+                # Appel à l'endpoint de validation IA individuelle
+                validation_result = await validate_fiche_ia(code_rome, request)
+                rapport.append({
+                    "code_rome": code_rome,
+                    "nom": nom,
+                    "status": "success",
+                    "score": validation_result["score"],
+                    "verdict": validation_result["verdict"]
+                })
+            except Exception as e:
+                rapport.append({
+                    "code_rome": code_rome,
+                    "nom": nom,
+                    "status": "error", 
+                    "error": str(e)
+                })
+
+        successes = len([r for r in rapport if r["status"] == "success"])
+        errors = len([r for r in rapport if r["status"] == "error"])
+
+        _add_audit("validation_ia_batch", "", user,
+                   f"Validation IA en masse par {user} : {successes} succès, {errors} erreurs sur {len(result)} fiches")
+
+        return {
+            "message": f"Validation batch terminée : {successes} succès, {errors} erreurs",
+            "total": len(result),
+            "successes": successes,
+            "errors": errors,
+            "rapport": rapport
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ==================== MISSING ENDPOINTS ====================
 
 @app.delete("/api/fiches/{code_rome}")

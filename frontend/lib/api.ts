@@ -486,6 +486,82 @@ class ApiClient {
     });
   }
 
+  // ==================== NOUVEAUX ENDPOINTS VALIDATION IA + HUMAINE ====================
+
+  async validateIA(codeRome: string): Promise<{
+    message: string;
+    code_rome: string;
+    score: number;
+    verdict: string;
+    statut: string;
+    details: {
+      score_global: number;
+      verdict: string;
+      problemes: Array<{
+        severite: "erreur" | "warning" | "info";
+        message: string;
+      }>;
+      points_forts: string[];
+      ameliorations_requises: string[];
+      criteres_detailles: Record<string, {
+        score: number;
+        max: number;
+        commentaire: string;
+      }>;
+    };
+  }> {
+    return this.request(`/api/fiches/${codeRome}/validate-ia`, { method: "POST" });
+  }
+
+  async validateHuman(
+    codeRome: string,
+    approved: boolean,
+    commentaire: string,
+    validatedBy: string
+  ): Promise<{
+    message: string;
+    code_rome: string;
+    approved: boolean;
+    commentaire: string | null;
+    validated_by: string;
+    nouveau_statut: string;
+  }> {
+    return this.request(`/api/fiches/${codeRome}/validate-human`, {
+      method: "POST",
+      body: JSON.stringify({
+        approved,
+        commentaire,
+        validated_by: validatedBy,
+      }),
+    });
+  }
+
+  async publishFinal(codeRome: string): Promise<{
+    message: string;
+    code_rome: string;
+    ia_score: number;
+    validation_humaine: boolean;
+  }> {
+    return this.request(`/api/fiches/${codeRome}/publish-final`, { method: "POST" });
+  }
+
+  async batchValidateIA(): Promise<{
+    message: string;
+    total: number;
+    successes: number;
+    errors: number;
+    rapport: Array<{
+      code_rome: string;
+      nom: string;
+      status: "success" | "error";
+      score?: number;
+      verdict?: string;
+      error?: string;
+    }>;
+  }> {
+    return this.request("/api/fiches/batch-validate-ia", { method: "POST" });
+  }
+
   // ==================== VARIANTES GENERATION ====================
 
   async generateVariantes(
