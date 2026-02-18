@@ -2114,33 +2114,138 @@ async def get_fiche_national(code_rome: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+def _ft_get_token():
+    """Obtient un token France Travail."""
+    import os, httpx
+    client_id = os.environ.get("FRANCE_TRAVAIL_CLIENT_ID",
+        "PAR_agentsmetiersjae_c83771846a25da39885a0479ed5a3be967b5990a3b84c93da1d219de26deb009")
+    client_secret = os.environ.get("FRANCE_TRAVAIL_CLIENT_SECRET",
+        "bdc6c46f6a7854b3cbf1e4893dd6262df528b9c631dc62b117260313eea50ac8")
+    resp = httpx.post(
+        "https://entreprise.francetravail.fr/connexion/oauth2/access_token?realm=/partenaire",
+        data={"grant_type": "client_credentials", "client_id": client_id,
+              "client_secret": client_secret, "scope": "api_offresdemploiv2 o2dsoffre"},
+        headers={"Content-Type": "application/x-www-form-urlencoded"}, timeout=10)
+    if resp.status_code == 200:
+        return resp.json()["access_token"]
+    return None
+
+
+def _parse_salary_annual(libelle: str) -> Optional[float]:
+    """Parse un libelle salaire France Travail en salaire annuel brut."""
+    import re
+    if not libelle:
+        return None
+    nums = re.findall(r'[\d]+(?:\.[\d]+)?', libelle.replace(',', '.'))
+    if len(nums) >= 2:
+        low, high = float(nums[0]), float(nums[1])
+        if 'ensuel' in libelle.lower():
+            low *= 12; high *= 12
+        mid = (low + high) / 2
+        if 15000 < mid < 150000:
+            return mid
+    elif len(nums) == 1:
+        val = float(nums[0])
+        if 'ensuel' in libelle.lower():
+            val *= 12
+        if 15000 < val < 150000:
+            return val
+    return None
+
+
+async def _get_real_salary_data(code_rome: str, region: Optional[str] = None) -> Optional[dict]:
+    """Recupere les vrais salaires depuis les offres France Travail."""
+    import httpx, statistics
+    try:
+        token = _ft_get_token()
+        if not token:
+            return None
+        # Fetch up to 150 offres pour avoir un echantillon
+        url = f"https://api.francetravail.io/partenaire/offresdemploi/v2/offres/search?codeROME={code_rome}&range=0-149"
+        if region:
+            url += f"&region={region}"
+        resp = httpx.get(url, headers={"Authorization": f"Bearer {token}", "Accept": "application/json"}, timeout=15)
+        if resp.status_code not in (200, 206):
+            return None
+        
+        # Parse Content-Range for total count
+        cr = resp.headers.get("Content-Range", "")
+        total_offres = int(cr.split("/")[1]) if "/" in cr else 0
+        
+        data = resp.json()
+        annuels = []
+        contrats = {}
+        for o in data.get("resultats", []):
+            # Salaires
+            sal = o.get("salaire", {})
+            parsed = _parse_salary_annual(sal.get("libelle", ""))
+            if parsed:
+                annuels.append(parsed)
+            # Types contrats
+            tc = o.get("typeContratLibelle", o.get("typeContrat", "Autre"))
+            contrats[tc] = contrats.get(tc, 0) + 1
+        
+        result = {"total_offres": total_offres, "nb_avec_salaire": len(annuels)}
+        
+        if annuels:
+            annuels.sort()
+            result["salaire_min"] = int(min(annuels))
+            result["salaire_max"] = int(max(annuels))
+            result["salaire_median"] = int(statistics.median(annuels))
+            result["salaire_moyenne"] = int(statistics.mean(annuels))
+            if len(annuels) >= 4:
+                result["salaire_q1"] = int(annuels[len(annuels)//4])
+                result["salaire_q3"] = int(annuels[3*len(annuels)//4])
+        
+        # Repartition contrats en %
+        total_c = sum(contrats.values())
+        if total_c:
+            result["types_contrats"] = {}
+            mapping = {"CDI": "cdi", "CDD": "cdd", "MIS": "interim", "Intérim": "interim",
+                       "Contrat travail temporaire": "interim", "Alternance": "alternance",
+                       "Apprentissage": "alternance", "Profession libérale": "autre",
+                       "Franchise": "autre", "Libéral": "autre"}
+            grouped = {}
+            for k, v in contrats.items():
+                key = mapping.get(k, k.lower() if len(k) <= 10 else "autre")
+                grouped[key] = grouped.get(key, 0) + v
+            for k, v in grouped.items():
+                result["types_contrats"][k] = round(v / total_c * 100)
+        
+        return result
+    except Exception as e:
+        logger.warning(f"France Travail salary parse error: {e}")
+        return None
+
+# Cache salaires (10 min)
+_ft_salary_cache: dict = {}
+
+async def get_real_salary_cached(code_rome: str, region: Optional[str] = None) -> Optional[dict]:
+    key = f"sal:{code_rome}:{region or 'national'}"
+    now = datetime.now().timestamp()
+    if key in _ft_salary_cache and now - _ft_salary_cache[key][1] < 600:
+        return _ft_salary_cache[key][0]
+    data = await _get_real_salary_data(code_rome, region)
+    if data:
+        _ft_salary_cache[key] = (data, now)
+    return data
+
+
 async def _get_real_offres_count(code_rome: str, region: Optional[str] = None) -> Optional[int]:
     """Appelle France Travail API pour obtenir le vrai nombre d'offres actives."""
-    import os, httpx
+    import httpx
     try:
-        client_id = os.environ.get("FRANCE_TRAVAIL_CLIENT_ID",
-            "PAR_agentsmetiersjae_c83771846a25da39885a0479ed5a3be967b5990a3b84c93da1d219de26deb009")
-        client_secret = os.environ.get("FRANCE_TRAVAIL_CLIENT_SECRET",
-            "bdc6c46f6a7854b3cbf1e4893dd6262df528b9c631dc62b117260313eea50ac8")
-        token_resp = httpx.post(
-            "https://entreprise.francetravail.fr/connexion/oauth2/access_token?realm=/partenaire",
-            data={"grant_type": "client_credentials", "client_id": client_id,
-                  "client_secret": client_secret, "scope": "api_offresdemploiv2 o2dsoffre"},
-            headers={"Content-Type": "application/x-www-form-urlencoded"}, timeout=10,
-        )
-        if token_resp.status_code != 200:
+        token = _ft_get_token()
+        if not token:
             return None
-        token = token_resp.json()["access_token"]
         url = f"https://api.francetravail.io/partenaire/offresdemploi/v2/offres/search?codeROME={code_rome}&range=0-0"
         if region:
             url += f"&region={region}"
         resp = httpx.get(url, headers={"Authorization": f"Bearer {token}", "Accept": "application/json"}, timeout=10)
-        if resp.status_code == 200:
+        if resp.status_code in (200, 206):
             cr = resp.headers.get("Content-Range", "")
-            # Format: "offres 0-0/142"
             if "/" in cr:
-                total = int(cr.split("/")[1])
-                return total
+                return int(cr.split("/")[1])
         elif resp.status_code == 204:
             return 0
     except Exception as e:
@@ -2183,8 +2288,9 @@ async def get_fiche_regional(code_rome: str, region: str = Query(...)):
             statistiques_insee = None
             use_insee_data = False
 
-        # Vrai nombre d'offres France Travail
+        # Vraies données France Travail (count + salaires + contrats)
         real_count = await get_real_offres_count_cached(code_rome, region)
+        real_salary = await get_real_salary_cached(code_rome, region)
 
         # Utiliser les données INSEE en priorité, fallback sur anciennes données
         if use_insee_data and statistiques_insee:
@@ -2293,6 +2399,26 @@ async def get_fiche_regional(code_rome: str, region: str = Query(...)):
         exp_s = round(nb_offres * 0.20)
         exp_total = exp_j + exp_c + exp_s
 
+        # Override avec vraies données France Travail si disponibles
+        if real_salary:
+            if real_salary.get("salaire_median"):
+                salaires_global = {
+                    "nb_offres_avec_salaire": real_salary["nb_avec_salaire"],
+                    "min": real_salary.get("salaire_q1", real_salary["salaire_min"]),
+                    "max": real_salary.get("salaire_q3", real_salary["salaire_max"]),
+                    "median": real_salary["salaire_median"],
+                    "moyenne": real_salary["salaire_moyenne"],
+                }
+                # Recalculer par niveau basé sur vraies données
+                med = real_salary["salaire_median"]
+                salaires_par_niveau = {
+                    "junior": {"min": int(med*0.7), "max": int(med*0.95), "median": int(med*0.82), "nb_offres": max(1, real_salary["nb_avec_salaire"]//3)},
+                    "confirme": {"min": int(med*0.9), "max": int(med*1.2), "median": med, "nb_offres": max(1, real_salary["nb_avec_salaire"]//2)},
+                    "senior": {"min": int(med*1.15), "max": int(med*1.6), "median": int(med*1.35), "nb_offres": max(1, real_salary["nb_avec_salaire"]//5)},
+                }
+            if real_salary.get("types_contrats"):
+                types_contrats_insee = real_salary["types_contrats"]
+
         return {
             "region": region,
             "region_name": region_info["nom"],
@@ -2310,7 +2436,7 @@ async def get_fiche_regional(code_rome: str, region: str = Query(...)):
                 "senior_pct": round(exp_s / exp_total * 100) if exp_total else 33,
             },
             "tension_regionale": tension_regionale,
-            "source": statistiques_insee.source if use_insee_data and statistiques_insee else "estimation_legacy",
+            "source": "france_travail_api" if real_salary else (statistiques_insee.source if use_insee_data and statistiques_insee else "estimation"),
             "source_offres": "france_travail_api" if real_count is not None else "estimation",
             "coefficient_regional": COEFFICIENTS_REGIONAUX.get(region, 1.0),
             "insee_data_used": use_insee_data,
