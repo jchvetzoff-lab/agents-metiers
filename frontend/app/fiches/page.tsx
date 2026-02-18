@@ -302,11 +302,6 @@ export default function FichesPage() {
           <div className="mt-4 flex items-center justify-between text-sm text-text-muted">
             <span>{total > 0 ? `${startIdx}–${endIdx} sur ${total}` : "0"} fiche{total > 1 ? "s" : ""}</span>
             <div className="flex items-center gap-3">
-              <label className="text-xs font-medium">Trier par :</label>
-              <select value={sortOption} onChange={(e) => { setSortOption(e.target.value); setPage(0); }}
-                className="px-3 py-1.5 border border-border-subtle rounded-lg text-sm focus:outline-none focus:border-indigo-500">
-                {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
               {(search || searchCompetences || statutFilter) && (
                 <button onClick={() => { setSearch(""); setSearchCompetences(""); setStatutFilter(""); setPage(0); }} className="text-primary-purple hover:underline text-xs">
                   Réinitialiser
@@ -330,10 +325,22 @@ export default function FichesPage() {
                         <input type="checkbox" checked={fiches.length > 0 && selected.size === fiches.length}
                           onChange={toggleAll} className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
                       </th>
-                      <th className="text-left p-4 text-xs font-semibold text-text-muted uppercase">Code ROME</th>
-                      <th className="text-left p-4 text-xs font-semibold text-text-muted uppercase">Nom du métier</th>
-                      <th className="text-left p-4 text-xs font-semibold text-text-muted uppercase">Statut</th>
-                      <th className="text-left p-4 text-xs font-semibold text-text-muted uppercase">Complétude</th>
+                      <th className="text-left p-4 text-xs font-semibold text-text-muted uppercase cursor-pointer hover:text-indigo-600 transition-colors select-none"
+                        onClick={() => { setSortOption(sortOption === "nom_asc" ? "nom_desc" : "nom_asc"); setPage(0); }}>
+                        Code ROME {sortOption === "nom_asc" ? "↑" : sortOption === "nom_desc" ? "↓" : ""}
+                      </th>
+                      <th className="text-left p-4 text-xs font-semibold text-text-muted uppercase cursor-pointer hover:text-indigo-600 transition-colors select-none"
+                        onClick={() => { setSortOption(sortOption === "nom_asc" ? "nom_desc" : "nom_asc"); setPage(0); }}>
+                        Nom du métier {sortOption === "nom_asc" ? "↑" : sortOption === "nom_desc" ? "↓" : ""}
+                      </th>
+                      <th className="text-left p-4 text-xs font-semibold text-text-muted uppercase cursor-pointer hover:text-indigo-600 transition-colors select-none"
+                        onClick={() => { setSortOption(sortOption === "date_desc" ? "date_asc" : "date_desc"); setPage(0); }}>
+                        Statut {sortOption === "date_desc" ? "↓" : sortOption === "date_asc" ? "↑" : ""}
+                      </th>
+                      <th className="text-left p-4 text-xs font-semibold text-text-muted uppercase cursor-pointer hover:text-indigo-600 transition-colors select-none"
+                        onClick={() => { setSortOption(sortOption === "score_desc" ? "score_asc" : "score_desc"); setPage(0); }}>
+                        Complétude {sortOption === "score_desc" ? "↓" : sortOption === "score_asc" ? "↑" : ""}
+                      </th>
                       <th className="text-center p-4 text-xs font-semibold text-text-muted uppercase">Actions</th>
                     </tr>
                   </thead>
