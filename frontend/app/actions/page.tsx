@@ -401,12 +401,12 @@ function TabHistorique() {
     ? allFiches.filter(f =>
         f.code_rome.toLowerCase().includes(searchInput.toLowerCase()) ||
         f.description.toLowerCase().includes(searchInput.toLowerCase())
-      ).slice(0, 6)
-    : [];
+      ).slice(0, 8)
+    : allFiches.slice(0, 8);
 
   const agentSuggestions = agentInput.trim().length > 0
-    ? allAgents.filter(a => a.toLowerCase().includes(agentInput.toLowerCase())).slice(0, 6)
-    : [];
+    ? allAgents.filter(a => a.toLowerCase().includes(agentInput.toLowerCase())).slice(0, 8)
+    : allAgents.slice(0, 8);
 
   useEffect(() => {
     const t = setTimeout(() => setSearch(searchInput), 400);
