@@ -141,7 +141,7 @@ class MetadataFiche(BaseModel):
     source: str = Field("ROME", description="Source principale de la fiche")
     auteur: Optional[str] = Field(None, description="Auteur de la dernière modification")
     statut: StatutFiche = Field(StatutFiche.BROUILLON)
-    tags: List[str] = Field(default_factory=list)
+    tags: List[Any] = Field(default_factory=list)
 
 
 class FicheMetier(BaseModel):
@@ -161,37 +161,37 @@ class FicheMetier(BaseModel):
     description_courte: Optional[str] = Field(None, description="Description courte (< 200 car.)")
 
     # Compétences et formations
-    competences: List[str] = Field(default_factory=list)
-    competences_transversales: List[str] = Field(default_factory=list)
-    formations: List[str] = Field(default_factory=list)
-    certifications: List[str] = Field(default_factory=list)
+    competences: List[Any] = Field(default_factory=list)
+    competences_transversales: List[Any] = Field(default_factory=list)
+    formations: List[Any] = Field(default_factory=list)
+    certifications: List[Any] = Field(default_factory=list)
 
     # Contexte de travail
-    conditions_travail: List[str] = Field(default_factory=list)
-    environnements: List[str] = Field(default_factory=list)
+    conditions_travail: List[Any] = Field(default_factory=list)
+    environnements: List[Any] = Field(default_factory=list)
 
     # Données économiques
     salaires: SalairesMetier = Field(default_factory=SalairesMetier)
     perspectives: PerspectivesMetier = Field(default_factory=PerspectivesMetier)
 
     # Liens
-    metiers_proches: List[str] = Field(
+    metiers_proches: List[Any] = Field(
         default_factory=list,
         description="Codes ROME des métiers connexes"
     )
-    secteurs_activite: List[str] = Field(default_factory=list)
+    secteurs_activite: List[Any] = Field(default_factory=list)
 
     # Champs enrichis
-    missions_principales: List[str] = Field(default_factory=list)
+    missions_principales: List[Any] = Field(default_factory=list)
     acces_metier: Optional[str] = Field(None)
-    savoirs: List[str] = Field(default_factory=list)
+    savoirs: List[Any] = Field(default_factory=list)
     types_contrats: Optional[Dict[str, Any]] = Field(None)
     mobilite: Optional[Dict[str, Any]] = Field(None)
-    traits_personnalite: List[str] = Field(default_factory=list)
+    traits_personnalite: List[Any] = Field(default_factory=list)
     aptitudes: List[Dict[str, Any]] = Field(default_factory=list)
     profil_riasec: Optional[Dict[str, Any]] = Field(None)
-    autres_appellations: List[str] = Field(default_factory=list)
-    statuts_professionnels: List[str] = Field(default_factory=list)
+    autres_appellations: List[Any] = Field(default_factory=list)
+    statuts_professionnels: List[Any] = Field(default_factory=list)
     niveau_formation: Optional[str] = Field(None)
     domaine_professionnel: Optional[Dict[str, Any]] = Field(None)
     sites_utiles: List[Dict[str, Any]] = Field(default_factory=list)
@@ -278,12 +278,12 @@ class VarianteFiche(BaseModel):
     nom: str
     description: str = ""
     description_courte: Optional[str] = None
-    competences: List[str] = Field(default_factory=list)
-    competences_transversales: List[str] = Field(default_factory=list)
-    formations: List[str] = Field(default_factory=list)
-    certifications: List[str] = Field(default_factory=list)
-    conditions_travail: List[str] = Field(default_factory=list)
-    environnements: List[str] = Field(default_factory=list)
+    competences: List[Any] = Field(default_factory=list)
+    competences_transversales: List[Any] = Field(default_factory=list)
+    formations: List[Any] = Field(default_factory=list)
+    certifications: List[Any] = Field(default_factory=list)
+    conditions_travail: List[Any] = Field(default_factory=list)
+    environnements: List[Any] = Field(default_factory=list)
 
     # Métadonnées
     date_creation: datetime = Field(default_factory=datetime.now)
