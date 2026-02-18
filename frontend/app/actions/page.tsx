@@ -573,14 +573,15 @@ function TabHistorique() {
           <p className="text-gray-500">Aucun evenement trouve</p>
         </div>
       ) : (() => {
-        const IA_AGENTS = ["agent ia", "agent_ia", "agentredacteurfiche", "agentcorrecteurfiche", "système", "systeme", "system", "ia"];
-        const IA_TYPES = ["validation_ia", "validation", "enrichissement", "veille_salaires", "veille_metiers"];
-        const isIA = (log: AuditLog) => {
-          if (IA_TYPES.includes(log.type_evenement)) return true;
-          return IA_AGENTS.some(a => (log.agent || "").toLowerCase().includes(a));
+        const HUMAN_TYPES = ["validation_humaine", "creation"];
+        const isHuman = (log: AuditLog) => {
+          if (HUMAN_TYPES.includes(log.type_evenement)) return true;
+          // Re-enrichissement avec commentaire = humain
+          if (log.type_evenement === "enrichissement" && log.description?.toLowerCase().includes("commentaire")) return true;
+          return false;
         };
-        const humanLogs = logs.filter(l => !isIA(l));
-        const iaLogs = logs.filter(l => isIA(l));
+        const humanLogs = logs.filter(l => isHuman(l));
+        const iaLogs = logs.filter(l => !isHuman(l));
 
         const renderLog = (log: AuditLog) => {
           const badge = TYPE_BADGES[log.type_evenement] || { label: log.type_evenement, color: "text-gray-700", bg: "bg-gray-100" };
