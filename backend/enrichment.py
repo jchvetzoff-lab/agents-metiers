@@ -120,9 +120,12 @@ Formations existantes: {json.dumps(fiche.formations or [], ensure_ascii=False)}
 Conditions travail: {json.dumps(fiche.conditions_travail or [], ensure_ascii=False)}
 Environnements: {json.dumps(fiche.environnements or [], ensure_ascii=False)}
 
-{f'Instruction supplémentaire: {commentaire}' if commentaire else ''}
+{f"""⚠️ INSTRUCTION PRIORITAIRE DE L'UTILISATEUR — A RESPECTER IMPERATIVEMENT :
+{commentaire}
 
-Génère un JSON avec TOUS les champs suivants. Remplis TOUT, même si des données existantes sont fournies ci-dessus. Sois précis et réaliste pour le marché français:
+Tu DOIS modifier les champs concernes selon cette instruction. Ne regenere pas les memes donnees — CHANGE ce qui est demande.""" if commentaire else ''}
+
+Génère un JSON avec TOUS les champs suivants. {f"ATTENTION : l'utilisateur a demandé des modifications specifiques (voir instruction ci-dessus). Applique-les." if commentaire else "Remplis TOUT, même si des données existantes sont fournies ci-dessus."} Sois précis et réaliste pour le marché français:
 
 {{
   "competences": [{{"nom": "Nom compétence", "niveau": "avance", "categorie": "technique"}}],
