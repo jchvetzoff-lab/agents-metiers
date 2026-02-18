@@ -175,6 +175,24 @@ class FicheMetier(BaseModel):
     )
     secteurs_activite: List[str] = Field(default_factory=list)
 
+    # Champs enrichis
+    missions_principales: List[str] = Field(default_factory=list)
+    acces_metier: Optional[str] = Field(None)
+    savoirs: List[str] = Field(default_factory=list)
+    types_contrats: Optional[Dict[str, Any]] = Field(None)
+    mobilite: Optional[Dict[str, Any]] = Field(None)
+    traits_personnalite: List[str] = Field(default_factory=list)
+    aptitudes: List[Dict[str, Any]] = Field(default_factory=list)
+    profil_riasec: Optional[Dict[str, Any]] = Field(None)
+    autres_appellations: List[str] = Field(default_factory=list)
+    statuts_professionnels: List[str] = Field(default_factory=list)
+    niveau_formation: Optional[str] = Field(None)
+    domaine_professionnel: Optional[Dict[str, Any]] = Field(None)
+    sites_utiles: List[Dict[str, Any]] = Field(default_factory=list)
+    conditions_travail_detaillees: Optional[Dict[str, Any]] = Field(None)
+    competences_dimensions: Optional[Dict[str, Any]] = Field(None)
+    preferences_interets: Optional[Dict[str, Any]] = Field(None)
+
     # Métadonnées
     metadata: MetadataFiche = Field(default_factory=MetadataFiche)
 
@@ -305,6 +323,24 @@ class FicheMetierDB(Base):
     metiers_proches = Column(JSON, default=list)
     secteurs_activite = Column(JSON, default=list)
 
+    # Champs enrichis (JSON)
+    missions_principales = Column(JSON, default=list)
+    acces_metier = Column(Text, nullable=True)
+    savoirs = Column(JSON, default=list)
+    types_contrats = Column(JSON, nullable=True)
+    mobilite = Column(JSON, nullable=True)
+    traits_personnalite = Column(JSON, default=list)
+    aptitudes = Column(JSON, default=list)
+    profil_riasec = Column(JSON, nullable=True)
+    autres_appellations = Column(JSON, default=list)
+    statuts_professionnels = Column(JSON, default=list)
+    niveau_formation = Column(String(255), nullable=True)
+    domaine_professionnel = Column(JSON, nullable=True)
+    sites_utiles = Column(JSON, default=list)
+    conditions_travail_detaillees = Column(JSON, nullable=True)
+    competences_dimensions = Column(JSON, nullable=True)
+    preferences_interets = Column(JSON, nullable=True)
+
     # Données salariales (JSON)
     salaires = Column(JSON, default=dict)
 
@@ -346,6 +382,22 @@ class FicheMetierDB(Base):
             environnements=self.environnements or [],
             metiers_proches=self.metiers_proches or [],
             secteurs_activite=self.secteurs_activite or [],
+            missions_principales=self.missions_principales or [],
+            acces_metier=self.acces_metier,
+            savoirs=self.savoirs or [],
+            types_contrats=self.types_contrats,
+            mobilite=self.mobilite,
+            traits_personnalite=self.traits_personnalite or [],
+            aptitudes=self.aptitudes or [],
+            profil_riasec=self.profil_riasec,
+            autres_appellations=self.autres_appellations or [],
+            statuts_professionnels=self.statuts_professionnels or [],
+            niveau_formation=self.niveau_formation,
+            domaine_professionnel=self.domaine_professionnel,
+            sites_utiles=self.sites_utiles or [],
+            conditions_travail_detaillees=self.conditions_travail_detaillees,
+            competences_dimensions=self.competences_dimensions,
+            preferences_interets=self.preferences_interets,
             salaires=SalairesMetier(**self.salaires) if self.salaires else SalairesMetier(),
             perspectives=PerspectivesMetier(**self.perspectives) if self.perspectives else PerspectivesMetier(),
             metadata=MetadataFiche(
@@ -378,6 +430,22 @@ class FicheMetierDB(Base):
             environnements=fiche.environnements,
             metiers_proches=fiche.metiers_proches,
             secteurs_activite=fiche.secteurs_activite,
+            missions_principales=fiche.missions_principales,
+            acces_metier=fiche.acces_metier,
+            savoirs=fiche.savoirs,
+            types_contrats=fiche.types_contrats,
+            mobilite=fiche.mobilite,
+            traits_personnalite=fiche.traits_personnalite,
+            aptitudes=fiche.aptitudes,
+            profil_riasec=fiche.profil_riasec,
+            autres_appellations=fiche.autres_appellations,
+            statuts_professionnels=fiche.statuts_professionnels,
+            niveau_formation=fiche.niveau_formation,
+            domaine_professionnel=fiche.domaine_professionnel,
+            sites_utiles=fiche.sites_utiles,
+            conditions_travail_detaillees=fiche.conditions_travail_detaillees,
+            competences_dimensions=fiche.competences_dimensions,
+            preferences_interets=fiche.preferences_interets,
             salaires=fiche.salaires.model_dump(mode="json"),
             perspectives=fiche.perspectives.model_dump(mode="json"),
             statut=fiche.metadata.statut.value,

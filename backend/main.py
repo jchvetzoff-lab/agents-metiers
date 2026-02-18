@@ -159,6 +159,22 @@ def run_migration():
             "validation_humaine_date": "TIMESTAMP",
             "validation_humaine_par": "VARCHAR(100)",
             "validation_humaine_commentaire": "TEXT",
+            "missions_principales": "JSON",
+            "acces_metier": "TEXT",
+            "savoirs": "JSON",
+            "types_contrats": "JSON",
+            "mobilite": "JSON",
+            "traits_personnalite": "JSON",
+            "aptitudes": "JSON",
+            "profil_riasec": "JSON",
+            "autres_appellations": "JSON",
+            "statuts_professionnels": "JSON",
+            "niveau_formation": "VARCHAR(255)",
+            "domaine_professionnel": "JSON",
+            "sites_utiles": "JSON",
+            "conditions_travail_detaillees": "JSON",
+            "competences_dimensions": "JSON",
+            "preferences_interets": "JSON",
         }
         for col_name, col_type in new_cols.items():
             if col_name not in existing:
@@ -690,6 +706,24 @@ async def get_fiche_detail(code_rome: str):
             "environnements": fiche.environnements,
             "salaires": fiche.salaires.model_dump() if fiche.salaires else None,
             "perspectives": fiche.perspectives.model_dump() if fiche.perspectives else None,
+            "metiers_proches": fiche.metiers_proches or [],
+            "secteurs_activite": fiche.secteurs_activite or [],
+            "missions_principales": fiche.missions_principales or [],
+            "acces_metier": fiche.acces_metier,
+            "savoirs": fiche.savoirs or [],
+            "types_contrats": fiche.types_contrats,
+            "mobilite": fiche.mobilite,
+            "traits_personnalite": fiche.traits_personnalite or [],
+            "aptitudes": fiche.aptitudes or [],
+            "profil_riasec": fiche.profil_riasec,
+            "autres_appellations": fiche.autres_appellations or [],
+            "statuts_professionnels": fiche.statuts_professionnels or [],
+            "niveau_formation": fiche.niveau_formation,
+            "domaine_professionnel": fiche.domaine_professionnel,
+            "sites_utiles": fiche.sites_utiles or [],
+            "conditions_travail_detaillees": fiche.conditions_travail_detaillees,
+            "competences_dimensions": fiche.competences_dimensions,
+            "preferences_interets": fiche.preferences_interets,
             "date_creation": fiche.metadata.date_creation,
             "date_maj": fiche.metadata.date_maj,
             "version": fiche.metadata.version,
@@ -718,6 +752,22 @@ class FicheMetierUpdate(BaseModel):
     salaires: Optional[dict] = None
     perspectives: Optional[dict] = None
     statut: Optional[str] = None
+    missions_principales: Optional[List[str]] = None
+    acces_metier: Optional[str] = None
+    savoirs: Optional[List[str]] = None
+    types_contrats: Optional[dict] = None
+    mobilite: Optional[dict] = None
+    traits_personnalite: Optional[List[str]] = None
+    aptitudes: Optional[List[dict]] = None
+    profil_riasec: Optional[dict] = None
+    autres_appellations: Optional[List[str]] = None
+    statuts_professionnels: Optional[List[str]] = None
+    niveau_formation: Optional[str] = None
+    domaine_professionnel: Optional[dict] = None
+    sites_utiles: Optional[List[dict]] = None
+    conditions_travail_detaillees: Optional[dict] = None
+    competences_dimensions: Optional[dict] = None
+    preferences_interets: Optional[dict] = None
 
 
 @app.patch("/api/fiches/{code_rome}")
