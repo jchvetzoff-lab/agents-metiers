@@ -22,6 +22,17 @@ const SORT_OPTIONS = [
   { value: "nom_desc", label: "Nom Z-A", sort_by: "nom", sort_order: "desc" },
 ] as const;
 
+function useClickOutside(ref: React.RefObject<HTMLElement | null>, handler: () => void) {
+  useEffect(() => {
+    const listener = (e: MouseEvent) => {
+      if (!ref.current || ref.current.contains(e.target as Node)) return;
+      handler();
+    };
+    document.addEventListener("mousedown", listener);
+    return () => document.removeEventListener("mousedown", listener);
+  }, [ref, handler]);
+}
+
 export default function FichesPage() {
   const [fiches, setFiches] = useState<FicheMetier[]>([]);
   const [total, setTotal] = useState(0);
@@ -39,11 +50,22 @@ export default function FichesPage() {
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const debounceCompRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Autocomplete state
+  const [suggestions, setSuggestions] = useState<FicheMetier[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const suggestDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const fuzzyDropdownRef = useRef<HTMLDivElement | null>(null);
+  const compDropdownRef = useRef<HTMLDivElement | null>(null);
+
+  useClickOutside(fuzzyDropdownRef, () => setShowSuggestions(false));
+  useClickOutside(compDropdownRef, () => setShowSuggestions(false));
+
   // Batch selection
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [batchRunning, setBatchRunning] = useState(false);
   const [batchProgress, setBatchProgress] = useState({ done: 0, total: 0, action: "" });
 
+  // Debounce main search
   useEffect(() => {
     debounceRef.current = setTimeout(() => setDebouncedSearch(search), 300);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
@@ -54,6 +76,45 @@ export default function FichesPage() {
     return () => { if (debounceCompRef.current) clearTimeout(debounceCompRef.current); };
   }, [searchCompetences]);
 
+  // Autocomplete suggestions
+  const fetchSuggestions = useCallback(async (query: string, mode: "fuzzy" | "competences") => {
+    if (!query || query.length < 2) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+    try {
+      const data = await api.getFiches({
+        search: mode === "fuzzy" ? query : undefined,
+        search_competences: mode === "competences" ? query : undefined,
+        limit: 6,
+        offset: 0,
+      });
+      setSuggestions(data.results);
+      setShowSuggestions(data.results.length > 0);
+    } catch {
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
+  }, []);
+
+  // Debounced suggestion fetch for fuzzy
+  useEffect(() => {
+    if (searchMode !== "fuzzy") return;
+    if (suggestDebounceRef.current) clearTimeout(suggestDebounceRef.current);
+    suggestDebounceRef.current = setTimeout(() => fetchSuggestions(search, "fuzzy"), 300);
+    return () => { if (suggestDebounceRef.current) clearTimeout(suggestDebounceRef.current); };
+  }, [search, searchMode, fetchSuggestions]);
+
+  // Debounced suggestion fetch for competences
+  useEffect(() => {
+    if (searchMode !== "competences") return;
+    if (suggestDebounceRef.current) clearTimeout(suggestDebounceRef.current);
+    suggestDebounceRef.current = setTimeout(() => fetchSuggestions(searchCompetences, "competences"), 300);
+    return () => { if (suggestDebounceRef.current) clearTimeout(suggestDebounceRef.current); };
+  }, [searchCompetences, searchMode, fetchSuggestions]);
+
+  // Load counts
   useEffect(() => {
     (async () => {
       try {
@@ -133,8 +194,43 @@ export default function FichesPage() {
     loadFiches();
   };
 
+  const selectSuggestion = (fiche: FicheMetier) => {
+    const name = fiche.nom_epicene || fiche.nom_masculin || fiche.code_rome;
+    if (searchMode === "fuzzy") {
+      setSearch(name);
+    } else {
+      setSearchCompetences(name);
+    }
+    setShowSuggestions(false);
+    setSuggestions([]);
+    setPage(0);
+  };
+
   const startIdx = page * limit + 1;
   const endIdx = Math.min((page + 1) * limit, total);
+
+  const renderSuggestionsDropdown = () => {
+    if (!showSuggestions || suggestions.length === 0) return null;
+    return (
+      <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
+        {suggestions.map((fiche) => (
+          <button
+            key={fiche.code_rome}
+            type="button"
+            onClick={() => selectSuggestion(fiche)}
+            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-indigo-50 transition-colors text-left border-b border-gray-50 last:border-0"
+          >
+            <span className="px-2 py-1 bg-indigo-100 text-indigo-700 text-xs font-bold rounded flex-shrink-0">
+              {fiche.code_rome}
+            </span>
+            <span className="text-sm font-medium text-gray-900 truncate">
+              {fiche.nom_epicene || fiche.nom_masculin}
+            </span>
+          </button>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <main className="min-h-screen py-12 px-4">
@@ -169,30 +265,36 @@ export default function FichesPage() {
         {/* Recherche + Tri */}
         <div className="sojai-card mb-8">
           <div className="flex gap-2 mb-5">
-            <button onClick={() => { setSearchMode("fuzzy"); setSearchCompetences(""); setPage(0); }}
+            <button onClick={() => { setSearchMode("fuzzy"); setSearchCompetences(""); setPage(0); setShowSuggestions(false); }}
               className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${searchMode === "fuzzy" ? "bg-indigo-600 text-white shadow-md" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
               🔍 Recherche par nom
             </button>
-            <button onClick={() => { setSearchMode("competences"); setSearch(""); setPage(0); }}
+            <button onClick={() => { setSearchMode("competences"); setSearch(""); setPage(0); setShowSuggestions(false); }}
               className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${searchMode === "competences" ? "bg-pink-600 text-white shadow-md" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
               🧠 Recherche par compétences
             </button>
           </div>
 
           {searchMode === "fuzzy" ? (
-            <div>
+            <div ref={fuzzyDropdownRef} className="relative">
               <label className="block text-sm font-medium text-text-dark mb-2">Recherche intelligente (fuzzy)</label>
               <input type="text" placeholder="Code ROME, nom du métier... (ex: boulanger, M1805, informatique)"
-                value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+                onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
                 className="w-full px-4 py-3 border border-border-subtle rounded-pill focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all" />
+              {renderSuggestionsDropdown()}
               <p className="text-xs text-gray-400 mt-2">Trouve les métiers même avec des fautes de frappe</p>
             </div>
           ) : (
-            <div>
+            <div ref={compDropdownRef} className="relative">
               <label className="block text-sm font-medium text-text-dark mb-2">Recherche par compétences</label>
               <input type="text" placeholder="Ex: Python, management, soudure, comptabilité..."
-                value={searchCompetences} onChange={(e) => { setSearchCompetences(e.target.value); setPage(0); }}
+                value={searchCompetences}
+                onChange={(e) => { setSearchCompetences(e.target.value); setPage(0); }}
+                onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
                 className="w-full px-4 py-3 border border-border-subtle rounded-pill focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 transition-all" />
+              {renderSuggestionsDropdown()}
               <p className="text-xs text-gray-400 mt-2">Trouve les métiers qui requièrent cette compétence</p>
             </div>
           )}

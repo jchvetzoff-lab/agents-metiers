@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { removeToken } from "@/lib/auth";
 import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
-import { api, FicheMetier } from "@/lib/api";
 
 const NAV_ITEMS = [
   {
@@ -36,45 +35,7 @@ export default function Navbar() {
   const bgOpacity = useTransform(scrollY, [0, 100], [0.7, 0.95]);
   const borderOpacity = useTransform(scrollY, [0, 100], [0, 0.08]);
 
-  // Search
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<FicheMetier[]>([]);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => { setMobileOpen(false); setSearchOpen(false); setSearchQuery(""); }, [pathname]);
-
-  // Ctrl+K shortcut
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
-        e.preventDefault();
-        setSearchOpen(true);
-        setTimeout(() => searchInputRef.current?.focus(), 50);
-      }
-      if (e.key === "Escape") { setSearchOpen(false); setSearchQuery(""); }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, []);
-
-  const doSearch = useCallback(async (q: string) => {
-    if (!q || q.length < 2) { setSearchResults([]); return; }
-    setSearchLoading(true);
-    try {
-      const data = await api.getFiches({ search: q, limit: 5, offset: 0 });
-      setSearchResults(data.results);
-    } catch { setSearchResults([]); }
-    setSearchLoading(false);
-  }, []);
-
-  useEffect(() => {
-    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-    searchDebounceRef.current = setTimeout(() => doSearch(searchQuery), 300);
-    return () => { if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current); };
-  }, [searchQuery, doSearch]);
+  useEffect(() => { setMobileOpen(false); }, [pathname]);
 
   const handleLogout = () => { removeToken(); router.push("/login"); };
 
@@ -99,18 +60,8 @@ export default function Navbar() {
               </div>
             </Link>
 
-            {/* Desktop nav + search */}
+            {/* Desktop nav */}
             <div className="hidden md:flex items-center gap-1">
-              {/* Search button */}
-              <button onClick={() => { setSearchOpen(true); setTimeout(() => searchInputRef.current?.focus(), 50); }}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 transition-all mr-1"
-                title="Recherche (Ctrl+K)">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-                <span className="text-xs text-gray-400 border border-gray-200 rounded px-1.5 py-0.5">⌘K</span>
-              </button>
-
               {NAV_ITEMS.map((item) => {
                 const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
                 return (
@@ -172,54 +123,6 @@ export default function Navbar() {
           )}
         </AnimatePresence>
       </div>
-
-      {/* Search overlay */}
-      <AnimatePresence>
-        {searchOpen && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[200] bg-black/40 backdrop-blur-sm" onClick={() => { setSearchOpen(false); setSearchQuery(""); }}>
-            <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
-              className="max-w-xl mx-auto mt-24 bg-white rounded-2xl shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
-                <svg className="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-                <input ref={searchInputRef} type="text" value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Rechercher une fiche métier..."
-                  className="flex-1 text-lg outline-none placeholder-gray-400" autoFocus />
-                <kbd className="text-xs text-gray-400 border border-gray-200 rounded px-2 py-1">Échap</kbd>
-              </div>
-              {searchQuery.length >= 2 && (
-                <div className="max-h-80 overflow-y-auto">
-                  {searchLoading ? (
-                    <div className="p-6 text-center text-gray-400">Recherche en cours...</div>
-                  ) : searchResults.length === 0 ? (
-                    <div className="p-6 text-center text-gray-400">Aucun résultat pour &quot;{searchQuery}&quot;</div>
-                  ) : (
-                    searchResults.map((fiche) => (
-                      <Link key={fiche.code_rome} href={`/fiches/${fiche.code_rome}`}
-                        onClick={() => { setSearchOpen(false); setSearchQuery(""); }}
-                        className="flex items-center gap-4 px-5 py-3 hover:bg-indigo-50 transition-colors border-b border-gray-50 last:border-0">
-                        <span className="px-2 py-1 bg-indigo-100 text-indigo-700 text-xs font-bold rounded">{fiche.code_rome}</span>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium text-gray-900 truncate">{fiche.nom_epicene || fiche.nom_masculin}</div>
-                          {fiche.description_courte && <div className="text-xs text-gray-500 truncate">{fiche.description_courte}</div>}
-                        </div>
-                        {fiche.score_completude != null && (
-                          <span className={`text-xs font-bold ${fiche.score_completude >= 80 ? "text-green-600" : fiche.score_completude >= 50 ? "text-yellow-600" : "text-red-600"}`}>
-                            {fiche.score_completude}%
-                          </span>
-                        )}
-                      </Link>
-                    ))
-                  )}
-                </div>
-              )}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </motion.nav>
   );
 }
