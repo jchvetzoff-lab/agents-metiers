@@ -149,14 +149,8 @@ export default function CareerMap({
   useEffect(() => {
     let cancelled = false;
 
-    async function load() {
-      setLoading(true);
-      const [resolvedProches, resolvedEvolutions] = await Promise.all([
-        resolveMobiliteItems(metiersProches),
-        resolveMobiliteItems(evolutions),
-      ]);
-
-      if (cancelled) return;
+    const resolvedProches = resolveMobiliteItems(metiersProches);
+      const resolvedEvolutions = resolveMobiliteItems(evolutions);
 
       const graph = buildCareerGraph(
         codeRome,
@@ -166,12 +160,11 @@ export default function CareerMap({
         compact
       );
 
-      setNodes(graph.nodes);
-      setEdges(graph.edges);
-      setLoading(false);
-    }
-
-    load();
+      if (!cancelled) {
+        setNodes(graph.nodes);
+        setEdges(graph.edges);
+        setLoading(false);
+      }
     return () => { cancelled = true; };
   }, [codeRome, nomMetier, metiersProches, evolutions, compact]);
 

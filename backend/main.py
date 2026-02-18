@@ -660,6 +660,49 @@ async def create_fiche(fiche_data: FicheMetierCreate):
         raise HTTPException(status_code=500, detail=f"Erreur lors de la création: {str(e)}")
 
 
+def _resolve_mobilite_codes(repo, mobilite):
+    """Resolve code_rome for mobilite items by searching the DB by name."""
+    if not mobilite or not isinstance(mobilite, dict):
+        return mobilite
+    
+    # Build a name -> code_rome lookup from all fiches (cached)
+    if not hasattr(_resolve_mobilite_codes, "_cache"):
+        try:
+            from sqlalchemy import text
+            with repo.session() as session:
+                rows = session.execute(
+                    text("SELECT code_rome, nom_masculin, nom_feminin, nom_epicene FROM fiches_metiers")
+                ).fetchall()
+                lookup = {}
+                for r in rows:
+                    for name in [r[1], r[2], r[3]]:
+                        if name:
+                            lookup[name.lower().strip()] = r[0]
+                _resolve_mobilite_codes._cache = lookup
+        except Exception:
+            _resolve_mobilite_codes._cache = {}
+    
+    lookup = _resolve_mobilite_codes._cache
+    
+    def resolve_items(items):
+        if not items:
+            return items
+        resolved = []
+        for item in items:
+            if isinstance(item, dict):
+                nom = (item.get("nom") or "").lower().strip()
+                code = lookup.get(nom)
+                resolved.append({**item, "code_rome": code})
+            else:
+                resolved.append(item)
+        return resolved
+    
+    return {
+        "metiers_proches": resolve_items(mobilite.get("metiers_proches", [])),
+        "evolutions": resolve_items(mobilite.get("evolutions", [])),
+    }
+
+
 @app.get("/api/fiches/{code_rome}")
 async def get_fiche_detail(code_rome: str):
     """Récupère le détail complet d'une fiche métier."""
@@ -717,7 +760,7 @@ async def get_fiche_detail(code_rome: str):
             "acces_metier": fiche.acces_metier,
             "savoirs": fiche.savoirs or [],
             "types_contrats": fiche.types_contrats,
-            "mobilite": fiche.mobilite,
+            "mobilite": _resolve_mobilite_codes(repo, fiche.mobilite),
             "traits_personnalite": fiche.traits_personnalite or [],
             "aptitudes": fiche.aptitudes or [],
             "profil_riasec": fiche.profil_riasec,

@@ -2,46 +2,24 @@
  * Career graph model: builds React Flow nodes and edges from mobility data.
  */
 
-import { api, MobiliteItem } from "./api";
+import { MobiliteItem } from "./api";
 import type { Node, Edge } from "@xyflow/react";
-
-// ── Resolution cache ──
-const codeCache = new Map<string, string | null>();
-
-async function resolveCodeRome(nom: string): Promise<string | null> {
-  const cached = codeCache.get(nom);
-  if (cached !== undefined) return cached;
-
-  try {
-    const res = await api.getFiches({ search: nom, limit: 5 });
-    const normalized = nom.toLowerCase().trim();
-    const match = res.results.find((r) =>
-      r.nom_masculin.toLowerCase().trim() === normalized ||
-      r.nom_feminin.toLowerCase().trim() === normalized ||
-      r.nom_epicene.toLowerCase().trim() === normalized
-    );
-    const code = match ? match.code_rome : null;
-    codeCache.set(nom, code);
-    return code;
-  } catch {
-    codeCache.set(nom, null);
-    return null;
-  }
-}
 
 export interface ResolvedMobiliteItem extends MobiliteItem {
   code_rome: string | null;
 }
 
-export async function resolveMobiliteItems(
+/**
+ * If items already have code_rome from backend, use them directly.
+ * No more expensive search API calls.
+ */
+export function resolveMobiliteItems(
   items: MobiliteItem[]
-): Promise<ResolvedMobiliteItem[]> {
-  return Promise.all(
-    items.map(async (item) => ({
-      ...item,
-      code_rome: await resolveCodeRome(item.nom),
-    }))
-  );
+): ResolvedMobiliteItem[] {
+  return items.map((item) => ({
+    ...item,
+    code_rome: (item as any).code_rome || null,
+  }));
 }
 
 export interface CareerGraphData {
@@ -49,10 +27,6 @@ export interface CareerGraphData {
   edges: Edge[];
 }
 
-/**
- * Build nodes and edges for the career map.
- * Layout: central node in center, evolutions in arc above, proches in arc below.
- */
 export function buildCareerGraph(
   currentCode: string,
   currentNom: string,
@@ -79,7 +53,7 @@ export function buildCareerGraph(
     },
   });
 
-  // Evolutions above in arc
+  // Evolutions above
   if (evolutions.length > 0) {
     const spacing = compact ? 200 : 260;
     const totalWidth = (evolutions.length - 1) * spacing;
@@ -110,7 +84,7 @@ export function buildCareerGraph(
     });
   }
 
-  // Proches below in arc
+  // Proches below
   if (proches.length > 0) {
     const spacing = compact ? 200 : 260;
     const totalWidth = (proches.length - 1) * spacing;

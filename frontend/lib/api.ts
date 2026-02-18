@@ -73,6 +73,7 @@ export interface MobiliteItem {
   nom_feminin?: string;
   nom_epicene?: string;
   contexte: string;
+  code_rome?: string;
 }
 
 export interface AptitudeItem {
