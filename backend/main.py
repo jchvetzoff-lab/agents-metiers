@@ -1295,6 +1295,518 @@ async def publish_fiche(code_rome: str, request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==================== MISSING ENDPOINTS ====================
+
+@app.delete("/api/fiches/{code_rome}")
+async def delete_fiche(code_rome: str, request: Request):
+    """Supprime une fiche métier."""
+    try:
+        fiche = repo.get_fiche(code_rome)
+        if not fiche:
+            raise HTTPException(status_code=404, detail=f"Fiche {code_rome} non trouvée")
+        from sqlalchemy import text
+        with repo.session() as session:
+            session.execute(text("DELETE FROM variantes_fiches WHERE code_rome = :cr"), {"cr": code_rome})
+            session.execute(text("DELETE FROM fiches_metiers WHERE code_rome = :cr"), {"cr": code_rome})
+        user = _get_user_name(request)
+        _add_audit("suppression", code_rome, user, f"Suppression de {fiche.nom_epicene} par {user}")
+        return {"message": "Fiche supprimée", "code_rome": code_rome}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class AutoCorrectRequest(BaseModel):
+    problemes: List[str] = []
+    suggestions: List[str] = []
+
+
+@app.post("/api/fiches/{code_rome}/auto-correct")
+async def auto_correct_fiche(code_rome: str, body: AutoCorrectRequest, request: Request):
+    """Correction automatique IA basée sur les problèmes et suggestions."""
+    import os
+    try:
+        fiche = repo.get_fiche(code_rome)
+        if not fiche:
+            raise HTTPException(status_code=404, detail=f"Fiche {code_rome} non trouvée")
+
+        prompt = f"""Tu es un expert des fiches métiers ROME. Corrige cette fiche en tenant compte des problèmes et suggestions.
+
+Code ROME: {code_rome}
+Nom: {fiche.nom_epicene}
+Description actuelle: {fiche.description or 'N/A'}
+Compétences: {json.dumps(fiche.competences or [], ensure_ascii=False)}
+Formations: {json.dumps(fiche.formations or [], ensure_ascii=False)}
+Salaires: {json.dumps(fiche.salaires.model_dump() if fiche.salaires else {}, ensure_ascii=False)}
+
+Problèmes identifiés:
+{json.dumps(body.problemes, ensure_ascii=False)}
+
+Suggestions:
+{json.dumps(body.suggestions, ensure_ascii=False)}
+
+Retourne UNIQUEMENT un JSON avec les champs corrigés (seulement ceux qui doivent changer):
+{{
+  "description": "...",
+  "competences": ["..."],
+  "formations": ["..."],
+  "salaires": {{"junior": {{"min": X, "median": X, "max": X}}, "confirme": {{...}}, "senior": {{...}}}}
+}}
+Ne retourne que les champs modifiés."""
+
+        import anthropic
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
+        if not api_key:
+            raise HTTPException(status_code=500, detail="Clé API Anthropic non configurée")
+
+        client = anthropic.Anthropic(api_key=api_key)
+        message = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=3000,
+            messages=[{"role": "user", "content": prompt}]
+        )
+
+        response_text = message.content[0].text.strip()
+        if response_text.startswith("```"):
+            response_text = response_text.split("```")[1]
+            if response_text.startswith("json"):
+                response_text = response_text[4:]
+        response_text = response_text.strip()
+        corrections = json.loads(response_text)
+
+        # Apply corrections via existing update mechanism
+        from sqlalchemy import text
+        update_parts = []
+        update_params = {"cr": code_rome}
+
+        if "description" in corrections:
+            update_parts.append("description = :description")
+            update_params["description"] = corrections["description"]
+        if "competences" in corrections:
+            update_parts.append("competences = :competences")
+            update_params["competences"] = json.dumps(corrections["competences"], ensure_ascii=False)
+        if "formations" in corrections:
+            update_parts.append("formations = :formations")
+            update_params["formations"] = json.dumps(corrections["formations"], ensure_ascii=False)
+        if "salaires" in corrections:
+            update_parts.append("salaires = :salaires")
+            update_params["salaires"] = json.dumps(corrections["salaires"], ensure_ascii=False)
+
+        if update_parts:
+            update_parts.append("date_maj = :d")
+            update_params["d"] = datetime.now()
+            with repo.session() as session:
+                session.execute(
+                    text(f"UPDATE fiches_metiers SET {', '.join(update_parts)} WHERE code_rome = :cr"),
+                    update_params
+                )
+
+        user = _get_user_name(request)
+        _add_audit("correction_ia", code_rome, user,
+                   f"Auto-correction IA de {fiche.nom_epicene} — {len(corrections)} champ(s) corrigé(s)")
+
+        return {
+            "message": f"Correction automatique terminée — {len(corrections)} champ(s) corrigé(s)",
+            "code_rome": code_rome,
+            "corrections": list(corrections.keys()),
+        }
+    except HTTPException:
+        raise
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=500, detail=f"Erreur parsing réponse IA: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class VariantesGenerateRequest(BaseModel):
+    langues: List[str] = []
+    genres: List[str] = []
+    tranches_age: List[str] = []
+    formats: List[str] = []
+
+
+@app.post("/api/fiches/{code_rome}/variantes/generate")
+async def generate_variantes(code_rome: str, body: VariantesGenerateRequest, request: Request):
+    """Génère des variantes via Claude et les stocke en DB."""
+    import os
+    try:
+        fiche = repo.get_fiche(code_rome)
+        if not fiche:
+            raise HTTPException(status_code=404, detail=f"Fiche {code_rome} non trouvée")
+
+        langues = body.langues or ["fr"]
+        genres = body.genres or ["epicene"]
+        tranches_age = body.tranches_age or ["adulte"]
+        formats = body.formats or ["standard"]
+
+        combinations = []
+        for l in langues:
+            for g in genres:
+                for a in tranches_age:
+                    for f in formats:
+                        if not (l == "fr" and g == "epicene" and a == "adulte" and f == "standard"):
+                            combinations.append({"langue": l, "genre": g, "tranche_age": a, "format": f})
+
+        if not combinations:
+            return {"variantes_generees": 0, "message": "Aucune combinaison de variantes à générer"}
+
+        import anthropic
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
+        if not api_key:
+            raise HTTPException(status_code=500, detail="Clé API Anthropic non configurée")
+
+        client = anthropic.Anthropic(api_key=api_key)
+        count = 0
+
+        for combo in combinations:
+            prompt = f"""Adapte cette fiche métier selon les paramètres suivants:
+- Langue: {combo['langue']}
+- Genre: {combo['genre']}
+- Tranche d'âge: {combo['tranche_age']}
+- Format: {combo['format']}
+
+Fiche source:
+Nom: {fiche.nom_epicene}
+Description: {fiche.description or 'N/A'}
+Compétences: {json.dumps(fiche.competences or [], ensure_ascii=False)}
+
+Retourne un JSON:
+{{
+  "nom": "Nom adapté",
+  "description": "Description adaptée",
+  "description_courte": "Description courte adaptée",
+  "competences": ["compétences adaptées"],
+  "formations": ["formations adaptées"]
+}}"""
+
+            try:
+                message = client.messages.create(
+                    model="claude-sonnet-4-20250514",
+                    max_tokens=2000,
+                    messages=[{"role": "user", "content": prompt}]
+                )
+                response_text = message.content[0].text.strip()
+                if response_text.startswith("```"):
+                    response_text = response_text.split("```")[1]
+                    if response_text.startswith("json"):
+                        response_text = response_text[4:]
+                response_text = response_text.strip()
+                variante_data = json.loads(response_text)
+
+                from sqlalchemy import text
+                with repo.session() as session:
+                    session.execute(
+                        text("""INSERT INTO variantes_fiches
+                            (code_rome, langue, genre, tranche_age, format_contenu,
+                             nom, description, description_courte, competences, formations,
+                             date_creation, date_maj, version)
+                            VALUES (:cr, :l, :g, :a, :f, :nom, :desc, :dc, :comp, :form, :now, :now, 1)"""),
+                        {
+                            "cr": code_rome, "l": combo["langue"], "g": combo["genre"],
+                            "a": combo["tranche_age"], "f": combo["format"],
+                            "nom": variante_data.get("nom", fiche.nom_epicene),
+                            "desc": variante_data.get("description", ""),
+                            "dc": variante_data.get("description_courte", ""),
+                            "comp": json.dumps(variante_data.get("competences", []), ensure_ascii=False),
+                            "form": json.dumps(variante_data.get("formations", []), ensure_ascii=False),
+                            "now": datetime.now(),
+                        }
+                    )
+                count += 1
+            except Exception as e:
+                print(f"Erreur génération variante {combo}: {e}")
+                continue
+
+        user = _get_user_name(request)
+        _add_audit("generation_variantes", code_rome, user,
+                   f"Génération de {count} variante(s) pour {fiche.nom_epicene}")
+
+        return {"variantes_generees": count}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class PublishBatchRequest(BaseModel):
+    codes_rome: List[str]
+
+
+@app.post("/api/fiches/publish-batch")
+async def publish_batch(body: PublishBatchRequest, request: Request):
+    """Publication en batch de plusieurs fiches."""
+    results = []
+    user = _get_user_name(request)
+    from sqlalchemy import text
+    for code_rome in body.codes_rome:
+        try:
+            fiche = repo.get_fiche(code_rome)
+            if not fiche:
+                results.append({"code_rome": code_rome, "status": "error", "message": "Fiche non trouvée"})
+                continue
+            with repo.session() as session:
+                row = session.execute(
+                    text("SELECT validation_ia_score, validation_humaine FROM fiches_metiers WHERE code_rome = :cr"),
+                    {"cr": code_rome}
+                ).fetchone()
+                ia_score = row[0] if row else None
+                humaine = row[1] if row else None
+                if not ia_score or ia_score < 70:
+                    results.append({"code_rome": code_rome, "status": "error",
+                                    "message": f"Validation IA insuffisante ({ia_score or 'non faite'})"})
+                    continue
+                if humaine != "approuvee":
+                    results.append({"code_rome": code_rome, "status": "error",
+                                    "message": f"Validation humaine requise ({humaine or 'non faite'})"})
+                    continue
+                session.execute(
+                    text("UPDATE fiches_metiers SET statut = 'publiee' WHERE code_rome = :cr"),
+                    {"cr": code_rome}
+                )
+            _add_audit("publication", code_rome, user, f"Publication batch de {fiche.nom_epicene} par {user}")
+            results.append({"code_rome": code_rome, "status": "success", "message": "Publiée"})
+        except Exception as e:
+            results.append({"code_rome": code_rome, "status": "error", "message": str(e)})
+    return {"results": results}
+
+
+# ==================== REGIONS ====================
+
+REGIONS_FRANCE = [
+    {"code": "01", "nom": "Guadeloupe"},
+    {"code": "02", "nom": "Martinique"},
+    {"code": "03", "nom": "Guyane"},
+    {"code": "04", "nom": "La Réunion"},
+    {"code": "06", "nom": "Mayotte"},
+    {"code": "11", "nom": "Île-de-France"},
+    {"code": "24", "nom": "Centre-Val de Loire"},
+    {"code": "27", "nom": "Bourgogne-Franche-Comté"},
+    {"code": "28", "nom": "Normandie"},
+    {"code": "32", "nom": "Hauts-de-France"},
+    {"code": "44", "nom": "Grand Est"},
+    {"code": "52", "nom": "Pays de la Loire"},
+    {"code": "53", "nom": "Bretagne"},
+    {"code": "75", "nom": "Nouvelle-Aquitaine"},
+    {"code": "76", "nom": "Occitanie"},
+    {"code": "84", "nom": "Auvergne-Rhône-Alpes"},
+    {"code": "93", "nom": "Provence-Alpes-Côte d'Azur"},
+    {"code": "94", "nom": "Corse"},
+]
+
+COEFFICIENTS_REGIONAUX = {
+    "11": 1.15, "84": 1.05, "93": 1.05, "44": 0.95, "32": 0.92,
+    "75": 0.95, "76": 0.93, "52": 0.93, "53": 0.94, "28": 0.92,
+    "27": 0.91, "24": 0.90, "94": 0.90, "01": 0.88, "02": 0.88,
+    "03": 0.85, "04": 0.88, "06": 0.85,
+}
+
+
+@app.get("/api/regions")
+async def get_regions():
+    """Retourne la liste des régions françaises."""
+    return {"regions": REGIONS_FRANCE}
+
+
+@app.get("/api/fiches/{code_rome}/regional")
+async def get_fiche_regional(code_rome: str, region: str = Query(...)):
+    """Retourne des données régionales simulées pour un métier."""
+    try:
+        fiche = repo.get_fiche(code_rome)
+        if not fiche:
+            raise HTTPException(status_code=404, detail=f"Fiche {code_rome} non trouvée")
+
+        coeff = COEFFICIENTS_REGIONAUX.get(region, 1.0)
+        region_info = next((r for r in REGIONS_FRANCE if r["code"] == region), None)
+        if not region_info:
+            raise HTTPException(status_code=404, detail=f"Région {region} non trouvée")
+
+        sal = fiche.salaires
+        sal_dict = sal.model_dump() if sal and hasattr(sal, 'model_dump') else (sal if isinstance(sal, dict) else {})
+
+        salaires_regionaux = {}
+        for level in ["junior", "confirme", "senior"]:
+            lvl = (sal_dict or {}).get(level, {}) or {}
+            salaires_regionaux[level] = {
+                "min": round(lvl.get("min", 0) * coeff) if lvl.get("min") else None,
+                "median": round(lvl.get("median", 0) * coeff) if lvl.get("median") else None,
+                "max": round(lvl.get("max", 0) * coeff) if lvl.get("max") else None,
+            }
+
+        import random
+        random.seed(hash(code_rome + region))
+        return {
+            "code_rome": code_rome,
+            "region": region_info,
+            "coefficient": coeff,
+            "salaires": salaires_regionaux,
+            "offres_emploi": random.randint(10, 500),
+            "tension": round(random.uniform(0.3, 0.9), 2),
+            "entreprises_secteur": random.randint(50, 2000),
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/fiches/{code_rome}/recrutements")
+async def get_recrutements(code_rome: str):
+    """Retourne des stats de recrutement simulées sur 12 mois."""
+    try:
+        fiche = repo.get_fiche(code_rome)
+        if not fiche:
+            raise HTTPException(status_code=404, detail=f"Fiche {code_rome} non trouvée")
+
+        import random
+        random.seed(hash(code_rome))
+        mois = []
+        base = random.randint(50, 300)
+        for i in range(12):
+            month_date = datetime.now() - timedelta(days=30 * (11 - i))
+            variation = random.uniform(0.7, 1.3)
+            mois.append({
+                "mois": month_date.strftime("%Y-%m"),
+                "offres": round(base * variation),
+                "candidatures": round(base * variation * random.uniform(2, 5)),
+                "recrutements": round(base * variation * random.uniform(0.3, 0.7)),
+            })
+
+        return {
+            "code_rome": code_rome,
+            "periode": "12 derniers mois",
+            "donnees_mensuelles": mois,
+            "total_offres": sum(m["offres"] for m in mois),
+            "total_recrutements": sum(m["recrutements"] for m in mois),
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/fiches/{code_rome}/offres")
+async def get_offres(code_rome: str):
+    """Retourne les offres d'emploi depuis France Travail ou données simulées."""
+    import os
+    try:
+        fiche = repo.get_fiche(code_rome)
+        if not fiche:
+            raise HTTPException(status_code=404, detail=f"Fiche {code_rome} non trouvée")
+
+        # Try France Travail API
+        client_id = os.environ.get("FRANCE_TRAVAIL_CLIENT_ID")
+        client_secret = os.environ.get("FRANCE_TRAVAIL_CLIENT_SECRET")
+
+        if client_id and client_secret:
+            try:
+                import httpx
+                # Get token
+                token_resp = httpx.post(
+                    "https://entreprise.francetravail.fr/connexion/oauth2/access_token?realm=/partenaire",
+                    data={
+                        "grant_type": "client_credentials",
+                        "client_id": client_id,
+                        "client_secret": client_secret,
+                        "scope": "api_offresdemploiv2 o2dsoffre"
+                    },
+                    headers={"Content-Type": "application/x-www-form-urlencoded"},
+                )
+                if token_resp.status_code == 200:
+                    token = token_resp.json()["access_token"]
+                    offres_resp = httpx.get(
+                        f"https://api.francetravail.io/partenaire/offresdemploi/v2/offres/search?codeROME={code_rome}&range=0-14",
+                        headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
+                    )
+                    if offres_resp.status_code == 200:
+                        data = offres_resp.json()
+                        offres = []
+                        for o in data.get("resultats", [])[:15]:
+                            offres.append({
+                                "id": o.get("id"),
+                                "titre": o.get("intitule"),
+                                "entreprise": o.get("entreprise", {}).get("nom", "Non communiqué"),
+                                "lieu": o.get("lieuTravail", {}).get("libelle", ""),
+                                "contrat": o.get("typeContratLibelle", ""),
+                                "salaire": o.get("salaire", {}).get("libelle", ""),
+                                "date_publication": o.get("dateCreation"),
+                                "url": o.get("origineOffre", {}).get("urlOrigine", ""),
+                            })
+                        return {
+                            "code_rome": code_rome,
+                            "source": "france_travail",
+                            "total": data.get("filtresPossibles", [{}])[0].get("agregation", [{}])[0].get("nbResultats", len(offres)) if data.get("filtresPossibles") else len(offres),
+                            "offres": offres,
+                        }
+            except Exception as e:
+                print(f"France Travail API error: {e}")
+
+        # Fallback: simulated data
+        import random
+        random.seed(hash(code_rome + "offres"))
+        entreprises = ["TechCorp", "InnoSoft", "DataPro", "ServicePlus", "ConseilExpert",
+                       "GroupeAlpha", "SolutionsPro", "AgenceDigitale", "CabinetConseil", "StartupIA"]
+        villes = ["Paris", "Lyon", "Marseille", "Toulouse", "Bordeaux", "Nantes", "Lille", "Strasbourg"]
+        contrats = ["CDI", "CDD", "Intérim", "Alternance", "Stage"]
+
+        offres = []
+        for i in range(random.randint(5, 15)):
+            days_ago = random.randint(1, 30)
+            offres.append({
+                "id": f"OFF{random.randint(100000, 999999)}",
+                "titre": f"{fiche.nom_epicene} - {random.choice(['Junior', 'Confirmé', 'Senior'])}",
+                "entreprise": random.choice(entreprises),
+                "lieu": random.choice(villes),
+                "contrat": random.choice(contrats),
+                "salaire": f"{random.randint(25, 65)}K€ - {random.randint(35, 85)}K€",
+                "date_publication": (datetime.now() - timedelta(days=days_ago)).isoformat(),
+                "url": "",
+            })
+
+        return {
+            "code_rome": code_rome,
+            "source": "simulation",
+            "total": len(offres),
+            "offres": offres,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== ROME SYNC & VEILLE ====================
+
+@app.post("/api/rome/sync")
+async def rome_sync():
+    """Synchronise le référentiel ROME (stub)."""
+    return {"nouvelles": 0, "mises_a_jour": 0, "inchangees": 1585}
+
+
+@app.post("/api/veille/rome")
+async def veille_rome():
+    """Déclenche une veille ROME (stub)."""
+    return {"message": "Veille lancée", "fiches_verifiees": 0, "modifications_detectees": 0}
+
+
+@app.get("/api/veille/rome/status")
+async def veille_rome_status():
+    """Retourne le statut de la veille ROME (stub)."""
+    return {"derniere_execution": None, "prochaine_execution": None, "fiches_a_verifier": 0}
+
+
+@app.get("/api/veille/rome/changes")
+async def veille_rome_changes():
+    """Retourne les changements ROME détectés (stub)."""
+    return {"total": 0, "changes": []}
+
+
+@app.post("/api/veille/rome/changes/{change_id}/review")
+async def veille_rome_review(change_id: str):
+    """Review un changement ROME (stub)."""
+    return {"message": "OK"}
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
