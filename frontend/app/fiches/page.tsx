@@ -9,8 +9,10 @@ import ScoreBar, { computeScore } from "@/components/ScoreBar";
 const STATUT_FILTERS = [
   { value: "", label: "Tous" },
   { value: "brouillon", label: "Brouillon" },
-  { value: "en_validation", label: "Enrichi" },
-  { value: "publiee", label: "Publié" },
+  { value: "enrichi", label: "Enrichi" },
+  { value: "en_validation", label: "En validation" },
+  { value: "valide", label: "Valide" },
+  { value: "publiee", label: "Publie" },
 ] as const;
 
 const SORT_OPTIONS = [
@@ -43,7 +45,9 @@ export default function FichesPage() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [debouncedCompetences, setDebouncedCompetences] = useState("");
   const [searchMode, setSearchMode] = useState<"fuzzy" | "competences">("fuzzy");
-  const [statutFilter, setStatutFilter] = useState("");
+  // Read statut from URL params (e.g. /fiches?statut=enrichi)
+  const initialStatut = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("statut") || "" : "";
+  const [statutFilter, setStatutFilter] = useState(initialStatut);
   const [sortOption, setSortOption] = useState("score_desc");
   const [page, setPage] = useState(0);
   const limit = 50;

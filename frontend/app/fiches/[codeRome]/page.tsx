@@ -366,6 +366,13 @@ export default function FicheDetailPage() {
       return;
     }
 
+    if (approved) {
+      const confirmed = window.confirm(
+        "Etes-vous sur de vouloir valider cette fiche ?\n\nCela entrainera sa publication et elle deviendra visible pour tous les utilisateurs."
+      );
+      if (!confirmed) return;
+    }
+
     setValidationHumaneLoading(true);
     try {
       const res = await api.validateHuman(
@@ -374,7 +381,19 @@ export default function FicheDetailPage() {
         validationComment.trim() || "",
         validatorName.trim()
       );
-      showActionMessage("success", `Fiche ${approved ? "approuvée" : "rejetée"} par ${res.validated_by}`);
+
+      if (approved) {
+        // Auto-publish after human validation
+        try {
+          await api.publishFiche(codeRome);
+          showActionMessage("success", `Fiche validee et publiee par ${res.validated_by}`);
+        } catch {
+          showActionMessage("success", `Fiche validee par ${res.validated_by} (publication manuelle requise)`);
+        }
+      } else {
+        showActionMessage("success", `Fiche rejetee par ${res.validated_by} — renvoyee en brouillon`);
+      }
+
       setShowValidationHumane(false);
       setValidationComment("");
       setValidatorName("");

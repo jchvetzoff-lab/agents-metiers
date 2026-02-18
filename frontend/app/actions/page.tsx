@@ -86,6 +86,7 @@ function TabActions() {
   const [archiving, setArchiving] = useState(false);
   const [creatingFiche, setCreatingFiche] = useState(false);
   const [metierName, setMetierName] = useState("");
+  const [validatingIA, setValidatingIA] = useState(false);
   // romeCheck removed - handled by external agent
   const [results, setResults] = useState<{ type: "success" | "error"; message: string }[]>([]);
 
@@ -214,8 +215,22 @@ function TabActions() {
             <p className="text-sm text-gray-500 mb-3">L&apos;IA analyse chaque fiche enrichie pour detecter les incoherences, les donnees manquantes ou les informations douteuses. Elle attribue un score de qualite et liste les points a corriger avant publication.</p>
             <p className="text-xs text-gray-400 mb-4">Les fiches avec un score superieur a 80/100 sont considerees comme pretes pour la relecture humaine.</p>
             <div className="space-y-2">
-              <Link href="/fiches?statut=enrichi&sort=score_asc"
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-500 text-white rounded-full text-sm font-medium hover:bg-amber-600 transition">
+              <button onClick={async () => {
+                setValidatingIA(true);
+                try {
+                  const res = await api.batchValidateIA();
+                  setResults(prev => [{ type: "success", message: `Validation IA terminee : ${res.validated}/${res.total} fiches validees` }, ...prev]);
+                  api.getStats().then(setStats);
+                } catch (err: unknown) {
+                  const message = err instanceof Error ? err.message : String(err);
+                  setResults(prev => [{ type: "error", message }, ...prev]);
+                } finally { setValidatingIA(false); }
+              }} disabled={validatingIA}
+                className="w-full px-4 py-2.5 bg-indigo-600 text-white rounded-full text-sm font-medium hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-wait">
+                {validatingIA ? "Validation en cours..." : "Lancer la validation IA sur les fiches enrichies"}
+              </button>
+              <Link href="/fiches?statut=enrichi"
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-amber-500 text-amber-600 rounded-full text-sm font-medium hover:bg-amber-50 transition">
                 Parcourir les fiches a valider
               </Link>
             </div>
