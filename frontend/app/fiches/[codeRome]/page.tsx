@@ -1970,7 +1970,7 @@ export default function FicheDetailPage() {
                       <span key={i} className="px-3 py-1.5 rounded-full text-sm font-medium" style={{
                         backgroundColor: [`#EEF2FF`, `#F0FDF4`, `#FFF7ED`, `#FDF2F8`, `#F0F9FF`, `#FAF5FF`][i % 6],
                         color: [`#4338CA`, `#15803D`, `#C2410C`, `#BE185D`, `#0369A1`, `#7E22CE`][i % 6],
-                      }}>{s}</span>
+                      }}>{toLabel(s)}</span>
                     ))}
                   </div>
                 </div>
@@ -2408,7 +2408,7 @@ export default function FicheDetailPage() {
                         return (
                         <div key={i} className="flex items-center gap-3 p-3 rounded-xl" style={{ backgroundColor: c.bg, border: `1px solid ${c.border}` }}>
                           <span className="w-7 h-7 rounded-full text-white flex items-center justify-center text-xs font-bold shrink-0" style={{ backgroundColor: c.badge }}>{i + 1}</span>
-                          <span className="text-sm text-gray-700 font-medium">{trait}</span>
+                          <span className="text-sm text-gray-700 font-medium">{toLabel(trait)}</span>
                         </div>
                         );
                       })}
@@ -2599,7 +2599,7 @@ export default function FicheDetailPage() {
                     {dSavoirs.map((s, i) => (
                       <div key={i} className="flex items-center gap-3 p-3.5 rounded-xl bg-[#F0FDFA] border border-[#CCFBF1]/60">
                         <span className="w-8 h-8 rounded-full bg-[#00C8C8] text-white flex items-center justify-center text-xs font-bold shrink-0">◆</span>
-                        <span className="text-[15px] text-gray-700">{s}</span>
+                        <span className="text-[15px] text-gray-700">{toLabel(s)}</span>
                       </div>
                     ))}
                   </div>
