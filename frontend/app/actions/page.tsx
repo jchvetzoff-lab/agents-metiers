@@ -313,7 +313,7 @@ const TYPE_BADGES: Record<string, { label: string; color: string; bg: string }> 
   enrichissement: { label: "Enrichissement", color: "text-blue-700", bg: "bg-blue-100" },
   validation_ia: { label: "Validation IA", color: "text-amber-700", bg: "bg-amber-100" },
   validation_humaine: { label: "Validation humaine", color: "text-emerald-700", bg: "bg-emerald-100" },
-  validation: { label: "Validation", color: "text-amber-700", bg: "bg-amber-100" },
+  validation: { label: "Validation IA", color: "text-amber-700", bg: "bg-amber-100" },
   publication: { label: "Publication", color: "text-green-700", bg: "bg-green-100" },
   correction: { label: "Correction", color: "text-violet-700", bg: "bg-violet-100" },
   creation: { label: "Création", color: "text-indigo-700", bg: "bg-indigo-100" },
@@ -332,7 +332,15 @@ const DATE_PRESETS = [
 
 const LIMIT_OPTIONS = [5, 10, 20, 50];
 
-const TYPE_FILTERS = ["Tous", "enrichissement", "validation_ia", "validation_humaine", "publication", "correction", "creation"];
+const TYPE_FILTERS = [
+  { key: "Tous", label: "Tous", apiValues: [] },
+  { key: "enrichissement", label: "Enrichissement", apiValues: ["enrichissement"] },
+  { key: "validation_ia", label: "Validation IA", apiValues: ["validation_ia", "validation"] },
+  { key: "validation_humaine", label: "Validation humaine", apiValues: ["validation_humaine"] },
+  { key: "publication", label: "Publication", apiValues: ["publication"] },
+  { key: "correction", label: "Correction", apiValues: ["correction"] },
+  { key: "creation", label: "Création", apiValues: ["creation"] },
+];
 
 function TabHistorique() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
@@ -355,14 +363,28 @@ function TabHistorique() {
         since = new Date(Date.now() - 30 * 86400000).toISOString();
       }
 
-      const res = await api.getAuditLogs({
-        limit,
-        search: search || undefined,
-        type_evenement: typeFilter !== "Tous" ? typeFilter : undefined,
-        agent: agentFilter || undefined,
-        since,
-      });
-      setLogs(res.logs);
+      const filterDef = TYPE_FILTERS.find(f => f.key === typeFilter);
+      if (filterDef && filterDef.apiValues.length > 1) {
+        // Multiple API values: fetch each and merge
+        const allLogs: AuditLog[] = [];
+        await Promise.all(filterDef.apiValues.map(async (tv) => {
+          try {
+            const r = await api.getAuditLogs({ limit, search: search || undefined, type_evenement: tv, agent: agentFilter || undefined, since });
+            allLogs.push(...r.logs);
+          } catch { /* skip */ }
+        }));
+        allLogs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        setLogs(allLogs.slice(0, limit));
+      } else {
+        const res = await api.getAuditLogs({
+          limit,
+          search: search || undefined,
+          type_evenement: filterDef && filterDef.apiValues.length === 1 ? filterDef.apiValues[0] : undefined,
+          agent: agentFilter || undefined,
+          since,
+        });
+        setLogs(res.logs);
+      }
     } catch {
       setLogs([]);
     } finally {
@@ -505,17 +527,17 @@ function TabHistorique() {
 
         {/* Row 3: Type filters */}
         <div className="flex flex-wrap gap-1">
-          {TYPE_FILTERS.map(t => {
-            const badge = t !== "Tous" ? TYPE_BADGES[t] : null;
-            const isActive = typeFilter === t;
+          {TYPE_FILTERS.map(f => {
+            const badge = f.key !== "Tous" ? TYPE_BADGES[f.key] : null;
+            const isActive = typeFilter === f.key;
             return (
-              <button key={t} onClick={() => setTypeFilter(t)}
+              <button key={f.key} onClick={() => setTypeFilter(f.key)}
                 className={`px-3 py-1 rounded-full text-xs font-medium transition ${
                   isActive
                     ? "bg-indigo-600 text-white"
                     : badge ? `${badge.bg} ${badge.color} hover:opacity-80` : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}>
-                {badge ? badge.label : t}
+                {f.label}
               </button>
             );
           })}
