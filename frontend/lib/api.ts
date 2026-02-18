@@ -4,7 +4,7 @@
 
 import { getToken, removeToken } from "./auth";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://agents-metiers.onrender.com";
 
 export interface FicheMetier {
   code_rome: string;
