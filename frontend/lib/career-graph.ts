@@ -63,7 +63,7 @@ export function buildCareerGraph(
     let angle = -Math.PI / 2;
 
     allItems.forEach((item, i) => {
-      const nodeId = item.code_rome || `${item.type}-${i}`;
+      const nodeId = item.code_rome ? `${item.code_rome}-${i}` : `${item.type}-${i}`;
       const nodeW = compact ? 90 : 110;
       const x = centerX + Math.cos(angle) * radius - nodeW;
       const y = centerY + Math.sin(angle) * radius - 35;
@@ -83,7 +83,7 @@ export function buildCareerGraph(
 
       const isEvolution = item.type === "evolution";
       edges.push({
-        id: `e-${currentCode}-${nodeId}`,
+        id: `e-${currentCode}-${nodeId}-${i}`,
         source: currentCode,
         target: nodeId,
         type: "default",
