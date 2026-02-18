@@ -149,7 +149,7 @@ function TabActions() {
     <div className="space-y-8">
       {/* Stats bar */}
       {loading ? (
-        <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
           {[1,2,3,4,5,6].map(i => (
             <div key={i} className="bg-white rounded-xl border p-4 animate-pulse">
               <div className="h-7 bg-gray-200 rounded mb-1" />
@@ -158,7 +158,7 @@ function TabActions() {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
           {statCards.map(s => (
             <div key={s.label} className={`rounded-xl border p-4 ${s.color}`}>
               <div className="flex items-center gap-1.5 mb-1">
@@ -190,15 +190,15 @@ function TabActions() {
       <div>
         <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Pipeline des fiches</h2>
         <div className="bg-white rounded-2xl border border-gray-200 p-6">
-          <div className="flex items-center justify-between gap-2 overflow-x-auto">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-2 overflow-x-auto">
             {[
               { label: "Brouillon", count: stats?.brouillons || 0, color: "gray", href: "/fiches?statut=brouillon", desc: "A enrichir" },
               { label: "Enrichie", count: (stats as any)?.enrichis || 0, color: "blue", href: "/fiches?statut=enrichi", desc: "En attente de validation IA" },
               { label: "Validee IA", count: ((stats as any)?.valides || 0) + (stats?.en_validation || 0), color: "amber", href: "/fiches?statut=valide", desc: "A valider par un humain" },
               { label: "Publiee", count: stats?.publiees || 0, color: "green", href: "/fiches?statut=publiee", desc: "Visible publiquement" },
             ].map((step, i, arr) => (
-              <div key={step.label} className="flex items-center gap-2 flex-1 min-w-0">
-                <Link href={step.href} className="flex-1 min-w-0 group">
+              <div key={step.label} className="flex flex-col sm:flex-row items-center gap-2 flex-1 min-w-0">
+                <Link href={step.href} className="flex-1 min-w-0 w-full group">
                   <div className={`rounded-xl border-2 p-3 text-center transition hover:shadow-md
                     ${step.color === "gray" ? "border-gray-300 bg-gray-50 group-hover:border-gray-400" : ""}
                     ${step.color === "blue" ? "border-blue-300 bg-blue-50 group-hover:border-blue-400" : ""}
@@ -211,9 +211,14 @@ function TabActions() {
                   </div>
                 </Link>
                 {i < arr.length - 1 && (
-                  <svg className="w-5 h-5 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
+                  <>
+                    <svg className="w-5 h-5 text-gray-300 shrink-0 hidden sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                    <svg className="w-5 h-5 text-gray-300 shrink-0 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 9l7 7 7-7" />
+                    </svg>
+                  </>
                 )}
               </div>
             ))}
@@ -222,7 +227,7 @@ function TabActions() {
       </div>
 
       {/* Actions grid */}
-      <div className="grid md:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {/* Validation IA */}
         <div className="bg-white rounded-2xl border border-gray-200 p-5 flex flex-col">
           <div className="flex items-center gap-3 mb-3">

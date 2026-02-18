@@ -278,13 +278,13 @@ export default function FichesPage() {
   };
 
   return (
-    <main className="min-h-screen py-12 px-4">
+    <main className="min-h-screen py-6 md:py-12 px-4 md:px-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-12">
-          <div className="flex items-center justify-center gap-4 mb-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-purple-pink flex items-center justify-center shadow-lg">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="text-center mb-8 md:mb-12">
+          <div className="flex items-center justify-center gap-3 md:gap-4 mb-4">
+            <div className="w-10 h-10 md:w-14 md:h-14 rounded-2xl bg-gradient-purple-pink flex items-center justify-center shadow-lg">
+              <svg className="w-6 h-6 md:w-8 md:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
             </div>
@@ -294,13 +294,13 @@ export default function FichesPage() {
         </div>
 
         {/* Filtres par statut */}
-        <div className="flex flex-wrap gap-2 justify-center mb-8">
+        <div className="flex gap-2 justify-start md:justify-center mb-8 overflow-x-auto pb-2 scrollbar-hide">
           {STATUT_FILTERS.map((f) => {
             const isActive = statutFilter === f.value;
             const count = counts[f.value];
             return (
               <button key={f.value} onClick={() => { setStatutFilter(f.value); setPage(0); }}
-                className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${isActive ? "bg-indigo-600 text-white shadow-md" : "border border-indigo-300 text-indigo-600 hover:bg-indigo-50"}`}>
+                className={`px-5 py-2 rounded-full text-sm font-semibold transition-all whitespace-nowrap shrink-0 min-h-[44px] ${isActive ? "bg-indigo-600 text-white shadow-md" : "border border-indigo-300 text-indigo-600 hover:bg-indigo-50"}`}>
                 {f.label}{count != null ? ` (${count})` : ""}
               </button>
             );
@@ -309,7 +309,7 @@ export default function FichesPage() {
 
         {/* Recherche + Tri */}
         <div className="sojai-card mb-8">
-          <div className="flex gap-2 mb-5">
+          <div className="flex gap-2 mb-5 overflow-x-auto scrollbar-hide">
             <button onClick={() => { setSearchMode("fuzzy"); setSearchCompetences(""); setPage(0); setShowSuggestions(false); }}
               className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${searchMode === "fuzzy" ? "bg-indigo-600 text-white shadow-md" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
               🔍 Recherche par nom
@@ -361,7 +361,67 @@ export default function FichesPage() {
           <div className="sojai-card"><div className="animate-shimmer h-64 rounded-card"></div></div>
         ) : (
           <>
-            <div className="sojai-card overflow-hidden">
+            {/* Mobile card view */}
+            <div className="md:hidden space-y-3">
+              {fiches.length === 0 && (
+                <div className="sojai-card p-8 text-center text-text-muted">Aucune fiche trouvée{search ? ` pour "${search}"` : ""}</div>
+              )}
+              {fiches.map((fiche) => {
+                const score = computeScore(fiche);
+                const isSelected = selected.has(fiche.code_rome);
+                return (
+                  <div key={fiche.code_rome} className={`sojai-card p-4 ${isSelected ? "ring-2 ring-indigo-400 bg-indigo-50/50" : ""}`}>
+                    <div className="flex items-start gap-3">
+                      <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(fiche.code_rome)}
+                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 mt-1 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <span className="badge badge-purple text-xs">{fiche.code_rome}</span>
+                          <StatusBadge statut={fiche.statut} />
+                          {fiche.rome_update_pending && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-700 border border-orange-300">MAJ ROME</span>
+                          )}
+                        </div>
+                        <div className="font-semibold text-text-dark text-sm">{fiche.nom_epicene || fiche.nom_masculin}</div>
+                        {fiche.description_courte && <div className="text-xs text-text-muted line-clamp-2 mt-1">{fiche.description_courte}</div>}
+                        <div className="flex items-center justify-between mt-3">
+                          <div className="flex items-center gap-1">
+                            {(fiche as any).validation_ia_score != null ? (
+                              <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold ${
+                                (fiche as any).validation_ia_score >= 80 ? 'bg-green-100 text-green-700' :
+                                (fiche as any).validation_ia_score >= 60 ? 'bg-yellow-100 text-yellow-700' : 
+                                'bg-red-100 text-red-700'
+                              }`}>
+                                🤖 {(fiche as any).validation_ia_score}
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-500">🤖 -</div>
+                            )}
+                            {(fiche as any).validation_humaine != null ? (
+                              <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold ${
+                                (fiche as any).validation_humaine ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                              }`}>
+                                👤 {(fiche as any).validation_humaine ? '✓' : '✗'}
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-500">👤 -</div>
+                            )}
+                          </div>
+                          <Link href={`/fiches/${fiche.code_rome}`}
+                            className="inline-flex items-center px-4 py-2 rounded-full border border-[#4A39C0] text-[#4A39C0] text-xs font-semibold hover:bg-[#4A39C0] hover:text-white transition-all min-h-[44px]">
+                            Voir
+                          </Link>
+                        </div>
+                        <div className="mt-2"><ScoreBar score={score} /></div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop table view */}
+            <div className="sojai-card overflow-hidden hidden md:block">
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="border-b-2 border-border-subtle">
@@ -488,8 +548,8 @@ export default function FichesPage() {
 
         {/* Batch action bar */}
         {selected.size > 0 && (
-          <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-indigo-200 shadow-2xl z-50 px-6 py-4">
-            <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-indigo-200 shadow-2xl z-50 px-4 md:px-6 py-3 md:py-4">
+            <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-2 md:gap-0">
               <span className="text-sm font-semibold text-gray-700">
                 {selected.size} fiche{selected.size > 1 ? "s" : ""} sélectionnée{selected.size > 1 ? "s" : ""}
               </span>
@@ -501,9 +561,9 @@ export default function FichesPage() {
                   <span className="text-sm text-gray-600">{batchProgress.action} : {batchProgress.done}/{batchProgress.total}</span>
                 </div>
               ) : (
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 md:gap-3 flex-wrap justify-center">
                   <button onClick={() => runBatch("validate")}
-                    className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors">
+                    className="px-3 md:px-4 py-2 bg-indigo-600 text-white text-xs md:text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors min-h-[44px]">
                     🤖 Valider IA ({selected.size})
                   </button>
                   <button onClick={async () => {

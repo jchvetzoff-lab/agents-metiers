@@ -1799,7 +1799,7 @@ export default function FicheDetailPage() {
       {variantes.length > 0 && (
         <div className="bg-white border-b border-gray-200">
           <div className="max-w-7xl mx-auto px-4 md:px-8 py-4">
-            <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
+            <div className="flex flex-wrap items-center gap-x-4 md:gap-x-8 gap-y-3 text-xs md:text-sm">
               {/* Genre */}
               <div className="flex items-center gap-3">
                 <span className="text-xs font-bold text-gray-500 uppercase tracking-wider w-14">{t.genre}</span>
@@ -1882,8 +1882,23 @@ export default function FicheDetailPage() {
 
       {/* ── CONTENT + SIDEBAR ── */}
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-8">
+        {/* Mobile horizontal section nav */}
+        <div className="lg:hidden sticky top-16 z-30 bg-white/95 backdrop-blur-md border-b border-gray-200 -mx-4 md:-mx-8 px-4 md:px-8 mb-6">
+          <div className="flex gap-1 overflow-x-auto py-2 scrollbar-hide">
+            {sections.map(s => (
+              <a key={s.id} href={`#${s.id}`}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium whitespace-nowrap shrink-0 transition-all ${
+                  activeSection === s.id ? "bg-indigo-600 text-white shadow-sm" : "text-gray-600 hover:bg-gray-100"
+                }`}>
+                <span>{s.icon}</span>
+                <span>{s.label}</span>
+              </a>
+            ))}
+          </div>
+        </div>
+
         <div className="flex gap-8">
-          {/* Sidebar */}
+          {/* Sidebar - desktop only */}
           <aside className="hidden lg:block w-60 shrink-0">
             <nav className="sticky top-24 space-y-1">
               {sections.map(s => (
