@@ -366,6 +366,8 @@ class ApiClient {
     statut?: string;
     search?: string;
     search_competences?: string;
+    sort_by?: string;
+    sort_order?: string;
     limit?: number;
     offset?: number;
   }): Promise<{ total: number; results: FicheMetier[] }> {
@@ -373,6 +375,8 @@ class ApiClient {
     if (params?.statut) searchParams.set("statut", params.statut);
     if (params?.search) searchParams.set("search", params.search);
     if (params?.search_competences) searchParams.set("search_competences", params.search_competences);
+    if (params?.sort_by) searchParams.set("sort_by", params.sort_by);
+    if (params?.sort_order) searchParams.set("sort_order", params.sort_order);
     if (params?.limit != null) searchParams.set("limit", params.limit.toString());
     if (params?.offset != null) searchParams.set("offset", params.offset.toString());
 

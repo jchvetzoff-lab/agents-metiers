@@ -13,6 +13,15 @@ const STATUT_FILTERS = [
   { value: "publiee", label: "Publié" },
 ] as const;
 
+const SORT_OPTIONS = [
+  { value: "score_desc", label: "Score ↓", sort_by: "score", sort_order: "desc" },
+  { value: "score_asc", label: "Score ↑", sort_by: "score", sort_order: "asc" },
+  { value: "date_desc", label: "Récent d'abord", sort_by: "date_maj", sort_order: "desc" },
+  { value: "date_asc", label: "Ancien d'abord", sort_by: "date_maj", sort_order: "asc" },
+  { value: "nom_asc", label: "Nom A-Z", sort_by: "nom", sort_order: "asc" },
+  { value: "nom_desc", label: "Nom Z-A", sort_by: "nom", sort_order: "desc" },
+] as const;
+
 export default function FichesPage() {
   const [fiches, setFiches] = useState<FicheMetier[]>([]);
   const [total, setTotal] = useState(0);
@@ -24,10 +33,16 @@ export default function FichesPage() {
   const [debouncedCompetences, setDebouncedCompetences] = useState("");
   const [searchMode, setSearchMode] = useState<"fuzzy" | "competences">("fuzzy");
   const [statutFilter, setStatutFilter] = useState("");
+  const [sortOption, setSortOption] = useState("score_desc");
   const [page, setPage] = useState(0);
   const limit = 50;
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const debounceCompRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Batch selection
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [batchRunning, setBatchRunning] = useState(false);
+  const [batchProgress, setBatchProgress] = useState({ done: 0, total: 0, action: "" });
 
   useEffect(() => {
     debounceRef.current = setTimeout(() => setDebouncedSearch(search), 300);
@@ -39,7 +54,6 @@ export default function FichesPage() {
     return () => { if (debounceCompRef.current) clearTimeout(debounceCompRef.current); };
   }, [searchCompetences]);
 
-  // Load counts for all statuses
   useEffect(() => {
     (async () => {
       try {
@@ -61,28 +75,66 @@ export default function FichesPage() {
     try {
       setLoading(true);
       const statut = statutFilter || undefined;
+      const sort = SORT_OPTIONS.find(s => s.value === sortOption);
       const data = await api.getFiches({
         search: searchMode === "fuzzy" && debouncedSearch ? debouncedSearch : undefined,
         search_competences: searchMode === "competences" && debouncedCompetences ? debouncedCompetences : undefined,
         statut,
+        sort_by: sort?.sort_by,
+        sort_order: sort?.sort_order,
         limit,
         offset: page * limit,
       });
-      const sorted = [...data.results].sort((a, b) => computeScore(a) - computeScore(b));
-      setFiches(sorted);
+      setFiches(data.results);
       setTotal(data.total);
     } catch (error) {
       console.error("Erreur chargement fiches:", error);
     } finally {
       setLoading(false);
     }
-  }, [debouncedSearch, debouncedCompetences, searchMode, statutFilter, page]);
+  }, [debouncedSearch, debouncedCompetences, searchMode, statutFilter, sortOption, page]);
 
-  useEffect(() => {
-    loadFiches();
-  }, [loadFiches]);
+  useEffect(() => { loadFiches(); }, [loadFiches]);
 
   const totalPages = Math.ceil(total / limit);
+
+  const toggleSelect = (code: string) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(code)) next.delete(code); else next.add(code);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (selected.size === fiches.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(fiches.map(f => f.code_rome)));
+    }
+  };
+
+  const runBatch = async (action: "validate" | "review" | "enrich") => {
+    const codes = Array.from(selected);
+    if (!codes.length) return;
+    setBatchRunning(true);
+    const labels = { validate: "Validation IA", review: "Approbation", enrich: "Enrichissement" };
+    setBatchProgress({ done: 0, total: codes.length, action: labels[action] });
+    for (let i = 0; i < codes.length; i++) {
+      try {
+        if (action === "validate") await api.validateFiche(codes[i]);
+        else if (action === "review") await api.reviewFiche(codes[i], "approuver");
+        else if (action === "enrich") await api.enrichFiche(codes[i]);
+      } catch { /* continue */ }
+      setBatchProgress(p => ({ ...p, done: i + 1 }));
+    }
+    setBatchRunning(false);
+    setSelected(new Set());
+    loadFiches();
+  };
+
+  const startIdx = page * limit + 1;
+  const endIdx = Math.min((page + 1) * limit, total);
 
   return (
     <main className="min-h-screen py-12 px-4">
@@ -97,53 +149,32 @@ export default function FichesPage() {
             </div>
             <h1 className="text-3xl md:text-4xl font-serif font-bold gradient-text">Fiches Métiers</h1>
           </div>
-          <p className="text-lg text-text-muted">
-            Toutes les fiches du référentiel ROME
-          </p>
+          <p className="text-lg text-text-muted">Toutes les fiches du référentiel ROME</p>
         </div>
 
-        {/* Filtres par statut (pills) */}
+        {/* Filtres par statut */}
         <div className="flex flex-wrap gap-2 justify-center mb-8">
           {STATUT_FILTERS.map((f) => {
             const isActive = statutFilter === f.value;
             const count = counts[f.value];
             return (
-              <button
-                key={f.value}
-                onClick={() => { setStatutFilter(f.value); setPage(0); }}
-                className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${
-                  isActive
-                    ? "bg-indigo-600 text-white shadow-md"
-                    : "border border-indigo-300 text-indigo-600 hover:bg-indigo-50"
-                }`}
-              >
+              <button key={f.value} onClick={() => { setStatutFilter(f.value); setPage(0); }}
+                className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${isActive ? "bg-indigo-600 text-white shadow-md" : "border border-indigo-300 text-indigo-600 hover:bg-indigo-50"}`}>
                 {f.label}{count != null ? ` (${count})` : ""}
               </button>
             );
           })}
         </div>
 
-        {/* Recherche */}
+        {/* Recherche + Tri */}
         <div className="sojai-card mb-8">
           <div className="flex gap-2 mb-5">
-            <button
-              onClick={() => { setSearchMode("fuzzy"); setSearchCompetences(""); setPage(0); }}
-              className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${
-                searchMode === "fuzzy"
-                  ? "bg-indigo-600 text-white shadow-md"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-            >
+            <button onClick={() => { setSearchMode("fuzzy"); setSearchCompetences(""); setPage(0); }}
+              className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${searchMode === "fuzzy" ? "bg-indigo-600 text-white shadow-md" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
               🔍 Recherche par nom
             </button>
-            <button
-              onClick={() => { setSearchMode("competences"); setSearch(""); setPage(0); }}
-              className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${
-                searchMode === "competences"
-                  ? "bg-pink-600 text-white shadow-md"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-            >
+            <button onClick={() => { setSearchMode("competences"); setSearch(""); setPage(0); }}
+              className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${searchMode === "competences" ? "bg-pink-600 text-white shadow-md" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
               🧠 Recherche par compétences
             </button>
           </div>
@@ -151,44 +182,41 @@ export default function FichesPage() {
           {searchMode === "fuzzy" ? (
             <div>
               <label className="block text-sm font-medium text-text-dark mb-2">Recherche intelligente (fuzzy)</label>
-              <input
-                type="text"
-                placeholder="Code ROME, nom du métier... (ex: boulanger, M1805, informatique)"
-                value={search}
-                onChange={(e) => { setSearch(e.target.value); setPage(0); }}
-                className="w-full px-4 py-3 border border-border-subtle rounded-pill focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
-              />
-              <p className="text-xs text-gray-400 mt-2">Trouve les métiers même avec des fautes de frappe ou des noms approchants</p>
+              <input type="text" placeholder="Code ROME, nom du métier... (ex: boulanger, M1805, informatique)"
+                value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+                className="w-full px-4 py-3 border border-border-subtle rounded-pill focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all" />
+              <p className="text-xs text-gray-400 mt-2">Trouve les métiers même avec des fautes de frappe</p>
             </div>
           ) : (
             <div>
               <label className="block text-sm font-medium text-text-dark mb-2">Recherche par compétences</label>
-              <input
-                type="text"
-                placeholder="Ex: Python, management, soudure, comptabilité..."
-                value={searchCompetences}
-                onChange={(e) => { setSearchCompetences(e.target.value); setPage(0); }}
-                className="w-full px-4 py-3 border border-border-subtle rounded-pill focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 transition-all"
-              />
-              <p className="text-xs text-gray-400 mt-2">Trouve les métiers qui requièrent cette compétence ou formation</p>
+              <input type="text" placeholder="Ex: Python, management, soudure, comptabilité..."
+                value={searchCompetences} onChange={(e) => { setSearchCompetences(e.target.value); setPage(0); }}
+                className="w-full px-4 py-3 border border-border-subtle rounded-pill focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 transition-all" />
+              <p className="text-xs text-gray-400 mt-2">Trouve les métiers qui requièrent cette compétence</p>
             </div>
           )}
 
           <div className="mt-4 flex items-center justify-between text-sm text-text-muted">
-            <span>{total} fiche{total > 1 ? "s" : ""} trouvée{total > 1 ? "s" : ""}</span>
-            {(search || searchCompetences || statutFilter) && (
-              <button onClick={() => { setSearch(""); setSearchCompetences(""); setStatutFilter(""); setPage(0); }} className="text-primary-purple hover:underline">
-                Réinitialiser les filtres
-              </button>
-            )}
+            <span>{total > 0 ? `${startIdx}–${endIdx} sur ${total}` : "0"} fiche{total > 1 ? "s" : ""}</span>
+            <div className="flex items-center gap-3">
+              <label className="text-xs font-medium">Trier par :</label>
+              <select value={sortOption} onChange={(e) => { setSortOption(e.target.value); setPage(0); }}
+                className="px-3 py-1.5 border border-border-subtle rounded-lg text-sm focus:outline-none focus:border-indigo-500">
+                {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+              {(search || searchCompetences || statutFilter) && (
+                <button onClick={() => { setSearch(""); setSearchCompetences(""); setStatutFilter(""); setPage(0); }} className="text-primary-purple hover:underline text-xs">
+                  Réinitialiser
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Table */}
         {loading ? (
-          <div className="sojai-card">
-            <div className="animate-shimmer h-64 rounded-card"></div>
-          </div>
+          <div className="sojai-card"><div className="animate-shimmer h-64 rounded-card"></div></div>
         ) : (
           <>
             <div className="sojai-card overflow-hidden">
@@ -196,6 +224,10 @@ export default function FichesPage() {
                 <table className="w-full">
                   <thead className="border-b-2 border-border-subtle">
                     <tr>
+                      <th className="p-4 w-10">
+                        <input type="checkbox" checked={fiches.length > 0 && selected.size === fiches.length}
+                          onChange={toggleAll} className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+                      </th>
                       <th className="text-left p-4 text-xs font-semibold text-text-muted uppercase">Code ROME</th>
                       <th className="text-left p-4 text-xs font-semibold text-text-muted uppercase">Nom du métier</th>
                       <th className="text-left p-4 text-xs font-semibold text-text-muted uppercase">Statut</th>
@@ -205,43 +237,34 @@ export default function FichesPage() {
                   </thead>
                   <tbody>
                     {fiches.length === 0 && (
-                      <tr>
-                        <td colSpan={5} className="p-8 text-center text-text-muted">
-                          Aucune fiche trouvée{search ? ` pour "${search}"` : ""}
-                        </td>
-                      </tr>
+                      <tr><td colSpan={6} className="p-8 text-center text-text-muted">Aucune fiche trouvée{search ? ` pour "${search}"` : ""}</td></tr>
                     )}
                     {fiches.map((fiche) => {
                       const score = computeScore(fiche);
+                      const isSelected = selected.has(fiche.code_rome);
                       return (
-                        <tr key={fiche.code_rome} className="border-b border-border-subtle hover:bg-background-light transition-colors">
+                        <tr key={fiche.code_rome} className={`border-b border-border-subtle hover:bg-background-light transition-colors ${isSelected ? "bg-indigo-50" : ""}`}>
                           <td className="p-4">
-                            <span className="badge badge-purple text-xs">{fiche.code_rome}</span>
+                            <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(fiche.code_rome)}
+                              className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
                           </td>
+                          <td className="p-4"><span className="badge badge-purple text-xs">{fiche.code_rome}</span></td>
                           <td className="p-4">
                             <div className="font-semibold text-text-dark">{fiche.nom_epicene || fiche.nom_masculin}</div>
-                            {fiche.description_courte && (
-                              <div className="text-sm text-text-muted line-clamp-1 mt-1">{fiche.description_courte}</div>
-                            )}
+                            {fiche.description_courte && <div className="text-sm text-text-muted line-clamp-1 mt-1">{fiche.description_courte}</div>}
                           </td>
                           <td className="p-4">
                             <div className="flex items-center gap-2 flex-wrap">
                               <StatusBadge statut={fiche.statut} />
                               {fiche.rome_update_pending && (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-700 border border-orange-300">
-                                  MAJ ROME
-                                </span>
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-700 border border-orange-300">MAJ ROME</span>
                               )}
                             </div>
                           </td>
-                          <td className="p-4">
-                            <ScoreBar score={score} />
-                          </td>
+                          <td className="p-4"><ScoreBar score={score} /></td>
                           <td className="p-4 text-center">
-                            <Link
-                              href={`/fiches/${fiche.code_rome}`}
-                              className="inline-flex items-center px-4 py-2 rounded-full border border-[#4A39C0] text-[#4A39C0] text-xs font-semibold hover:bg-[#4A39C0] hover:text-white hover:scale-105 hover:shadow-md transition-all duration-200 ease-out"
-                            >
+                            <Link href={`/fiches/${fiche.code_rome}`}
+                              className="inline-flex items-center px-4 py-2 rounded-full border border-[#4A39C0] text-[#4A39C0] text-xs font-semibold hover:bg-[#4A39C0] hover:text-white hover:scale-105 hover:shadow-md transition-all duration-200 ease-out">
                               Voir
                             </Link>
                           </td>
@@ -253,14 +276,69 @@ export default function FichesPage() {
               </div>
             </div>
 
+            {/* Pagination */}
             {totalPages > 1 && (
               <div className="flex items-center justify-center gap-2 mt-8">
-                <button onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0} className="btn btn-secondary disabled:opacity-50 disabled:cursor-not-allowed">← Précédent</button>
-                <span className="px-4 py-2 text-text-muted">Page {page + 1} / {totalPages}</span>
-                <button onClick={() => setPage(Math.min(totalPages - 1, page + 1))} disabled={page >= totalPages - 1} className="btn btn-secondary disabled:opacity-50 disabled:cursor-not-allowed">Suivant →</button>
+                <button onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0}
+                  className="btn btn-secondary disabled:opacity-50 disabled:cursor-not-allowed">← Précédent</button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
+                    let p: number;
+                    if (totalPages <= 7) p = i;
+                    else if (page < 4) p = i;
+                    else if (page > totalPages - 5) p = totalPages - 7 + i;
+                    else p = page - 3 + i;
+                    return (
+                      <button key={p} onClick={() => setPage(p)}
+                        className={`w-10 h-10 rounded-lg text-sm font-medium transition-all ${p === page ? "bg-indigo-600 text-white shadow-md" : "text-gray-600 hover:bg-gray-100"}`}>
+                        {p + 1}
+                      </button>
+                    );
+                  })}
+                </div>
+                <button onClick={() => setPage(Math.min(totalPages - 1, page + 1))} disabled={page >= totalPages - 1}
+                  className="btn btn-secondary disabled:opacity-50 disabled:cursor-not-allowed">Suivant →</button>
               </div>
             )}
           </>
+        )}
+
+        {/* Batch action bar */}
+        {selected.size > 0 && (
+          <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-indigo-200 shadow-2xl z-50 px-6 py-4">
+            <div className="max-w-7xl mx-auto flex items-center justify-between">
+              <span className="text-sm font-semibold text-gray-700">
+                {selected.size} fiche{selected.size > 1 ? "s" : ""} sélectionnée{selected.size > 1 ? "s" : ""}
+              </span>
+              {batchRunning ? (
+                <div className="flex items-center gap-3">
+                  <div className="w-48 h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div className="h-full bg-indigo-600 rounded-full transition-all" style={{ width: `${(batchProgress.done / batchProgress.total) * 100}%` }} />
+                  </div>
+                  <span className="text-sm text-gray-600">{batchProgress.action} : {batchProgress.done}/{batchProgress.total}</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <button onClick={() => runBatch("validate")}
+                    className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors">
+                    🔍 Valider IA ({selected.size})
+                  </button>
+                  <button onClick={() => runBatch("review")}
+                    className="px-4 py-2 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 transition-colors">
+                    ✅ Approuver ({selected.size})
+                  </button>
+                  <button onClick={() => runBatch("enrich")}
+                    className="px-4 py-2 bg-purple-600 text-white text-sm font-semibold rounded-lg hover:bg-purple-700 transition-colors">
+                    ✨ Enrichir ({selected.size})
+                  </button>
+                  <button onClick={() => setSelected(new Set())}
+                    className="px-4 py-2 text-gray-600 text-sm font-semibold rounded-lg hover:bg-gray-100 transition-colors">
+                    Annuler
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         )}
       </div>
     </main>

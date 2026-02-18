@@ -1,189 +1,209 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { FadeInView, StaggerContainer, StaggerItem, TiltCard } from "@/components/motion";
+import { FadeInView } from "@/components/motion";
+import { api, Stats, AuditLog, FicheMetier } from "@/lib/api";
 
-function FloatingOrb({ className, delay = 0 }: { className: string; delay?: number }) {
+function KPICard({ label, value, icon, color }: { label: string; value: number | string; icon: string; color: string }) {
   return (
-    <motion.div
-      className={`absolute rounded-full blur-3xl opacity-20 ${className}`}
-      animate={{
-        y: [0, -30, 0, 20, 0],
-        x: [0, 15, -10, 5, 0],
-        scale: [1, 1.1, 0.95, 1.05, 1],
-      }}
-      transition={{
-        duration: 8,
-        repeat: Infinity,
-        delay,
-        ease: "easeInOut",
-      }}
-    />
+    <FadeInView>
+      <div className={`sojai-card p-6 border-l-4 ${color}`}>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-text-muted font-medium">{label}</p>
+            <p className="text-3xl font-bold text-text-dark mt-1">{value}</p>
+          </div>
+          <span className="text-3xl">{icon}</span>
+        </div>
+      </div>
+    </FadeInView>
   );
 }
 
-export default function Home() {
+function StatBar({ label, value, total, color }: { label: string; value: number; total: number; color: string }) {
+  const pct = total > 0 ? Math.round((value / total) * 100) : 0;
   return (
-    <main className="min-h-screen bg-[#0A0A0A]">
-      {/* Hero - Dark premium */}
-      <section className="relative min-h-[85vh] flex items-center justify-center px-6 overflow-hidden"
-        style={{ background: "linear-gradient(135deg, #0F0A1A 0%, #1A1145 40%, #2D1B69 70%, #1A0A2E 100%)" }}>
-        
-        {/* Floating orbs */}
-        <FloatingOrb className="w-[500px] h-[500px] bg-violet-600 top-1/4 -left-32" delay={0} />
-        <FloatingOrb className="w-[400px] h-[400px] bg-pink-600 bottom-1/4 -right-24" delay={2} />
-        <FloatingOrb className="w-[300px] h-[300px] bg-indigo-500 top-1/2 left-1/2" delay={4} />
-        
-        {/* Grid pattern overlay */}
-        <div className="absolute inset-0 opacity-[0.03]"
-          style={{
-            backgroundImage: "linear-gradient(rgba(255,255,255,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px)",
-            backgroundSize: "60px 60px",
-          }}
-        />
+    <div className="flex items-center gap-3">
+      <span className="text-sm text-text-muted w-28 text-right">{label}</span>
+      <div className="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden">
+        <div className={`h-full rounded-full ${color} transition-all duration-700`} style={{ width: `${pct}%` }} />
+      </div>
+      <span className="text-sm font-semibold text-text-dark w-20">{value} ({pct}%)</span>
+    </div>
+  );
+}
 
-        {/* Content */}
-        <div className="max-w-4xl mx-auto text-center relative z-10">
-          <FadeInView delay={0.1}>
-            <motion.div
-              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-sm mb-8"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3, duration: 0.6 }}
-            >
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-sm text-white/60">Système opérationnel</span>
-            </motion.div>
-          </FadeInView>
+const EVT_ICONS: Record<string, string> = {
+  validation_ia: "🔍",
+  validation_humaine: "✅",
+  enrichissement: "✨",
+  publication: "🚀",
+  modification: "✏️",
+  creation: "➕",
+};
 
-          <FadeInView delay={0.2}>
-            <h1 className="text-5xl md:text-7xl font-bold mb-3 leading-tight">
-              <span className="text-white">Agents</span>{" "}
-              <span className="bg-gradient-to-r from-violet-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">Métiers</span>
-            </h1>
-          </FadeInView>
+export default function Home() {
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [avgScore, setAvgScore] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
 
-          <FadeInView delay={0.3}>
-            <p className="text-sm text-white/30 mb-8 tracking-widest uppercase">By JAE Fondation</p>
-          </FadeInView>
+  useEffect(() => {
+    (async () => {
+      try {
+        const [statsData, logsData, fichesData] = await Promise.all([
+          api.getStats(),
+          api.getAuditLogs({ limit: 5 }),
+          api.getFiches({ limit: 200, offset: 0 }),
+        ]);
+        setStats(statsData);
+        setLogs(logsData.logs);
+        // Compute average score
+        if (fichesData.results.length > 0) {
+          const scores = fichesData.results.map(f => f.score_completude ?? 0);
+          setAvgScore(Math.round(scores.reduce((a, b) => a + b, 0) / scores.length));
+        }
+      } catch (e) { console.error(e); }
+      setLoading(false);
+    })();
+  }, []);
 
-          <FadeInView delay={0.4}>
-            <p className="text-lg md:text-xl text-white/50 max-w-2xl mx-auto mb-12 leading-relaxed">
-              Système multi-agents{" "}
-              <span className="text-violet-400 font-semibold">IA</span>{" "}
-              pour générer, enrichir et gérer les{" "}
-              <span className="text-white font-semibold">1 584 fiches métiers</span>{" "}
-              du référentiel ROME
-            </p>
-          </FadeInView>
+  if (loading) {
+    return (
+      <main className="min-h-screen py-12 px-4">
+        <div className="max-w-6xl mx-auto">
+          <div className="animate-shimmer h-96 rounded-card"></div>
+        </div>
+      </main>
+    );
+  }
 
-          <FadeInView delay={0.5}>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/actions"
-                className="group relative px-8 py-3.5 rounded-full text-white font-semibold text-sm overflow-hidden transition-all hover:scale-105 hover:shadow-2xl hover:shadow-violet-500/25">
-                <div className="absolute inset-0 bg-gradient-to-r from-violet-600 to-pink-600 transition-all group-hover:from-violet-500 group-hover:to-pink-500" />
-                <span className="relative">Lancer des actions</span>
-              </Link>
-              <Link href="/fiches"
-                className="px-8 py-3.5 rounded-full text-white/70 font-semibold text-sm border border-white/10 hover:border-white/30 hover:text-white hover:bg-white/5 transition-all">
-                Explorer les fiches
-              </Link>
+  return (
+    <main className="min-h-screen py-12 px-4">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <FadeInView>
+          <div className="text-center mb-12">
+            <h1 className="text-4xl md:text-5xl font-serif font-bold gradient-text mb-3">Tableau de bord</h1>
+            <p className="text-lg text-text-muted">Vue d&apos;ensemble du référentiel Agents Métiers</p>
+          </div>
+        </FadeInView>
+
+        {/* KPI Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <KPICard label="Total fiches" value={stats?.total ?? 0} icon="📋" color="border-indigo-500" />
+          <KPICard label="Brouillons" value={stats?.brouillons ?? 0} icon="📝" color="border-stone-400" />
+          <KPICard label="Enrichies" value={stats?.en_validation ?? 0} icon="🔍" color="border-amber-500" />
+          <KPICard label="Publiées" value={stats?.publiees ?? 0} icon="✅" color="border-emerald-500" />
+        </div>
+
+        {/* Score moyen + répartition */}
+        <div className="grid md:grid-cols-2 gap-6 mb-8">
+          <FadeInView>
+            <div className="sojai-card p-6">
+              <h3 className="text-lg font-semibold text-text-dark mb-4">Score moyen de complétude</h3>
+              <div className="flex items-center gap-4">
+                <div className="relative w-28 h-28">
+                  <svg className="w-28 h-28 -rotate-90" viewBox="0 0 120 120">
+                    <circle cx="60" cy="60" r="52" fill="none" stroke="#e5e7eb" strokeWidth="10" />
+                    <circle cx="60" cy="60" r="52" fill="none"
+                      stroke={avgScore != null ? (avgScore >= 80 ? "#16a34a" : avgScore >= 50 ? "#eab308" : "#dc2626") : "#e5e7eb"}
+                      strokeWidth="10" strokeDasharray={`${(avgScore ?? 0) * 3.27} 327`} strokeLinecap="round" />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-2xl font-bold text-text-dark">{avgScore ?? "—"}%</span>
+                  </div>
+                </div>
+                <div className="text-sm text-text-muted">
+                  <p>Score moyen calculé sur l&apos;ensemble des fiches du référentiel.</p>
+                  <p className="mt-2">
+                    {avgScore != null && avgScore >= 80 && "🟢 Excellent niveau de complétude"}
+                    {avgScore != null && avgScore >= 50 && avgScore < 80 && "🟡 Niveau correct, améliorations possibles"}
+                    {avgScore != null && avgScore < 50 && "🔴 Complétude insuffisante"}
+                  </p>
+                </div>
+              </div>
             </div>
           </FadeInView>
 
-          {/* Stats row */}
-          <FadeInView delay={0.7}>
-            <div className="flex justify-center gap-12 mt-16">
-              {[
-                { value: "1 584", label: "Fiches ROME" },
-                { value: "5", label: "Agents IA" },
-                { value: "90", label: "Variantes/fiche" },
-              ].map((stat, i) => (
-                <div key={i} className="text-center">
-                  <div className="text-2xl md:text-3xl font-bold text-white">{stat.value}</div>
-                  <div className="text-xs text-white/30 mt-1">{stat.label}</div>
-                </div>
-              ))}
+          <FadeInView>
+            <div className="sojai-card p-6">
+              <h3 className="text-lg font-semibold text-text-dark mb-4">Répartition par statut</h3>
+              <div className="space-y-3">
+                <StatBar label="Brouillons" value={stats?.brouillons ?? 0} total={stats?.total ?? 1} color="bg-stone-400" />
+                <StatBar label="En validation" value={stats?.en_validation ?? 0} total={stats?.total ?? 1} color="bg-amber-500" />
+                <StatBar label="Publiées" value={stats?.publiees ?? 0} total={stats?.total ?? 1} color="bg-emerald-500" />
+                <StatBar label="Archivées" value={stats?.archivees ?? 0} total={stats?.total ?? 1} color="bg-gray-400" />
+              </div>
             </div>
           </FadeInView>
         </div>
 
-        {/* Bottom fade */}
-        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#0A0A0A] to-transparent" />
-      </section>
-
-      {/* 3 Cards */}
-      <section className="py-24 px-6 bg-[#0A0A0A] relative">
-        <div className="max-w-5xl mx-auto">
+        {/* Recent activity + quick links */}
+        <div className="grid md:grid-cols-3 gap-6">
           <FadeInView>
-            <h2 className="text-center text-3xl font-bold text-white mb-4">Tout commence ici</h2>
-            <p className="text-center text-white/40 mb-16 max-w-lg mx-auto">Trois espaces pour piloter l&apos;ensemble du référentiel métiers.</p>
-          </FadeInView>
-
-          <StaggerContainer stagger={0.12} className="grid md:grid-cols-3 gap-6">
-            {[
-              {
-                href: "/actions",
-                icon: (
-                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                ),
-                title: "Actions",
-                desc: "Enrichissements IA, publications en masse, exports.",
-                gradient: "from-violet-600 to-indigo-600",
-                glow: "shadow-violet-500/20",
-              },
-              {
-                href: "/fiches",
-                icon: (
-                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                ),
-                title: "Fiches",
-                desc: "Toutes les fiches métiers du référentiel ROME.",
-                gradient: "from-pink-600 to-rose-600",
-                glow: "shadow-pink-500/20",
-              },
-            ].map((card, i) => (
-              <StaggerItem key={i}>
-                <Link href={card.href}>
-                  <TiltCard className="group">
-                    <div className={`relative p-8 rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm min-h-[240px] flex flex-col justify-center text-center transition-all duration-500 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-2xl ${card.glow}`}>
-                      <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${card.gradient} flex items-center justify-center mx-auto mb-5 text-white shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                        {card.icon}
-                      </div>
-                      <h3 className="text-lg font-bold text-white mb-2 group-hover:text-violet-300 transition-colors">{card.title}</h3>
-                      <p className="text-sm text-white/40 leading-relaxed">{card.desc}</p>
-                      <div className="mt-4 text-xs text-white/20 group-hover:text-white/40 transition-colors">
-                        Ouvrir →
+            <div className="sojai-card p-6 md:col-span-2">
+              <h3 className="text-lg font-semibold text-text-dark mb-4">Dernières actions</h3>
+              {logs.length === 0 ? (
+                <p className="text-text-muted text-sm">Aucune action récente.</p>
+              ) : (
+                <div className="space-y-3">
+                  {logs.map((log) => (
+                    <div key={log.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                      <span className="text-xl">{EVT_ICONS[log.type_evenement] || "📌"}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-text-dark truncate">{log.description}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          {log.code_rome && (
+                            <Link href={`/fiches/${log.code_rome}`} className="text-xs text-indigo-600 hover:underline font-semibold">
+                              {log.code_rome}
+                            </Link>
+                          )}
+                          <span className="text-xs text-text-muted">
+                            {log.timestamp ? new Date(log.timestamp).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : ""}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </TiltCard>
-                </Link>
-              </StaggerItem>
-            ))}
-          </StaggerContainer>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="py-8 bg-[#0A0A0A] border-t border-white/[0.04]">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="font-bold text-lg bg-gradient-to-r from-violet-400 to-pink-400 bg-clip-text text-transparent">Agents Métiers</div>
-            <div className="flex gap-8 text-sm">
-              <Link href="/actions" className="text-white/30 hover:text-white/70 transition-colors font-medium">Actions</Link>
-              <Link href="/fiches" className="text-white/30 hover:text-white/70 transition-colors font-medium">Fiches</Link>
+                  ))}
+                </div>
+              )}
             </div>
-          </div>
-          <div className="text-center text-xs text-white/15 mt-4">
-            © 2026 JAE Fondation • Agents Métiers
-          </div>
+          </FadeInView>
+
+          <FadeInView>
+            <div className="sojai-card p-6">
+              <h3 className="text-lg font-semibold text-text-dark mb-4">Accès rapide</h3>
+              <div className="space-y-3">
+                <Link href="/fiches" className="flex items-center gap-3 p-3 rounded-lg hover:bg-indigo-50 transition-colors group">
+                  <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600 group-hover:bg-indigo-200 transition-colors">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-text-dark">Fiches métiers</p>
+                    <p className="text-xs text-text-muted">{stats?.total ?? 0} fiches</p>
+                  </div>
+                </Link>
+                <Link href="/actions" className="flex items-center gap-3 p-3 rounded-lg hover:bg-purple-50 transition-colors group">
+                  <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center text-purple-600 group-hover:bg-purple-200 transition-colors">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-text-dark">Actions IA</p>
+                    <p className="text-xs text-text-muted">Enrichir, valider, publier</p>
+                  </div>
+                </Link>
+              </div>
+            </div>
+          </FadeInView>
         </div>
-      </footer>
+      </div>
     </main>
   );
 }

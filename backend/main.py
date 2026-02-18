@@ -415,6 +415,8 @@ async def get_fiches(
     statut: Optional[str] = Query(None, description="Filtrer par statut"),
     search: Optional[str] = Query(None, description="Recherche textuelle fuzzy"),
     search_competences: Optional[str] = Query(None, description="Recherche par compétences"),
+    sort_by: Optional[str] = Query(None, description="Tri: score, date_maj, nom"),
+    sort_order: Optional[str] = Query("desc", description="Ordre: asc ou desc"),
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0)
 ):
@@ -438,6 +440,16 @@ async def get_fiches(
         # Recherche par compétences
         if search_competences:
             fiches = search_fiches_competences(fiches, search_competences)
+
+        # Server-side sorting
+        if sort_by == "score":
+            fiches_scored = [(f, calc_score_completude(f)["score"]) for f in fiches]
+            fiches_scored.sort(key=lambda x: x[1], reverse=(sort_order != "asc"))
+            fiches = [f for f, _ in fiches_scored]
+        elif sort_by == "date_maj":
+            fiches.sort(key=lambda f: f.metadata.date_maj or datetime.min, reverse=(sort_order != "asc"))
+        elif sort_by == "nom":
+            fiches.sort(key=lambda f: (f.nom_epicene or f.nom_masculin or "").lower(), reverse=(sort_order == "desc"))
 
         # Pagination
         total = len(fiches)
