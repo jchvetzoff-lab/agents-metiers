@@ -305,9 +305,20 @@ export interface AuditLog {
 
 class ApiClient {
   private baseUrl: string;
+  private cache = new Map<string, { data: unknown; ts: number }>();
+  private cacheTTL = 5 * 60 * 1000; // 5 min
 
   constructor(baseUrl: string = API_BASE_URL) {
     this.baseUrl = baseUrl;
+  }
+
+  private getCached<T>(key: string): T | null {
+    const entry = this.cache.get(key);
+    if (entry && Date.now() - entry.ts < this.cacheTTL) return entry.data as T;
+    return null;
+  }
+  private setCache(key: string, data: unknown) {
+    this.cache.set(key, { data, ts: Date.now() });
   }
 
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
@@ -512,20 +523,35 @@ class ApiClient {
   }
 
   async getRegionalData(codeRome: string, region: string): Promise<RegionalData> {
-    return this.request<RegionalData>(`/api/fiches/${codeRome}/regional?region=${region}`);
+    const key = `regional:${codeRome}:${region}`;
+    const cached = this.getCached<RegionalData>(key);
+    if (cached) return cached;
+    const data = await this.request<RegionalData>(`/api/fiches/${codeRome}/regional?region=${region}`);
+    this.setCache(key, data);
+    return data;
   }
 
   async getRecrutements(codeRome: string, region?: string): Promise<RecrutementsData> {
+    const key = `recrutements:${codeRome}:${region || ""}`;
+    const cached = this.getCached<RecrutementsData>(key);
+    if (cached) return cached;
     const params = region ? `?region=${region}` : "";
-    return this.request<RecrutementsData>(`/api/fiches/${codeRome}/recrutements${params}`);
+    const data = await this.request<RecrutementsData>(`/api/fiches/${codeRome}/recrutements${params}`);
+    this.setCache(key, data);
+    return data;
   }
 
   async getOffres(codeRome: string, region?: string, limit?: number): Promise<OffresData> {
+    const key = `offres:${codeRome}:${region || ""}:${limit || ""}`;
+    const cached = this.getCached<OffresData>(key);
+    if (cached) return cached;
     const searchParams = new URLSearchParams();
     if (region) searchParams.set("region", region);
     if (limit != null) searchParams.set("limit", limit.toString());
     const query = searchParams.toString() ? `?${searchParams.toString()}` : "";
-    return this.request<OffresData>(`/api/fiches/${codeRome}/offres${query}`);
+    const data = await this.request<OffresData>(`/api/fiches/${codeRome}/offres${query}`);
+    this.setCache(key, data);
+    return data;
   }
 
   // ==================== ROME SYNC ====================
