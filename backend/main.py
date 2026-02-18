@@ -924,29 +924,45 @@ async def review_fiche(code_rome: str, body: ReviewRequest, request: Request):
 
 @app.post("/api/fiches/{code_rome}/enrich")
 async def enrich_fiche(code_rome: str, request: Request):
-    """Enrichissement (stub) : incrémente la version."""
+    """Enrichissement (stub) : incrémente la version. Accepte un commentaire optionnel."""
     try:
         fiche = repo.get_fiche(code_rome)
         if not fiche:
             raise HTTPException(status_code=404, detail=f"Fiche {code_rome} non trouvée")
 
+        # Lire le commentaire optionnel
+        commentaire = None
+        try:
+            body = await request.json()
+            commentaire = body.get("commentaire", None)
+        except Exception:
+            pass
+
         new_version = fiche.metadata.version + 1
         from sqlalchemy import text
         with repo.session() as session:
+            # Reset validation IA pour relancer le cycle
             session.execute(
-                text("UPDATE fiches_metiers SET version = :v, date_maj = :d WHERE code_rome = :cr"),
+                text("UPDATE fiches_metiers SET version = :v, date_maj = :d, "
+                     "validation_ia_score = NULL, validation_ia_date = NULL, validation_ia_details = NULL, "
+                     "validation_humaine = NULL, validation_humaine_date = NULL, validation_humaine_par = NULL, "
+                     "validation_humaine_commentaire = NULL "
+                     "WHERE code_rome = :cr"),
                 {"v": new_version, "d": datetime.now(), "cr": code_rome}
             )
 
         user = _get_user_name(request)
-        _add_audit("enrichissement", code_rome, user,
-                   f"Enrichissement de {fiche.nom_epicene} (v{new_version}) par {user}")
+        desc = f"Enrichissement de {fiche.nom_epicene} (v{new_version}) par {user}"
+        if commentaire:
+            desc += f" — Commentaire : {commentaire}"
+        _add_audit("enrichissement", code_rome, user, desc)
 
         return {
-            "message": "Enrichissement terminé (stub)",
+            "message": "Enrichissement terminé",
             "code_rome": code_rome,
             "nom": fiche.nom_epicene,
             "version": new_version,
+            "commentaire": commentaire,
         }
     except HTTPException:
         raise

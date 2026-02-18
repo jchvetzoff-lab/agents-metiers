@@ -273,11 +273,17 @@ export default function FicheDetailPage() {
     setTimeout(() => setActionMessage(null), 5000);
   }
 
-  async function handleEnrich() {
+  const [enrichComment, setEnrichComment] = useState("");
+  const [showEnrichComment, setShowEnrichComment] = useState(false);
+
+  async function handleEnrich(withComment = false) {
     setActionLoading("enrich");
     try {
-      const res = await api.enrichFiche(codeRome);
-      showActionMessage("success", `Enrichissement termine (v${res.version})`);
+      const comment = withComment && enrichComment.trim() ? enrichComment.trim() : undefined;
+      const res = await api.enrichFiche(codeRome, comment);
+      showActionMessage("success", `Enrichissement terminé (v${res.version})${comment ? " — commentaire pris en compte" : ""}`);
+      setEnrichComment("");
+      setShowEnrichComment(false);
       await reloadFiche();
     } catch (err: any) {
       showActionMessage("error", err.message || "Erreur lors de l'enrichissement");
@@ -1572,14 +1578,14 @@ export default function FicheDetailPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     {/* Brouillon : uniquement Enrichir */}
                     {fiche.statut === "brouillon" && (
-                      <button onClick={handleEnrich} disabled={actionLoading !== null}
+                      <button onClick={() => handleEnrich(false)} disabled={actionLoading !== null}
                         className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-indigo-300 text-indigo-600 rounded-full text-xs font-medium hover:bg-indigo-50 transition disabled:opacity-40 disabled:cursor-wait">
                         {actionLoading === "enrich" ? <span className="w-3 h-3 border-2 border-indigo-300 border-t-indigo-600 rounded-full animate-spin" /> : "✨"}
                         Enrichir
                       </button>
                     )}
 
-                    {/* En validation (enrichi) : Valider (IA) + Ré-enrichir */}
+                    {/* En validation (enrichi) : Valider (IA) + Ré-enrichir avec commentaire */}
                     {fiche.statut === "en_validation" && (fiche.validation_ia_score == null || fiche.validation_ia_score < 70) && fiche.validation_humaine !== "approuvee" && (
                       <>
                         <button onClick={handleValidate} disabled={actionLoading !== null}
@@ -1587,10 +1593,9 @@ export default function FicheDetailPage() {
                           {actionLoading === "validate" ? <span className="w-3 h-3 border-2 border-amber-300 border-t-amber-600 rounded-full animate-spin" /> : "🤖"}
                           Valider (IA)
                         </button>
-                        <button onClick={handleEnrich} disabled={actionLoading !== null}
-                          className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-indigo-300 text-indigo-600 rounded-full text-xs font-medium hover:bg-indigo-50 transition disabled:opacity-40 disabled:cursor-wait">
-                          {actionLoading === "enrich" ? <span className="w-3 h-3 border-2 border-indigo-300 border-t-indigo-600 rounded-full animate-spin" /> : "✨"}
-                          Ré-enrichir
+                        <button onClick={() => setShowEnrichComment(!showEnrichComment)}
+                          className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-indigo-300 text-indigo-600 rounded-full text-xs font-medium hover:bg-indigo-50 transition">
+                          ✨ Ré-enrichir
                         </button>
                       </>
                     )}
@@ -1611,10 +1616,9 @@ export default function FicheDetailPage() {
                           {actionLoading === "approve" ? <span className="w-3 h-3 border-2 border-green-300 border-t-green-600 rounded-full animate-spin" /> : "✅"}
                           Approuver
                         </button>
-                        <button onClick={handleEnrich} disabled={actionLoading !== null}
-                          className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-indigo-300 text-indigo-600 rounded-full text-xs font-medium hover:bg-indigo-50 transition disabled:opacity-40 disabled:cursor-wait">
-                          {actionLoading === "enrich" ? <span className="w-3 h-3 border-2 border-indigo-300 border-t-indigo-600 rounded-full animate-spin" /> : "✨"}
-                          Ré-enrichir
+                        <button onClick={() => setShowEnrichComment(!showEnrichComment)}
+                          className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-indigo-300 text-indigo-600 rounded-full text-xs font-medium hover:bg-indigo-50 transition">
+                          ✨ Ré-enrichir
                         </button>
                         <button onClick={async () => {
                           const com = prompt("Commentaire de rejet (optionnel) :");
@@ -1640,6 +1644,33 @@ export default function FicheDetailPage() {
                         {actionLoading === "publish" ? <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "🚀"}
                         Publier
                       </button>
+                    )}
+
+                    {/* Zone commentaire ré-enrichissement */}
+                    {showEnrichComment && fiche.statut !== "publiee" && (
+                      <div className="w-full mt-3 p-4 bg-indigo-50 border border-indigo-200 rounded-xl">
+                        <label className="block text-xs font-semibold text-indigo-700 mb-2">
+                          Instructions pour le ré-enrichissement (optionnel)
+                        </label>
+                        <textarea
+                          value={enrichComment}
+                          onChange={(e) => setEnrichComment(e.target.value)}
+                          placeholder="Ex : il manque les diplômes requis, ajouter les conditions de travail spécifiques..."
+                          rows={3}
+                          className="w-full px-3 py-2 border border-indigo-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 resize-none"
+                        />
+                        <div className="flex items-center gap-2 mt-3">
+                          <button onClick={() => handleEnrich(true)} disabled={actionLoading !== null}
+                            className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white rounded-full text-xs font-semibold hover:bg-indigo-700 transition disabled:opacity-40 disabled:cursor-wait">
+                            {actionLoading === "enrich" ? <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "✨"}
+                            Lancer le ré-enrichissement
+                          </button>
+                          <button onClick={() => { setShowEnrichComment(false); setEnrichComment(""); }}
+                            className="px-4 py-2 text-gray-500 text-xs font-medium hover:text-gray-700 transition">
+                            Annuler
+                          </button>
+                        </div>
+                      </div>
                     )}
 
                     {/* Publié : uniquement Variantes */}
