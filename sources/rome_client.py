@@ -1,8 +1,9 @@
 """
 Client pour le référentiel ROME (Répertoire Opérationnel des Métiers et des Emplois).
+API v1 mise à jour (rome-metiers).
 """
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 import logging
 
@@ -15,15 +16,11 @@ from config import get_config
 class ROMEClient:
     """
     Client pour accéder au référentiel ROME via l'API France Travail.
-
-    Le ROME est le référentiel officiel des métiers en France, maintenu par
-    France Travail (ex Pôle Emploi). Il contient environ 530 fiches métiers.
-
-    Documentation API :
-    https://francetravail.io/data/api/rome
+    Nouvelle API: rome-metiers/v1
     """
 
-    BASE_URL = "https://api.francetravail.io/partenaire/rome/v1"
+    BASE_URL = "https://api.francetravail.io/partenaire/rome-metiers/v1/metiers"
+    AUTH_URL = "https://entreprise.francetravail.fr/connexion/oauth2/access_token"
 
     def __init__(
         self,
@@ -31,14 +28,6 @@ class ROMEClient:
         client_secret: Optional[str] = None,
         logger: Optional[logging.Logger] = None
     ):
-        """
-        Initialise le client ROME.
-
-        Args:
-            client_id: ID client France Travail (optionnel, sinon config)
-            client_secret: Secret client France Travail (optionnel, sinon config)
-            logger: Logger optionnel
-        """
         config = get_config()
         self.client_id = client_id or config.api.france_travail_client_id
         self.client_secret = client_secret or config.api.france_travail_client_secret
@@ -55,13 +44,13 @@ class ROMEClient:
 
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                "https://entreprise.francetravail.fr/connexion/oauth2/access_token",
+                self.AUTH_URL,
                 params={"realm": "/partenaire"},
                 data={
                     "grant_type": "client_credentials",
                     "client_id": self.client_id,
                     "client_secret": self.client_secret,
-                    "scope": "api_romev1 nomenclatureRome"
+                    "scope": "api_rome-metiersv1 nomenclatureRome"
                 },
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
                 timeout=self.timeout
@@ -69,8 +58,6 @@ class ROMEClient:
             response.raise_for_status()
             data = response.json()
             self._access_token = data["access_token"]
-            # Token valide 1500 secondes, on prend une marge
-            from datetime import timedelta
             self._token_expiry = datetime.now() + timedelta(seconds=1400)
             return self._access_token
 
@@ -79,7 +66,7 @@ class ROMEClient:
         method: str,
         endpoint: str,
         params: Optional[Dict] = None
-    ) -> Dict:
+    ) -> Any:
         """Effectue une requête authentifiée."""
         token = await self._get_access_token()
 
@@ -99,15 +86,7 @@ class ROMEClient:
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     async def get_metier(self, code_rome: str) -> Optional[Dict]:
-        """
-        Récupère les informations d'un métier par son code ROME.
-
-        Args:
-            code_rome: Code ROME (ex: "M1805")
-
-        Returns:
-            Dictionnaire avec les informations du métier
-        """
+        """Récupère les informations d'un métier par son code ROME."""
         try:
             data = await self._request("GET", f"metier/{code_rome}")
             return self._normaliser_metier(data)
@@ -118,158 +97,141 @@ class ROMEClient:
             raise
 
     async def get_all_metiers(self) -> List[Dict]:
-        """
-        Récupère la liste de tous les métiers du ROME.
-
-        Returns:
-            Liste des métiers
-        """
+        """Récupère la liste de tous les métiers du ROME."""
         data = await self._request("GET", "metier")
         return [self._normaliser_metier(m) for m in data]
 
     async def get_competences(self, code_rome: str) -> List[str]:
-        """
-        Récupère les compétences associées à un métier.
-
-        Args:
-            code_rome: Code ROME
-
-        Returns:
-            Liste des compétences
-        """
+        """Récupère les compétences depuis la fiche complète."""
         try:
-            data = await self._request("GET", f"metier/{code_rome}/competence")
-            return [c.get("libelle", "") for c in data if c.get("libelle")]
+            data = await self._request("GET", f"metier/{code_rome}")
+            competences = set()
+            for appellation in data.get("appellations", []):
+                for cc in appellation.get("competencesCles", []):
+                    comp = cc.get("competence", {})
+                    if comp.get("libelle") and comp.get("type") == "COMPETENCE-DETAILLEE":
+                        competences.add(comp["libelle"])
+            return list(competences)
         except Exception as e:
             self.logger.error(f"Erreur récupération compétences {code_rome}: {e}")
             return []
 
     async def get_appellations(self, code_rome: str) -> List[Dict]:
-        """
-        Récupère les appellations (variantes de noms) d'un métier.
-
-        Args:
-            code_rome: Code ROME
-
-        Returns:
-            Liste des appellations avec leurs libellés
-        """
+        """Récupère les appellations depuis la fiche complète."""
         try:
-            data = await self._request("GET", f"metier/{code_rome}/appellation")
+            data = await self._request("GET", f"metier/{code_rome}")
             return [
                 {
                     "code": a.get("code"),
                     "libelle": a.get("libelle"),
                     "libelle_court": a.get("libelleCourt")
                 }
-                for a in data
+                for a in data.get("appellations", [])
             ]
         except Exception as e:
             self.logger.error(f"Erreur récupération appellations {code_rome}: {e}")
             return []
 
     async def get_contextes_travail(self, code_rome: str) -> List[str]:
-        """
-        Récupère les contextes de travail d'un métier.
-
-        Args:
-            code_rome: Code ROME
-
-        Returns:
-            Liste des contextes de travail
-        """
+        """Récupère les contextes de travail depuis la fiche complète."""
         try:
-            data = await self._request("GET", f"metier/{code_rome}/contexte-travail")
-            return [c.get("libelle", "") for c in data if c.get("libelle")]
+            data = await self._request("GET", f"metier/{code_rome}")
+            contextes = []
+            for ctx in data.get("contextesTravail", []):
+                if ctx.get("libelle"):
+                    contextes.append(ctx["libelle"])
+            return contextes
         except Exception as e:
             self.logger.error(f"Erreur récupération contextes {code_rome}: {e}")
             return []
 
     async def get_environnements(self, code_rome: str) -> List[str]:
-        """
-        Récupère les environnements de travail d'un métier.
-
-        Args:
-            code_rome: Code ROME
-
-        Returns:
-            Liste des environnements
-        """
+        """Récupère les environnements depuis les contextes de travail."""
         try:
-            data = await self._request("GET", f"metier/{code_rome}/environnement-travail")
-            return [e.get("libelle", "") for e in data if e.get("libelle")]
+            data = await self._request("GET", f"metier/{code_rome}")
+            envs = []
+            for ctx in data.get("contextesTravail", []):
+                if ctx.get("categorie") == "ENVIRONNEMENT" and ctx.get("libelle"):
+                    envs.append(ctx["libelle"])
+            return envs
         except Exception as e:
             self.logger.error(f"Erreur récupération environnements {code_rome}: {e}")
             return []
 
     async def search_metiers(self, query: str, limit: int = 20) -> List[Dict]:
-        """
-        Recherche des métiers par mot-clé.
-
-        Args:
-            query: Terme de recherche
-            limit: Nombre max de résultats
-
-        Returns:
-            Liste des métiers correspondants
-        """
+        """Recherche des métiers par mot-clé."""
         try:
-            data = await self._request(
-                "GET",
-                "metier",
-                params={"motCle": query}
-            )
+            data = await self._request("GET", "metier", params={"motCle": query})
             return [self._normaliser_metier(m) for m in data[:limit]]
         except Exception as e:
             self.logger.error(f"Erreur recherche métiers '{query}': {e}")
             return []
 
     async def get_metiers_proches(self, code_rome: str) -> List[str]:
-        """
-        Récupère les codes ROME des métiers proches.
-
-        Args:
-            code_rome: Code ROME
-
-        Returns:
-            Liste des codes ROME des métiers connexes
-        """
+        """Récupère les codes ROME des métiers proches."""
         try:
-            data = await self._request("GET", f"metier/{code_rome}/metier-proche")
-            return [m.get("code") for m in data if m.get("code")]
+            data = await self._request("GET", f"metier/{code_rome}")
+            proches = []
+            for m in data.get("metiersProches", []):
+                if m.get("code"):
+                    proches.append(m["code"])
+            return proches
         except Exception as e:
             self.logger.error(f"Erreur récupération métiers proches {code_rome}: {e}")
             return []
 
     async def get_fiche_complete(self, code_rome: str) -> Optional[Dict]:
-        """
-        Récupère toutes les informations d'un métier en une fois.
+        """Récupère toutes les informations d'un métier (tout est dans un seul appel maintenant)."""
+        try:
+            data = await self._request("GET", f"metier/{code_rome}")
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                return None
+            raise
 
-        Args:
-            code_rome: Code ROME
+        metier = self._normaliser_metier(data)
 
-        Returns:
-            Dictionnaire complet du métier
-        """
-        metier = await self.get_metier(code_rome)
-        if not metier:
-            return None
+        # Extraire competences de toutes les appellations
+        competences = set()
+        savoirs = set()
+        for appellation in data.get("appellations", []):
+            for cc in appellation.get("competencesCles", []):
+                comp = cc.get("competence", {})
+                libelle = comp.get("libelle")
+                if not libelle:
+                    continue
+                if comp.get("type") == "COMPETENCE-DETAILLEE":
+                    competences.add(libelle)
+                elif comp.get("type") == "SAVOIR":
+                    savoirs.add(libelle)
 
-        # Récupérer les informations complémentaires en parallèle
-        results = await asyncio.gather(
-            self.get_competences(code_rome),
-            self.get_appellations(code_rome),
-            self.get_contextes_travail(code_rome),
-            self.get_environnements(code_rome),
-            self.get_metiers_proches(code_rome),
-            return_exceptions=True
-        )
+        metier["competences"] = list(competences)
+        metier["savoirs"] = list(savoirs)
 
-        metier["competences"] = results[0] if not isinstance(results[0], Exception) else []
-        metier["appellations"] = results[1] if not isinstance(results[1], Exception) else []
-        metier["contextes_travail"] = results[2] if not isinstance(results[2], Exception) else []
-        metier["environnements"] = results[3] if not isinstance(results[3], Exception) else []
-        metier["metiers_proches"] = results[4] if not isinstance(results[4], Exception) else []
+        # Appellations
+        metier["appellations"] = [
+            {"code": a.get("code"), "libelle": a.get("libelle"), "libelle_court": a.get("libelleCourt")}
+            for a in data.get("appellations", [])
+        ]
+
+        # Contextes de travail
+        contextes = []
+        environnements = []
+        for ctx in data.get("contextesTravail", []):
+            lib = ctx.get("libelle", "")
+            if not lib:
+                continue
+            cat = ctx.get("categorie", "")
+            if cat == "ENVIRONNEMENT":
+                environnements.append(lib)
+            else:
+                contextes.append(lib)
+
+        metier["contextes_travail"] = contextes
+        metier["environnements"] = environnements
+
+        # Metiers proches
+        metier["metiers_proches"] = [m.get("code") for m in data.get("metiersProches", []) if m.get("code")]
 
         return metier
 
@@ -279,24 +241,20 @@ class ROMEClient:
             "code_rome": data.get("code"),
             "nom": data.get("libelle"),
             "definition": data.get("definition"),
-            "acces_metier": data.get("accesMetier"),
-            "conditions_exercice": data.get("conditionsExercice")
+            "acces_metier": data.get("accesEmploi"),
+            "conditions_exercice": data.get("conditionsExercice"),
+            "riasec_majeur": data.get("riasecMajeur"),
+            "riasec_mineur": data.get("riasecMineur"),
+            "transition_ecologique": data.get("transitionEcologique"),
+            "transition_numerique": data.get("transitionNumerique"),
         }
 
     async def import_referentiel_complet(self) -> List[Dict]:
-        """
-        Importe le référentiel ROME complet.
-
-        Returns:
-            Liste de tous les métiers avec leurs informations complètes
-        """
+        """Importe le référentiel ROME complet."""
         self.logger.info("Début import référentiel ROME complet...")
-
-        # Récupérer la liste des métiers
         metiers = await self.get_all_metiers()
         self.logger.info(f"{len(metiers)} métiers trouvés")
 
-        # Récupérer les détails de chaque métier (par lots)
         fiches_completes = []
         batch_size = 10
 
