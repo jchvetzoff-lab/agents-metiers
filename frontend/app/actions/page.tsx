@@ -375,6 +375,38 @@ function TabHistorique() {
   // Debounced search
   const [searchInput, setSearchInput] = useState("");
   const [agentInput, setAgentInput] = useState("");
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [agentFocused, setAgentFocused] = useState(false);
+
+  // Suggestions: extract unique agents and code_rome+description from logs
+  const [allAgents, setAllAgents] = useState<string[]>([]);
+  const [allFiches, setAllFiches] = useState<{ code_rome: string; description: string }[]>([]);
+
+  useEffect(() => {
+    // Load a big batch of logs to extract suggestions
+    api.getAuditLogs({ limit: 200 }).then(res => {
+      const agents = [...new Set(res.logs.map(l => l.agent).filter(Boolean) as string[])];
+      setAllAgents(agents);
+      const ficheMap = new Map<string, string>();
+      for (const l of res.logs) {
+        if (l.code_rome && !ficheMap.has(l.code_rome)) {
+          ficheMap.set(l.code_rome, l.description || "");
+        }
+      }
+      setAllFiches(Array.from(ficheMap, ([code_rome, description]) => ({ code_rome, description })));
+    }).catch(() => {});
+  }, []);
+
+  const searchSuggestions = searchInput.trim().length > 0
+    ? allFiches.filter(f =>
+        f.code_rome.toLowerCase().includes(searchInput.toLowerCase()) ||
+        f.description.toLowerCase().includes(searchInput.toLowerCase())
+      ).slice(0, 6)
+    : [];
+
+  const agentSuggestions = agentInput.trim().length > 0
+    ? allAgents.filter(a => a.toLowerCase().includes(agentInput.toLowerCase())).slice(0, 6)
+    : [];
 
   useEffect(() => {
     const t = setTimeout(() => setSearch(searchInput), 400);
@@ -398,17 +430,46 @@ function TabHistorique() {
       <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
         {/* Row 1: Search + Agent */}
         <div className="grid md:grid-cols-2 gap-4">
-          <div>
+          <div className="relative">
             <label className="text-xs font-medium text-gray-500 mb-1 block">Recherche (code ROME ou métier)</label>
             <input type="text" placeholder="Ex : M1805 ou développeur"
-              value={searchInput} onChange={e => setSearchInput(e.target.value)}
+              value={searchInput}
+              onChange={e => setSearchInput(e.target.value)}
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
               className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500" />
+            {searchFocused && searchSuggestions.length > 0 && (
+              <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                {searchSuggestions.map(s => (
+                  <button key={s.code_rome} type="button"
+                    onMouseDown={() => { setSearchInput(s.code_rome); setSearchFocused(false); }}
+                    className="w-full text-left px-4 py-2.5 hover:bg-indigo-50 transition flex items-center gap-2 text-sm">
+                    <span className="font-mono text-indigo-600 font-medium text-xs shrink-0">{s.code_rome}</span>
+                    <span className="text-gray-600 truncate">{s.description}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
-          <div>
+          <div className="relative">
             <label className="text-xs font-medium text-gray-500 mb-1 block">Utilisateur / Agent</label>
             <input type="text" placeholder="Ex : Jérémie, Agent IA"
-              value={agentInput} onChange={e => setAgentInput(e.target.value)}
+              value={agentInput}
+              onChange={e => setAgentInput(e.target.value)}
+              onFocus={() => setAgentFocused(true)}
+              onBlur={() => setTimeout(() => setAgentFocused(false), 200)}
               className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500" />
+            {agentFocused && agentSuggestions.length > 0 && (
+              <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                {agentSuggestions.map(a => (
+                  <button key={a} type="button"
+                    onMouseDown={() => { setAgentInput(a); setAgentFocused(false); }}
+                    className="w-full text-left px-4 py-2.5 hover:bg-indigo-50 transition text-sm text-gray-700">
+                    {a}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
