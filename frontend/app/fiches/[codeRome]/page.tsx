@@ -101,20 +101,28 @@ function ChartTooltip({ active, payload, label, locale = "fr-FR" }: any) {
   );
 }
 
-function BulletList({ items, color = PURPLE }: { items: string[]; color?: string }) {
+/** Normalise un item qui peut etre string ou {nom: string, ...} en string affichable */
+function toLabel(item: unknown): string {
+  if (typeof item === "string") return item;
+  if (item && typeof item === "object" && "nom" in item) return String((item as Record<string, unknown>).nom);
+  if (item && typeof item === "object") return Object.values(item as Record<string, unknown>).filter(v => typeof v === "string").join(" — ") || JSON.stringify(item);
+  return String(item);
+}
+
+function BulletList({ items, color = PURPLE }: { items: unknown[]; color?: string }) {
   return (
     <ul className="space-y-2.5">
       {items.map((item, i) => (
         <li key={i} className="flex items-start gap-3">
           <span className="w-2 h-2 rounded-full shrink-0 mt-2" style={{ backgroundColor: color }} />
-          <span className="text-[15px] text-gray-700 leading-relaxed">{item}</span>
+          <span className="text-[15px] text-gray-700 leading-relaxed">{toLabel(item)}</span>
         </li>
       ))}
     </ul>
   );
 }
 
-function NumberedList({ items, color = PURPLE }: { items: string[]; color?: string }) {
+function NumberedList({ items, color = PURPLE }: { items: unknown[]; color?: string }) {
   return (
     <div className="space-y-3">
       {items.map((item, i) => (
@@ -122,7 +130,7 @@ function NumberedList({ items, color = PURPLE }: { items: string[]; color?: stri
           <span className="flex items-center justify-center w-7 h-7 rounded-lg text-white text-xs font-bold shrink-0 mt-0.5" style={{ backgroundColor: color }}>
             {i + 1}
           </span>
-          <span className="text-[15px] text-gray-700 leading-relaxed pt-0.5">{item}</span>
+          <span className="text-[15px] text-gray-700 leading-relaxed pt-0.5">{toLabel(item)}</span>
         </div>
       ))}
     </div>
@@ -653,8 +661,9 @@ export default function FicheDetailPage() {
         y += 6;
       }
 
-      function bulletList(items: string[], color: RGB = C.purple) {
-        for (const item of items) {
+      function bulletList(items: unknown[], color: RGB = C.purple) {
+        for (const rawItem of items) {
+          const item = typeof rawItem === "string" ? rawItem : (rawItem as Record<string, unknown>)?.nom as string || String(rawItem);
           ensureSpace(9);
           fill(color);
           pdf.circle(ML + 6, y - 1.2, 1.5, "F");
@@ -733,12 +742,13 @@ export default function FicheDetailPage() {
         y += 6;
       }
 
-      function tags(items: string[]) {
+      function tags(items: unknown[]) {
         ensureSpace(10);
         let x = ML + 2;
         pdf.setFontSize(8);
         pdf.setFont("helvetica", "normal");
-        for (const tag of items) {
+        for (const rawTag of items) {
+          const tag = typeof rawTag === "string" ? rawTag : (rawTag as Record<string, unknown>)?.nom as string || String(rawTag);
           const tw = pdf.getTextWidth(tag) + 12;
           if (x + tw > W - MR) { x = ML + 2; y += 9; ensureSpace(9); }
           fill(C.gray100);
@@ -2579,7 +2589,7 @@ export default function FicheDetailPage() {
                     {dCompetencesTransversales.map((c, i) => (
                       <div key={i} className="flex items-center gap-3 p-3.5 rounded-xl bg-[#FFF5F7] border border-[#FFE0E6]/60">
                         <span className="w-8 h-8 rounded-full bg-pink-500 text-white flex items-center justify-center text-xs font-bold shrink-0">✓</span>
-                        <span className="text-[15px] text-gray-700">{c}</span>
+                        <span className="text-[15px] text-gray-700">{toLabel(c)}</span>
                       </div>
                     ))}
                   </div>
@@ -2623,12 +2633,13 @@ export default function FicheDetailPage() {
                       {fiche.formations && fiche.formations.length > 0 && (
                         <div className="space-y-2 mt-2">
                           {fiche.formations.map((f, i) => {
-                            const levelMatch = f.match(/bac\s*\+\s*(\d)/i);
-                            const isMaster = /master|ingenieur|ingénieur|doctorat/i.test(f);
-                            const isLicence = /licence|bachelor|but\b/i.test(f);
-                            const isBTS = /bts|dut|deust/i.test(f);
-                            const isBac = /bac\s+pro|baccalauréat|bp\b/i.test(f);
-                            const isCAP = /cap\b|bep\b|titre\s+professionnel/i.test(f);
+                            const label = typeof f === "string" ? f : (f as Record<string, unknown>)?.nom as string || JSON.stringify(f);
+                            const levelMatch = label.match(/bac\s*\+\s*(\d)/i);
+                            const isMaster = /master|ingenieur|ingénieur|doctorat/i.test(label);
+                            const isLicence = /licence|bachelor|but\b/i.test(label);
+                            const isBTS = /bts|dut|deust/i.test(label);
+                            const isBac = /bac\s+pro|baccalauréat|bp\b/i.test(label);
+                            const isCAP = /cap\b|bep\b|titre\s+professionnel/i.test(label);
                             const color = isMaster ? "#7C3AED" : isLicence ? "#4F46E5" : isBTS ? "#06B6D4" : isBac ? "#F97316" : isCAP ? "#EAB308" : "#6B7280";
                             const bgColor = isMaster ? "#F5F3FF" : isLicence ? "#EEF2FF" : isBTS ? "#ECFEFF" : isBac ? "#FFF7ED" : isCAP ? "#FEFCE8" : "#F9FAFB";
                             const level = isMaster ? "Bac+5" : isLicence ? "Bac+3" : isBTS ? "Bac+2" : isBac ? "Bac" : isCAP ? "CAP/BEP" : null;
@@ -2639,7 +2650,7 @@ export default function FicheDetailPage() {
                                     {level}
                                   </span>
                                 )}
-                                <span className="text-sm text-gray-700">{f}</span>
+                                <span className="text-sm text-gray-700">{label}</span>
                               </div>
                             );
                           })}
@@ -2652,7 +2663,7 @@ export default function FicheDetailPage() {
                       <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t.professionalStatuses}</span>
                       <div className="flex flex-wrap gap-2 mt-2">
                         {fiche.statuts_professionnels.map((s, i) => (
-                          <span key={i} className="px-3 py-1 rounded-full bg-indigo-100 text-indigo-600 text-sm font-medium">{s}</span>
+                          <span key={i} className="px-3 py-1 rounded-full bg-indigo-100 text-indigo-600 text-sm font-medium">{toLabel(s)}</span>
                         ))}
                       </div>
                     </div>
@@ -2663,7 +2674,7 @@ export default function FicheDetailPage() {
                     <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t.otherTitles}</span>
                     <div className="flex flex-wrap gap-2 mt-2">
                       {dAutresAppellations.map((a, i) => (
-                        <span key={i} className="px-3 py-1.5 rounded-full bg-gray-100 text-sm text-gray-700">{a}</span>
+                        <span key={i} className="px-3 py-1.5 rounded-full bg-gray-100 text-sm text-gray-700">{toLabel(a)}</span>
                       ))}
                     </div>
                   </div>
