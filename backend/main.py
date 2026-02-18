@@ -1982,7 +1982,10 @@ async def publish_batch(body: PublishBatchRequest, request: Request):
 
 # ==================== REGIONS & INSEE INTEGRATION ====================
 
-from insee_data import insee_integrator
+try:
+    from insee_data import insee_integrator
+except ImportError:
+    from backend.insee_data import insee_integrator
 
 REGIONS_FRANCE = [
     {"code": "01", "nom": "Guadeloupe"},
