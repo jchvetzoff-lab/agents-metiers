@@ -17,7 +17,8 @@ def _json_serial(obj):
 
 def _dumps(obj, **kwargs):
     """json.dumps with datetime support."""
-    return _dumps(obj, default=_json_serial, **kwargs)
+    kwargs.setdefault("default", _json_serial)
+    return json.dumps(obj, **kwargs)
 from typing import Any, Dict, List, Optional
 from types import SimpleNamespace
 from difflib import SequenceMatcher
