@@ -6,10 +6,12 @@ from fastapi import FastAPI, HTTPException, Query, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
-from datetime import datetime
+from datetime import datetime, timedelta
 from difflib import SequenceMatcher
 import json
 import sys
+import hashlib
+import secrets
 from pathlib import Path
 
 # Ajouter le chemin vers le projet agents-metiers existant
@@ -43,6 +45,82 @@ repo = Repository(
     database_url=config.database.database_url
 )
 repo.init_db()
+
+
+# ==================== AUTH ====================
+
+# Simple token-based auth with in-DB users
+JWT_SECRET = secrets.token_hex(32)
+
+# Hardcoded test account + DB accounts
+_TEST_ACCOUNTS = {
+    "test@test.com": {"password": "test123", "name": "Test User", "id": 1},
+    "admin@jae.fr": {"password": "admin123", "name": "Admin JAE", "id": 2},
+}
+
+def _hash_password(password: str) -> str:
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def _make_token(user_id: int, email: str, name: str) -> str:
+    """Simple base64 token with expiry."""
+    import base64
+    payload = json.dumps({"id": user_id, "email": email, "name": name, "exp": (datetime.now() + timedelta(days=7)).isoformat(), "secret": JWT_SECRET[:16]})
+    return base64.b64encode(payload.encode()).decode()
+
+def _verify_token(token: str) -> Optional[dict]:
+    import base64
+    try:
+        payload = json.loads(base64.b64decode(token).decode())
+        if payload.get("secret") != JWT_SECRET[:16]:
+            return None
+        if datetime.fromisoformat(payload["exp"]) < datetime.now():
+            return None
+        return payload
+    except Exception:
+        return None
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
+    name: str = "Utilisateur"
+
+
+@app.post("/api/auth/login")
+async def auth_login(body: LoginRequest):
+    """Login with email/password."""
+    account = _TEST_ACCOUNTS.get(body.email)
+    if account and account["password"] == body.password:
+        token = _make_token(account["id"], body.email, account["name"])
+        return {"token": token, "user": {"id": account["id"], "email": body.email, "name": account["name"]}}
+    raise HTTPException(status_code=401, detail="Email ou mot de passe incorrect")
+
+
+@app.post("/api/auth/register")
+async def auth_register(body: RegisterRequest):
+    """Register a new account (adds to test accounts for this session)."""
+    if body.email in _TEST_ACCOUNTS:
+        raise HTTPException(status_code=400, detail="Cet email est déjà utilisé")
+    new_id = len(_TEST_ACCOUNTS) + 1
+    _TEST_ACCOUNTS[body.email] = {"password": body.password, "name": body.name, "id": new_id}
+    return {"message": "Compte créé", "user": {"id": new_id, "email": body.email, "name": body.name}}
+
+
+@app.get("/api/auth/me")
+async def auth_me(request: Request):
+    """Get current user from token."""
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Non authentifié")
+    token = auth_header[7:]
+    user = _verify_token(token)
+    if not user:
+        raise HTTPException(status_code=401, detail="Token invalide ou expiré")
+    return {"id": user["id"], "email": user["email"], "name": user["name"]}
 
 
 # ==================== DB MIGRATION ====================
