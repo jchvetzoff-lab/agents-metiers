@@ -86,8 +86,7 @@ function TabActions() {
   const [archiving, setArchiving] = useState(false);
   const [creatingFiche, setCreatingFiche] = useState(false);
   const [metierName, setMetierName] = useState("");
-  const [romeCheckCode, setRomeCheckCode] = useState("");
-  const [romeChecking, setRomeChecking] = useState(false);
+  // romeCheck removed - handled by external agent
   const [results, setResults] = useState<{ type: "success" | "error"; message: string }[]>([]);
 
   useEffect(() => {
@@ -137,23 +136,7 @@ function TabActions() {
     }
   }
 
-  async function handleRomeCheck() {
-    setRomeChecking(true);
-    try {
-      const params: Record<string, string> = {};
-      if (romeCheckCode.trim()) params.code_rome = romeCheckCode.trim().toUpperCase();
-      const res = await api.getRomeVeilleStatus();
-      const msg = res.fiches_pending > 0
-        ? `${res.fiches_pending} fiche(s) avec mise à jour ROME détectée — ${res.changements_non_revues} changement(s) non revu(s)`
-        : "Aucune mise à jour ROME détectée — toutes les fiches sont à jour";
-      setResults(prev => [{ type: res.fiches_pending > 0 ? "error" : "success", message: msg }, ...prev]);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      setResults(prev => [{ type: "error", message }, ...prev]);
-    } finally {
-      setRomeChecking(false);
-    }
-  }
+  // handleRomeCheck removed - veille ROME handled by external agent
 
   async function handleCreateFiche() {
     if (!metierName.trim()) return;
@@ -217,65 +200,83 @@ function TabActions() {
         </div>
       )}
 
-      {/* Section: Actions Utilisateurs */}
+      {/* Section: Validation & Publication */}
       <div>
-        <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-          <span>👤</span> Actions utilisateurs
+        <h2 className="text-lg font-semibold text-gray-800 mb-2 flex items-center gap-2">
+          <span>🛡️</span> Validation & Publication
         </h2>
-        <div className="grid md:grid-cols-3 gap-6">
-          <ActionCard
-            title="Publier les fiches en validation"
-            description="Publie toutes les fiches qui sont en statut « en validation »."
-            icon="📤"
-            buttonLabel={publishing ? "Publication..." : "Publier tout"}
-            onClick={handlePublishAll}
-            disabled={publishing}
-            count={stats?.en_validation}
-          />
-          <ActionCard
-            title="Archiver les fiches obsolètes"
-            description="Archive les fiches marquées comme ayant une mise à jour ROME en attente."
-            icon="📦"
-            buttonLabel={archiving ? "Archivage..." : "Archiver"}
-            onClick={handleArchiveObsolete}
-            disabled={archiving}
-          />
-          {/* Exporter JSON retiré */}
+        <p className="text-sm text-gray-500 mb-4">Avant d&apos;etre publiees, les fiches enrichies par l&apos;IA passent par une validation automatique qui verifie la coherence, la completude et la qualite des donnees. Vous pouvez ensuite les relire et les publier manuellement.</p>
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Validation IA */}
+          <div className="bg-white rounded-2xl border border-gray-200 p-6">
+            <div className="text-3xl mb-3">🤖</div>
+            <h3 className="text-base font-bold text-gray-900 mb-2">Controle qualite IA des fiches enrichies</h3>
+            <p className="text-sm text-gray-500 mb-3">L&apos;IA analyse chaque fiche enrichie pour detecter les incoherences, les donnees manquantes ou les informations douteuses. Elle attribue un score de qualite et liste les points a corriger avant publication.</p>
+            <p className="text-xs text-gray-400 mb-4">Les fiches avec un score superieur a 80/100 sont considerees comme pretes pour la relecture humaine.</p>
+            <div className="space-y-2">
+              <Link href="/fiches?statut=enrichi&sort=score_asc"
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-500 text-white rounded-full text-sm font-medium hover:bg-amber-600 transition">
+                Parcourir les fiches a valider
+              </Link>
+            </div>
+          </div>
+
+          {/* Publier */}
+          <div className="bg-white rounded-2xl border border-gray-200 p-6">
+            <div className="text-3xl mb-3">📤</div>
+            <h3 className="text-base font-bold text-gray-900 mb-2">Publier les fiches validees</h3>
+            <p className="text-sm text-gray-500 mb-3">Une fois qu&apos;une fiche a passe le controle qualite IA et que vous l&apos;avez relue, vous pouvez la publier. Les fiches publiees deviennent visibles pour tous les utilisateurs de la plateforme.</p>
+            {stats?.en_validation ? (
+              <p className="text-xs text-indigo-600 font-medium mb-4">{stats.en_validation} fiche{stats.en_validation > 1 ? "s" : ""} en attente de publication</p>
+            ) : (
+              <p className="text-xs text-gray-400 mb-4">Aucune fiche en attente de publication pour le moment.</p>
+            )}
+            <button onClick={handlePublishAll} disabled={publishing}
+              className="w-full px-4 py-2.5 bg-green-600 text-white rounded-full text-sm font-medium hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-wait">
+              {publishing ? "Publication en cours..." : "Publier toutes les fiches validees"}
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Section: Actions IA */}
+      {/* Section: Gestion des fiches */}
       <div>
-        <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-          <span>🤖</span> Actions IA
+        <h2 className="text-lg font-semibold text-gray-800 mb-2 flex items-center gap-2">
+          <span>📋</span> Gestion des fiches
         </h2>
-        <div className="grid md:grid-cols-3 gap-6">
-          {/* Créer fiche */}
+        <p className="text-sm text-gray-500 mb-4">Creez de nouvelles fiches metiers ou gerez les fiches existantes qui necessitent une mise a jour ou un archivage.</p>
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Creer fiche */}
           <div className="bg-white rounded-2xl border border-gray-200 p-6">
             <div className="text-3xl mb-3">✨</div>
-            <h3 className="text-base font-bold text-gray-900 mb-2">Créer une fiche depuis un nom de métier</h3>
-            <p className="text-sm text-gray-500 mb-4">Crée une nouvelle fiche brouillon à partir d&apos;un nom de métier.</p>
-            <input type="text" placeholder="Ex : Développeur blockchain" value={metierName}
+            <h3 className="text-base font-bold text-gray-900 mb-2">Creer une nouvelle fiche metier</h3>
+            <p className="text-sm text-gray-500 mb-3">Entrez le nom d&apos;un metier pour creer une fiche brouillon. L&apos;IA pourra ensuite l&apos;enrichir automatiquement avec les competences, formations, salaires et perspectives du marche.</p>
+            <p className="text-xs text-gray-400 mb-4">La fiche sera creee en statut &laquo; brouillon &raquo; — vous pourrez la completer, l&apos;enrichir par IA, puis la valider et la publier.</p>
+            <input type="text" placeholder="Ex : Developpeur blockchain, Data engineer, Osteopathe..." value={metierName}
               onChange={e => setMetierName(e.target.value)}
               className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm mb-4 focus:outline-none focus:border-indigo-500" />
             <button onClick={handleCreateFiche} disabled={creatingFiche || !metierName.trim()}
               className="w-full px-4 py-2.5 bg-indigo-600 text-white rounded-full text-sm font-medium hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-wait">
-              {creatingFiche ? "Création..." : "Créer"}
+              {creatingFiche ? "Creation en cours..." : "Creer la fiche"}
             </button>
           </div>
 
-          {/* Veille ROME */}
+          {/* Archiver / Fiches a mettre a jour */}
           <div className="bg-white rounded-2xl border border-gray-200 p-6">
-            <div className="text-3xl mb-3">🔍</div>
-            <h3 className="text-base font-bold text-gray-900 mb-2">Veille ROME</h3>
-            <p className="text-sm text-gray-500 mb-4">Vérifie si les codes ROME de vos fiches ont évolué dans le référentiel officiel France Travail.</p>
-            <input type="text" placeholder="Code ROME (ex : M1805) ou laisser vide pour tout vérifier"
-              value={romeCheckCode} onChange={e => setRomeCheckCode(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm mb-4 focus:outline-none focus:border-indigo-500" />
-            <button onClick={handleRomeCheck} disabled={romeChecking}
-              className="w-full px-4 py-2.5 bg-indigo-600 text-white rounded-full text-sm font-medium hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-wait">
-              {romeChecking ? "Vérification en cours..." : "Vérifier"}
-            </button>
+            <div className="text-3xl mb-3">📦</div>
+            <h3 className="text-base font-bold text-gray-900 mb-2">Fiches obsoletes & mises a jour</h3>
+            <p className="text-sm text-gray-500 mb-3">Certaines fiches peuvent devenir obsoletes lorsque le referentiel ROME evolue ou que le metier change significativement. Consultez les fiches concernees et archivez celles qui ne sont plus pertinentes.</p>
+            <p className="text-xs text-gray-400 mb-4">L&apos;archivage ne supprime pas la fiche — elle reste accessible mais n&apos;apparait plus dans les resultats de recherche publics.</p>
+            <div className="space-y-2">
+              <Link href="/fiches?rome_update=pending"
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-orange-500 text-white rounded-full text-sm font-medium hover:bg-orange-600 transition">
+                Voir les fiches a mettre a jour
+              </Link>
+              <button onClick={handleArchiveObsolete} disabled={archiving}
+                className="w-full px-4 py-2.5 bg-gray-600 text-white rounded-full text-sm font-medium hover:bg-gray-700 transition disabled:opacity-50 disabled:cursor-wait">
+                {archiving ? "Archivage en cours..." : "Archiver les fiches obsoletes"}
+              </button>
+            </div>
           </div>
         </div>
       </div>
