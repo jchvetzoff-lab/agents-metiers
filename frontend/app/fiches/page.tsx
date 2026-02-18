@@ -10,7 +10,6 @@ const STATUT_FILTERS = [
   { value: "", label: "Tous" },
   { value: "brouillon", label: "Brouillon" },
   { value: "en_validation", label: "Enrichi" },
-  { value: "en_validation_ia", label: "En validation" },
   { value: "publiee", label: "Publié" },
 ] as const;
 
