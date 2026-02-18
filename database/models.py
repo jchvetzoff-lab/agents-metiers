@@ -14,6 +14,10 @@ class TendanceMetier(str, Enum):
     EMERGENCE = "emergence"
     STABLE = "stable"
     DISPARITION = "disparition"
+    HAUSSE = "hausse"
+    CROISSANCE = "croissance"
+    BAISSE = "baisse"
+    DECLIN = "declin"
 
 
 class NiveauExperience(str, Enum):

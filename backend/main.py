@@ -1262,6 +1262,26 @@ IMPORTANT:
 
         enriched = json.loads(response_text)
 
+        # Normaliser les valeurs de tendance dans perspectives
+        if "perspectives" in enriched and isinstance(enriched["perspectives"], dict):
+            tendance = enriched["perspectives"].get("tendance", "stable")
+            valid_tendances = ["emergence", "stable", "disparition", "hausse", "croissance", "baisse", "declin"]
+            if tendance not in valid_tendances:
+                # Map common AI outputs to valid values
+                tendance_map = {
+                    "en hausse": "hausse", "en baisse": "baisse", "en croissance": "croissance",
+                    "en déclin": "declin", "en emergence": "emergence", "en disparition": "disparition",
+                    "forte": "hausse", "positive": "hausse", "negative": "baisse",
+                    "stagnation": "stable", "stagnant": "stable",
+                }
+                enriched["perspectives"]["tendance"] = tendance_map.get(tendance.lower(), "stable")
+            # Clamp tension
+            if "tension" in enriched["perspectives"]:
+                try:
+                    enriched["perspectives"]["tension"] = max(0.0, min(1.0, float(enriched["perspectives"]["tension"])))
+                except (ValueError, TypeError):
+                    enriched["perspectives"]["tension"] = 0.5
+
         # Build SQL update for all enriched fields
         update_parts = []
         update_params = {"cr": code_rome, "d": datetime.now()}
