@@ -319,6 +319,14 @@ class ApiClient {
     const token = getToken();
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
+      // Envoyer le nom de l'utilisateur pour les audit logs
+      try {
+        const { parseToken } = await import("./auth");
+        const payload = parseToken(token);
+        if (payload?.name) {
+          headers["X-User-Name"] = payload.name;
+        }
+      } catch { /* ignore */ }
     }
 
     const response = await fetch(url, {

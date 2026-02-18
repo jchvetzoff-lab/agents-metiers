@@ -2,7 +2,7 @@
 Backend FastAPI pour Agents Métiers Web.
 Expose une API REST pour accéder à la base de données SQLite et aux agents IA.
 """
-from fastapi import FastAPI, HTTPException, Query, Depends
+from fastapi import FastAPI, HTTPException, Query, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
@@ -769,6 +769,11 @@ async def get_audit_logs(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+def _get_user_name(request) -> str:
+    """Extract user name from X-User-Name header, fallback to 'Utilisateur'."""
+    return request.headers.get("X-User-Name", "Utilisateur")
+
+
 def _add_audit(type_evt: str, code_rome: str, agent: str, description: str, validateur: str = None):
     """Helper to add audit log."""
     from database.models import AuditLog as AL, TypeEvenement as TE
@@ -790,7 +795,7 @@ def _add_audit(type_evt: str, code_rome: str, agent: str, description: str, vali
 
 
 @app.post("/api/fiches/{code_rome}/validate")
-async def validate_fiche(code_rome: str):
+async def validate_fiche(code_rome: str, request: Request):
     """Validation IA déterministe : complétude + qualité."""
     try:
         fiche = repo.get_fiche(code_rome)
@@ -836,8 +841,9 @@ async def validate_fiche(code_rome: str):
                 {"score": score_final, "date": now, "details": json.dumps(rapport), "statut": new_statut, "cr": code_rome}
             )
 
-        _add_audit("validation_ia", code_rome, "Agent IA",
-                   f"Validation IA : {verdict} ({score_final}/100) pour {fiche.nom_epicene}")
+        user = _get_user_name(request)
+        _add_audit("validation_ia", code_rome, user,
+                   f"Validation IA lancée par {user} : {verdict} ({score_final}/100) pour {fiche.nom_epicene}")
 
         return {
             "message": f"Validation IA terminée — {verdict}",
@@ -857,7 +863,7 @@ class ReviewRequest(BaseModel):
 
 
 @app.post("/api/fiches/{code_rome}/review")
-async def review_fiche(code_rome: str, body: ReviewRequest):
+async def review_fiche(code_rome: str, body: ReviewRequest, request: Request):
     """Validation humaine : approuver ou rejeter."""
     try:
         fiche = repo.get_fiche(code_rome)
@@ -877,18 +883,19 @@ async def review_fiche(code_rome: str, body: ReviewRequest):
             new_statut = "brouillon"
             val_humaine = "rejetee"
 
+        user = _get_user_name(request)
         with repo.session() as session:
             session.execute(
                 text("UPDATE fiches_metiers SET validation_humaine = :vh, validation_humaine_date = :date, "
                      "validation_humaine_par = :par, validation_humaine_commentaire = :com, "
                      "statut = :statut WHERE code_rome = :cr"),
-                {"vh": val_humaine, "date": now, "par": "admin", "com": body.commentaire or "",
+                {"vh": val_humaine, "date": now, "par": user, "com": body.commentaire or "",
                  "statut": new_statut, "cr": code_rome}
             )
 
-        _add_audit("validation_humaine", code_rome, "admin",
-                   f"Validation humaine : {body.decision} pour {fiche.nom_epicene}",
-                   validateur="admin")
+        _add_audit("validation_humaine", code_rome, user,
+                   f"Validation humaine par {user} : {body.decision} pour {fiche.nom_epicene}",
+                   validateur=user)
 
         return {
             "message": f"Fiche {'approuvée' if body.decision == 'approuver' else 'rejetée'}",
@@ -904,7 +911,7 @@ async def review_fiche(code_rome: str, body: ReviewRequest):
 
 
 @app.post("/api/fiches/{code_rome}/enrich")
-async def enrich_fiche(code_rome: str):
+async def enrich_fiche(code_rome: str, request: Request):
     """Enrichissement (stub) : incrémente la version."""
     try:
         fiche = repo.get_fiche(code_rome)
@@ -919,8 +926,9 @@ async def enrich_fiche(code_rome: str):
                 {"v": new_version, "d": datetime.now(), "cr": code_rome}
             )
 
-        _add_audit("enrichissement", code_rome, "Agent IA",
-                   f"Enrichissement de {fiche.nom_epicene} (v{new_version})")
+        user = _get_user_name(request)
+        _add_audit("enrichissement", code_rome, user,
+                   f"Enrichissement de {fiche.nom_epicene} (v{new_version}) par {user}")
 
         return {
             "message": "Enrichissement terminé (stub)",
@@ -935,7 +943,7 @@ async def enrich_fiche(code_rome: str):
 
 
 @app.post("/api/fiches/{code_rome}/publish")
-async def publish_fiche(code_rome: str):
+async def publish_fiche(code_rome: str, request: Request):
     """Publication : requiert validation IA >= 70 ET validation humaine approuvée."""
     try:
         fiche = repo.get_fiche(code_rome)
@@ -965,8 +973,9 @@ async def publish_fiche(code_rome: str):
                 {"cr": code_rome}
             )
 
-        _add_audit("publication", code_rome, "Système",
-                   f"Publication de {fiche.nom_epicene}")
+        user = _get_user_name(request)
+        _add_audit("publication", code_rome, user,
+                   f"Publication de {fiche.nom_epicene} par {user}")
 
         return {"message": "Fiche publiée", "code_rome": code_rome}
     except HTTPException:
