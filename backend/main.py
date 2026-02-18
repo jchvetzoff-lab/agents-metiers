@@ -428,7 +428,9 @@ class StatsResponse(BaseModel):
     """Statistiques globales."""
     total: int
     brouillons: int
+    enrichis: int = 0
     en_validation: int
+    valides: int = 0
     publiees: int
     archivees: int
 
@@ -456,14 +458,18 @@ async def get_stats():
     try:
         total = repo.count_fiches()
         brouillons = repo.count_fiches(StatutFiche.BROUILLON)
+        enrichis = repo.count_fiches(StatutFiche.ENRICHI)
         en_validation = repo.count_fiches(StatutFiche.EN_VALIDATION)
+        valides = repo.count_fiches(StatutFiche.VALIDE)
         publiees = repo.count_fiches(StatutFiche.PUBLIEE)
         archivees = repo.count_fiches(StatutFiche.ARCHIVEE)
 
         return StatsResponse(
             total=total,
             brouillons=brouillons,
+            enrichis=enrichis,
             en_validation=en_validation,
+            valides=valides,
             publiees=publiees,
             archivees=archivees
         )

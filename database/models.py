@@ -55,7 +55,9 @@ class FormatContenu(str, Enum):
 class StatutFiche(str, Enum):
     """Statut d'une fiche métier."""
     BROUILLON = "brouillon"
+    ENRICHI = "enrichi"
     EN_VALIDATION = "en_validation"
+    VALIDE = "valide"
     PUBLIEE = "publiee"
     ARCHIVEE = "archivee"
 
