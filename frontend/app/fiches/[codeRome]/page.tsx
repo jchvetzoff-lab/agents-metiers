@@ -306,6 +306,7 @@ export default function FicheDetailPage() {
       const res = await api.validateFiche(codeRome);
       const { score, verdict } = res.rapport;
       showActionMessage("success", `Validation IA : score ${score}/100 — ${verdict}`);
+      await reloadFiche();
     } catch (err: any) {
       showActionMessage("error", err.message || "Erreur lors de la validation");
     } finally {
@@ -1594,7 +1595,7 @@ export default function FicheDetailPage() {
                       </>
                     )}
 
-                    {/* Après validation IA >= 70 : Approuver + Rejeter (validation humaine) */}
+                    {/* Après validation IA >= 70 : Approuver + Rejeter + Ré-enrichir */}
                     {fiche.validation_ia_score != null && fiche.validation_ia_score >= 70 && fiche.statut !== "publiee" && fiche.validation_humaine !== "approuvee" && (
                       <>
                         <button onClick={async () => {
@@ -1609,6 +1610,11 @@ export default function FicheDetailPage() {
                           className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-green-300 text-green-600 rounded-full text-xs font-medium hover:bg-green-50 transition disabled:opacity-40 disabled:cursor-wait">
                           {actionLoading === "approve" ? <span className="w-3 h-3 border-2 border-green-300 border-t-green-600 rounded-full animate-spin" /> : "✅"}
                           Approuver
+                        </button>
+                        <button onClick={handleEnrich} disabled={actionLoading !== null}
+                          className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-indigo-300 text-indigo-600 rounded-full text-xs font-medium hover:bg-indigo-50 transition disabled:opacity-40 disabled:cursor-wait">
+                          {actionLoading === "enrich" ? <span className="w-3 h-3 border-2 border-indigo-300 border-t-indigo-600 rounded-full animate-spin" /> : "✨"}
+                          Ré-enrichir
                         </button>
                         <button onClick={async () => {
                           const com = prompt("Commentaire de rejet (optionnel) :");
