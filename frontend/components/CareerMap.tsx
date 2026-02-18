@@ -17,45 +17,18 @@ import { type MobiliteItem } from "@/lib/api";
 import {
   resolveMobiliteItems,
   buildCareerGraph,
-  type ResolvedMobiliteItem,
 } from "@/lib/career-graph";
 
-// ── Styles par variante ──
-
-const VARIANT_STYLES = {
-  central: {
-    bg: "linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)",
-    border: "#4F46E5",
-    text: "#FFFFFF",
-    badgeColor: "#FFFFFF",
-    badgeBg: "rgba(255,255,255,0.25)",
-    width: 240,
-  },
-  evolution: {
-    bg: "linear-gradient(135deg, #ECFEFF 0%, #CFFAFE 100%)",
-    border: "#06B6D4",
-    text: "#1A1A2E",
-    badgeColor: "#0E7490",
-    badgeBg: "#A5F3FC",
-    width: 220,
-  },
-  proche: {
-    bg: "#FFFFFF",
-    border: "#D1D5DB",
-    text: "#1A1A2E",
-    badgeColor: "#6B7280",
-    badgeBg: "#F3F4F6",
-    width: 220,
-  },
-};
+// ── Node Component ──
 
 function CareerNodeComponent({ data }: NodeProps) {
   const router = useRouter();
-  const variant = (data.variant as keyof typeof VARIANT_STYLES) || "proche";
-  const style = VARIANT_STYLES[variant];
+  const variant = (data.variant as string) || "proche";
   const codeRome = data.codeRome as string | null;
   const label = data.label as string;
   const contexte = data.contexte as string | undefined;
+  const isLarge = data.size === "large";
+  const [hovered, setHovered] = useState(false);
 
   const handleClick = useCallback(() => {
     if (codeRome && variant !== "central") {
@@ -63,57 +36,136 @@ function CareerNodeComponent({ data }: NodeProps) {
     }
   }, [codeRome, variant, router]);
 
+  const styles: Record<string, any> = {
+    central: {
+      bg: "linear-gradient(135deg, #4F46E5 0%, #6D28D9 50%, #7C3AED 100%)",
+      border: "#4F46E5",
+      text: "#FFF",
+      subtext: "rgba(255,255,255,0.7)",
+      badge: { bg: "rgba(255,255,255,0.2)", color: "#FFF" },
+      shadow: "0 8px 32px rgba(79,70,229,0.35)",
+      hoverShadow: "0 12px 40px rgba(79,70,229,0.5)",
+      width: isLarge ? 280 : 240,
+    },
+    evolution: {
+      bg: "linear-gradient(135deg, #ECFEFF 0%, #CFFAFE 100%)",
+      border: "#06B6D4",
+      text: "#0F172A",
+      subtext: "#64748B",
+      badge: { bg: "#A5F3FC", color: "#0E7490" },
+      shadow: "0 4px 16px rgba(6,182,212,0.15)",
+      hoverShadow: "0 8px 24px rgba(6,182,212,0.3)",
+      width: 220,
+    },
+    proche: {
+      bg: "linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)",
+      border: "#C7D2FE",
+      text: "#0F172A",
+      subtext: "#64748B",
+      badge: { bg: "#EEF2FF", color: "#4F46E5" },
+      shadow: "0 4px 16px rgba(0,0,0,0.06)",
+      hoverShadow: "0 8px 24px rgba(79,70,229,0.15)",
+      width: 220,
+    },
+  };
+  const s = styles[variant] || styles.proche;
+
   return (
     <div
       onClick={handleClick}
-      className="rounded-xl shadow-md transition-all duration-200 hover:shadow-lg hover:scale-[1.03]"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       style={{
-        background: style.bg,
-        border: `2px solid ${style.border}`,
-        padding: "14px 18px",
-        width: style.width,
+        background: s.bg,
+        border: `2px solid ${s.border}`,
+        borderRadius: 16,
+        padding: isLarge ? "18px 22px" : "14px 18px",
+        width: s.width,
         cursor: codeRome && variant !== "central" ? "pointer" : "default",
-        minHeight: 60,
+        boxShadow: hovered ? s.hoverShadow : s.shadow,
+        transform: hovered && variant !== "central" ? "translateY(-2px) scale(1.02)" : "none",
+        transition: "all 0.2s ease",
+        position: "relative",
       }}
     >
       <Handle type="target" position={Position.Top} style={{ opacity: 0 }} />
       <Handle type="source" position={Position.Bottom} style={{ opacity: 0 }} />
+      <Handle type="target" position={Position.Left} style={{ opacity: 0 }} />
+      <Handle type="source" position={Position.Right} style={{ opacity: 0 }} />
 
-      {/* Badge code ROME */}
-      {codeRome && (
-        <div className="flex items-center gap-1.5 mb-1.5">
-          <span
-            className="px-2 py-0.5 rounded text-[10px] font-bold"
-            style={{ backgroundColor: style.badgeBg, color: style.badgeColor }}
-          >
+      {/* Type badge */}
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+        {variant === "central" && (
+          <span style={{
+            background: s.badge.bg, color: s.badge.color,
+            padding: "2px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700,
+          }}>
+            ● Métier actuel
+          </span>
+        )}
+        {variant === "evolution" && (
+          <span style={{
+            background: s.badge.bg, color: s.badge.color,
+            padding: "2px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600,
+          }}>
+            ↗ Évolution
+          </span>
+        )}
+        {variant === "proche" && (
+          <span style={{
+            background: s.badge.bg, color: s.badge.color,
+            padding: "2px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600,
+          }}>
+            ↔ Métier proche
+          </span>
+        )}
+        {codeRome && (
+          <span style={{
+            background: "rgba(0,0,0,0.08)", color: s.text,
+            padding: "2px 8px", borderRadius: 6, fontSize: 10, fontWeight: 700,
+            opacity: 0.7,
+          }}>
             {codeRome}
           </span>
-          {variant === "central" && (
-            <span className="text-[10px] font-medium" style={{ color: style.badgeColor, opacity: 0.8 }}>
-              ● actuel
-            </span>
-          )}
-          {variant === "evolution" && (
-            <span className="text-[10px] text-cyan-600 font-medium">↗ évolution</span>
-          )}
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* Nom du metier */}
-      <div
-        className="font-semibold text-[14px] leading-tight"
-        style={{ color: style.text }}
-      >
+      {/* Name */}
+      <div style={{
+        fontWeight: 700,
+        fontSize: isLarge ? 16 : 14,
+        lineHeight: 1.3,
+        color: s.text,
+        marginBottom: contexte ? 6 : 0,
+      }}>
         {label}
       </div>
 
-      {/* Contexte */}
+      {/* Contexte — full text on hover, truncated otherwise */}
       {contexte && (
-        <div
-          className="text-[11px] mt-1.5 leading-snug"
-          style={{ color: variant === "central" ? "rgba(255,255,255,0.75)" : "#6B7280" }}
-        >
+        <div style={{
+          fontSize: 11,
+          lineHeight: 1.4,
+          color: s.subtext,
+          overflow: hovered ? "visible" : "hidden",
+          display: hovered ? "block" : "-webkit-box",
+          WebkitLineClamp: hovered ? undefined : 2,
+          WebkitBoxOrient: "vertical" as any,
+        }}>
           {contexte}
+        </div>
+      )}
+
+      {/* Click hint on hover */}
+      {hovered && codeRome && variant !== "central" && (
+        <div style={{
+          marginTop: 8,
+          fontSize: 10,
+          color: s.badge.color,
+          fontWeight: 600,
+          opacity: 0.8,
+        }}>
+          Cliquer pour voir la fiche →
         </div>
       )}
     </div>
@@ -148,32 +200,21 @@ export default function CareerMap({
 
   useEffect(() => {
     let cancelled = false;
-
     const resolvedProches = resolveMobiliteItems(metiersProches);
-      const resolvedEvolutions = resolveMobiliteItems(evolutions);
-
-      const graph = buildCareerGraph(
-        codeRome,
-        nomMetier,
-        resolvedProches,
-        resolvedEvolutions,
-        compact
-      );
-
-      if (!cancelled) {
-        setNodes(graph.nodes);
-        setEdges(graph.edges);
-        setLoading(false);
-      }
+    const resolvedEvolutions = resolveMobiliteItems(evolutions);
+    const graph = buildCareerGraph(codeRome, nomMetier, resolvedProches, resolvedEvolutions, compact);
+    if (!cancelled) {
+      setNodes(graph.nodes);
+      setEdges(graph.edges);
+      setLoading(false);
+    }
     return () => { cancelled = true; };
   }, [codeRome, nomMetier, metiersProches, evolutions, compact]);
 
   if (loading) {
     return (
-      <div
-        className="flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-gray-50"
-        style={{ height: compact ? 400 : 600 }}
-      >
+      <div className="flex flex-col items-center justify-center rounded-2xl border border-gray-200 bg-gray-50"
+        style={{ height: compact ? 400 : 700 }}>
         <div className="animate-spin w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full mb-3" />
         <div className="text-sm text-gray-400">{t.careerMapLoading}</div>
       </div>
@@ -181,26 +222,26 @@ export default function CareerMap({
   }
 
   return (
-    <div
-      className="rounded-xl border border-gray-200 overflow-hidden bg-white"
-      style={{ height: compact ? 400 : 600 }}
-    >
-      {/* Legend */}
-      <div className="flex items-center gap-5 px-4 py-2.5 bg-gray-50 border-b border-gray-100 text-xs">
-        <span className="flex items-center gap-1.5">
-          <span className="w-3.5 h-3.5 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600" />
-          <span className="text-gray-600 font-medium">{t.careerMapCentral || "Métier actuel"}</span>
+    <div className="rounded-2xl border border-gray-200 overflow-hidden bg-white shadow-sm"
+      style={{ height: compact ? 400 : 700 }}>
+      {/* Legend bar */}
+      <div className="flex flex-wrap items-center gap-5 px-5 py-3 bg-gradient-to-r from-gray-50 to-slate-50 border-b border-gray-100">
+        <span className="flex items-center gap-2">
+          <span className="w-4 h-4 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 shadow-sm" />
+          <span className="text-sm font-medium text-gray-700">Métier actuel</span>
         </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-3.5 h-3.5 rounded-full bg-cyan-500" />
-          <span className="text-gray-600">{t.careerMapEvolutions || "Évolutions"}</span>
+        <span className="flex items-center gap-2">
+          <span className="w-4 h-4 rounded-full bg-gradient-to-br from-cyan-400 to-cyan-600 shadow-sm" />
+          <span className="text-sm text-gray-600">Évolutions</span>
+          <span className="text-xs text-gray-400">({evolutions.length})</span>
         </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-3.5 h-3.5 rounded border border-gray-400 bg-white" />
-          <span className="text-gray-600">{t.careerMapProches || "Métiers proches"}</span>
+        <span className="flex items-center gap-2">
+          <span className="w-4 h-4 rounded-lg border-2 border-indigo-300 bg-white shadow-sm" />
+          <span className="text-sm text-gray-600">Métiers proches</span>
+          <span className="text-xs text-gray-400">({metiersProches.length})</span>
         </span>
-        <span className="ml-auto text-gray-400 hidden sm:block">
-          {nodes.length} métiers
+        <span className="ml-auto text-xs text-gray-400 hidden sm:block">
+          {nodes.length} métiers • Survolez pour détails
         </span>
       </div>
 
@@ -209,20 +250,20 @@ export default function CareerMap({
         edges={edges}
         nodeTypes={nodeTypes}
         fitView
-        fitViewOptions={{ padding: 0.3 }}
-        minZoom={0.3}
-        maxZoom={1.5}
-        panOnDrag={!compact}
-        zoomOnScroll={!compact}
-        zoomOnPinch={!compact}
+        fitViewOptions={{ padding: 0.25, maxZoom: 1.2 }}
+        minZoom={0.2}
+        maxZoom={2}
+        panOnDrag
+        zoomOnScroll
+        zoomOnPinch
         preventScrolling={compact}
-        nodesDraggable={false}
+        nodesDraggable={!compact}
         nodesConnectable={false}
         elementsSelectable={false}
         proOptions={{ hideAttribution: true }}
       >
-        <Background color="#f1f5f9" gap={20} />
-        {!compact && <Controls showInteractive={false} />}
+        <Background color="#f1f5f9" gap={24} size={1.5} />
+        <Controls showInteractive={false} position="bottom-right" />
       </ReactFlow>
     </div>
   );

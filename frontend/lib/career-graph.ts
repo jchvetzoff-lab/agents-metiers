@@ -1,5 +1,6 @@
 /**
- * Career graph model: builds React Flow nodes and edges from mobility data.
+ * Career graph: builds React Flow nodes/edges from mobility data.
+ * Layout: radial — central node in middle, others around in a circle.
  */
 
 import { MobiliteItem } from "./api";
@@ -9,13 +10,7 @@ export interface ResolvedMobiliteItem extends MobiliteItem {
   code_rome: string | null;
 }
 
-/**
- * If items already have code_rome from backend, use them directly.
- * No more expensive search API calls.
- */
-export function resolveMobiliteItems(
-  items: MobiliteItem[]
-): ResolvedMobiliteItem[] {
+export function resolveMobiliteItems(items: MobiliteItem[]): ResolvedMobiliteItem[] {
   return items.map((item) => ({
     ...item,
     code_rome: (item as any).code_rome || null,
@@ -37,80 +32,70 @@ export function buildCareerGraph(
   const nodes: Node[] = [];
   const edges: Edge[] = [];
 
-  const NODE_W = compact ? 180 : 220;
-  const centerX = compact ? 350 : 550;
-  const centerY = compact ? 200 : 280;
+  const centerX = compact ? 300 : 500;
+  const centerY = compact ? 250 : 320;
+  const radius = compact ? 200 : 300;
 
-  // Central node
+  // All satellite items
+  const allItems = [
+    ...evolutions.map(e => ({ ...e, type: "evolution" as const })),
+    ...proches.map(p => ({ ...p, type: "proche" as const })),
+  ];
+
+  // Central node — larger
   nodes.push({
     id: currentCode,
     type: "careerNode",
-    position: { x: centerX - NODE_W / 2, y: centerY - 35 },
+    position: { x: centerX - 130, y: centerY - 45 },
     data: {
       label: currentNom,
       codeRome: currentCode,
       variant: "central",
+      size: "large",
     },
   });
 
-  // Evolutions above
-  if (evolutions.length > 0) {
-    const spacing = compact ? 200 : 260;
-    const totalWidth = (evolutions.length - 1) * spacing;
-    const startX = centerX - totalWidth / 2 - NODE_W / 2;
-    const evoY = compact ? 10 : 30;
+  // Satellite nodes — radial
+  const count = allItems.length;
+  if (count > 0) {
+    const angleStep = (2 * Math.PI) / count;
+    // Start from top (-PI/2) so first node is above center
+    let angle = -Math.PI / 2;
 
-    evolutions.forEach((evo, i) => {
-      const nodeId = evo.code_rome || `evo-${i}`;
+    allItems.forEach((item, i) => {
+      const nodeId = item.code_rome || `${item.type}-${i}`;
+      const nodeW = compact ? 90 : 110;
+      const x = centerX + Math.cos(angle) * radius - nodeW;
+      const y = centerY + Math.sin(angle) * radius - 35;
+
       nodes.push({
         id: nodeId,
         type: "careerNode",
-        position: { x: startX + i * spacing, y: evoY },
+        position: { x, y },
         data: {
-          label: evo.nom,
-          codeRome: evo.code_rome,
-          contexte: evo.contexte,
-          variant: "evolution",
+          label: item.nom,
+          codeRome: item.code_rome,
+          contexte: item.contexte,
+          variant: item.type,
+          size: "normal",
         },
       });
+
+      const isEvolution = item.type === "evolution";
       edges.push({
         id: `e-${currentCode}-${nodeId}`,
         source: currentCode,
         target: nodeId,
-        type: "smoothstep",
-        animated: true,
-        style: { stroke: "#06B6D4", strokeWidth: 2 },
-      });
-    });
-  }
-
-  // Proches below
-  if (proches.length > 0) {
-    const spacing = compact ? 200 : 260;
-    const totalWidth = (proches.length - 1) * spacing;
-    const startX = centerX - totalWidth / 2 - NODE_W / 2;
-    const procheY = compact ? 390 : 530;
-
-    proches.forEach((proche, i) => {
-      const nodeId = proche.code_rome || `proche-${i}`;
-      nodes.push({
-        id: nodeId,
-        type: "careerNode",
-        position: { x: startX + i * spacing, y: procheY },
-        data: {
-          label: proche.nom,
-          codeRome: proche.code_rome,
-          contexte: proche.contexte,
-          variant: "proche",
+        type: "default",
+        animated: isEvolution,
+        style: {
+          stroke: isEvolution ? "#06B6D4" : "#818CF8",
+          strokeWidth: isEvolution ? 2.5 : 2,
+          strokeDasharray: isEvolution ? undefined : "8 4",
         },
       });
-      edges.push({
-        id: `e-${currentCode}-${nodeId}`,
-        source: currentCode,
-        target: nodeId,
-        type: "smoothstep",
-        style: { stroke: "#4F46E5", strokeWidth: 2, strokeDasharray: "6 3" },
-      });
+
+      angle += angleStep;
     });
   }
 
