@@ -41,7 +41,7 @@ const LEVEL_PATTERNS: { level: FormationLevel; pattern: RegExp }[] = [
   },
   {
     level: "cap",
-    pattern: /\b(cap\b|capa\b|bep\b|bpa\b|certificat\s+d'aptitude|titre\s+professionnel\s+de\s+niveau\s+3|mc\b|mention\s+complementaire)\b/i,
+    pattern: /\b(cap\b|capa\b|bep\b|bpa\b|certificat\s+d'aptitude|titre\s+professionnel\s+de\s+niveau\s+3|mc\b|mention\s+complementaire|certificat\s+de\s+qualification|cqp|titre\s+professionnel|habilitation|permis|attestation|formation\s+continue|formation\s+professionnelle|diplome\s+de\s+niveau|experience\s+professionnelle|vae|validation\s+des\s+acquis|sans\s+diplome|aucun\s+diplome|niveau\s+v)\b/i,
   },
 ];
 
