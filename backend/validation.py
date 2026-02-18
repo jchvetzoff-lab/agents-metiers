@@ -123,188 +123,188 @@ def _safe_get_attribute_or_dict_key(obj: Any, key: str) -> Any:
     return None
 
 
+
+def _to_dict(obj):
+    """Convert pydantic model, dict, or other to dict safely."""
+    if obj is None:
+        return {}
+    if hasattr(obj, 'model_dump'):
+        return obj.model_dump()
+    if isinstance(obj, dict):
+        return obj
+    return {}
+
+
+def _list_item_quality(item):
+    """Score a list item richness: 0.0 (bare string) to 1.0 (detailed object)."""
+    if isinstance(item, dict):
+        meaningful = sum(1 for k, v in item.items() if v and k != "nom")
+        if not item.get("nom"):
+            return 0.0
+        name_len = len(str(item.get("nom", "")))
+        base = 0.5 if name_len > 3 else 0.3
+        detail_bonus = min(meaningful * 0.15, 0.5)
+        return min(base + detail_bonus, 1.0)
+    elif isinstance(item, str):
+        if len(item) < 3:
+            return 0.0
+        if len(item) < 15:
+            return 0.3
+        return 0.5
+    return 0.0
+
+
+def _score_list_field(items, max_score, ideal_count, field_name):
+    """Score a list field based on count AND quality of items."""
+    if not items:
+        return {"score": 0, "max": max_score, "commentaire": "Manquant"}
+    count = len(items)
+    count_ratio = min(count / ideal_count, 1.0)
+    qualities = [_list_item_quality(it) for it in items]
+    avg_quality = sum(qualities) / len(qualities) if qualities else 0.0
+    combined = count_ratio * 0.6 + avg_quality * 0.4
+    score = max(0, min(round(combined * max_score), max_score))
+    quality_label = "detaille" if avg_quality >= 0.7 else ("basique" if avg_quality >= 0.4 else "superficiel")
+    return {"score": score, "max": max_score, "commentaire": f"{count} item(s), {quality_label}"}
+
+
 def calculate_completude_score(fiche: Any) -> Dict[str, Any]:
     """
-    Calculate completude score for a fiche. 
-    Returns {score, details} with detailed breakdown.
+    Calculate completude score with QUALITY assessment.
+    Not just presence -- measures richness, detail, and coherence.
     """
     details = {}
 
-    # Description > 100 chars: +8
+    # DESCRIPTION (max 8) - graded by length
     desc = getattr(fiche, 'description', None) or ""
-    if len(desc) > 100:
-        details["description"] = {
-            "score": SCORE_DESCRIPTION_LONG, 
-            "max": SCORE_DESCRIPTION_LONG, 
-            "commentaire": "Description complète"
-        }
+    if len(desc) >= 500:
+        d_score, d_comment = SCORE_DESCRIPTION_LONG, "Description riche"
+    elif len(desc) >= 300:
+        d_score, d_comment = 6, "Description correcte"
+    elif len(desc) >= 100:
+        d_score, d_comment = 4, "Description courte"
     elif desc:
-        details["description"] = {
-            "score": 4, 
-            "max": SCORE_DESCRIPTION_LONG, 
-            "commentaire": "Description trop courte (< 100 car.)"
-        }
+        d_score, d_comment = 2, f"Description trop courte ({len(desc)} car.)"
     else:
-        details["description"] = {
-            "score": 0, 
-            "max": SCORE_DESCRIPTION_LONG, 
-            "commentaire": "Description manquante"
-        }
+        d_score, d_comment = 0, "Description manquante"
+    details["description"] = {"score": d_score, "max": SCORE_DESCRIPTION_LONG, "commentaire": d_comment}
 
-    # Description courte: +5
-    desc_courte = getattr(fiche, 'description_courte', None)
-    details["description_courte"] = {
-        "score": SCORE_DESCRIPTION_SHORT if desc_courte else 0, 
-        "max": SCORE_DESCRIPTION_SHORT, 
-        "commentaire": "OK" if desc_courte else "Manquante"
-    }
+    # DESCRIPTION COURTE (max 5) - 50-200 chars ideal
+    desc_courte = getattr(fiche, 'description_courte', None) or ""
+    if 50 <= len(desc_courte) <= 200:
+        dc_score, dc_comment = SCORE_DESCRIPTION_SHORT, "OK"
+    elif desc_courte and len(desc_courte) > 200:
+        dc_score, dc_comment = 3, "Trop longue pour un resume"
+    elif desc_courte:
+        dc_score, dc_comment = 2, f"Trop courte ({len(desc_courte)} car.)"
+    else:
+        dc_score, dc_comment = 0, "Manquante"
+    details["description_courte"] = {"score": dc_score, "max": SCORE_DESCRIPTION_SHORT, "commentaire": dc_comment}
 
-    # Compétences: +3 each, max 15 (5 items)
+    # LIST FIELDS - scored by count + quality
     competences = getattr(fiche, 'competences', None) or []
-    score_comp = min(len(competences) * SCORE_COMPETENCE_EACH, SCORE_COMPETENCE_MAX)
-    details["competences"] = {
-        "score": score_comp, 
-        "max": SCORE_COMPETENCE_MAX, 
-        "commentaire": f"{len(competences)} compétence(s)"
-    }
+    details["competences"] = _score_list_field(competences, SCORE_COMPETENCE_MAX, 5, "competences")
 
-    # Compétences transversales: +3 each, max 9
     comp_trans = getattr(fiche, 'competences_transversales', None) or []
-    score_comp_trans = min(len(comp_trans) * SCORE_COMPETENCE_TRANSVERSALE_EACH, SCORE_COMPETENCE_TRANSVERSALE_MAX)
-    details["competences_transversales"] = {
-        "score": score_comp_trans, 
-        "max": SCORE_COMPETENCE_TRANSVERSALE_MAX, 
-        "commentaire": f"{len(comp_trans)} item(s)"
-    }
+    details["competences_transversales"] = _score_list_field(comp_trans, SCORE_COMPETENCE_TRANSVERSALE_MAX, 3, "comp_trans")
 
-    # Formations: +3 each, max 12
     formations = getattr(fiche, 'formations', None) or []
-    score_form = min(len(formations) * SCORE_FORMATION_EACH, SCORE_FORMATION_MAX)
-    details["formations"] = {
-        "score": score_form, 
-        "max": SCORE_FORMATION_MAX, 
-        "commentaire": f"{len(formations)} formation(s)"
-    }
+    details["formations"] = _score_list_field(formations, SCORE_FORMATION_MAX, 4, "formations")
 
-    # Certifications: +2 each, max 6
     certifications = getattr(fiche, 'certifications', None) or []
-    score_cert = min(len(certifications) * SCORE_CERTIFICATION_EACH, SCORE_CERTIFICATION_MAX)
-    details["certifications"] = {
-        "score": score_cert, 
-        "max": SCORE_CERTIFICATION_MAX, 
-        "commentaire": f"{len(certifications)} certification(s)"
-    }
+    details["certifications"] = _score_list_field(certifications, SCORE_CERTIFICATION_MAX, 3, "certifications")
 
-    # Conditions travail: +2 each, max 6
     conditions_travail = getattr(fiche, 'conditions_travail', None) or []
-    score_cond = min(len(conditions_travail) * SCORE_CONDITIONS_TRAVAIL_EACH, SCORE_CONDITIONS_TRAVAIL_MAX)
-    details["conditions_travail"] = {
-        "score": score_cond, 
-        "max": SCORE_CONDITIONS_TRAVAIL_MAX, 
-        "commentaire": f"{len(conditions_travail)} item(s)"
-    }
+    details["conditions_travail"] = _score_list_field(conditions_travail, SCORE_CONDITIONS_TRAVAIL_MAX, 3, "conditions")
 
-    # Environnements: +2 each, max 6
     environnements = getattr(fiche, 'environnements', None) or []
-    score_env = min(len(environnements) * SCORE_ENVIRONNEMENT_EACH, SCORE_ENVIRONNEMENT_MAX)
-    details["environnements"] = {
-        "score": score_env, 
-        "max": SCORE_ENVIRONNEMENT_MAX, 
-        "commentaire": f"{len(environnements)} item(s)"
-    }
+    details["environnements"] = _score_list_field(environnements, SCORE_ENVIRONNEMENT_MAX, 3, "environnements")
 
-    # Secteurs activité: +2 each, max 6
     secteurs = getattr(fiche, 'secteurs_activite', None) or []
-    score_sect = min(len(secteurs) * SCORE_SECTEUR_ACTIVITE_EACH, SCORE_SECTEUR_ACTIVITE_MAX)
-    details["secteurs_activite"] = {
-        "score": score_sect, 
-        "max": SCORE_SECTEUR_ACTIVITE_MAX, 
-        "commentaire": f"{len(secteurs)} secteur(s)"
-    }
+    details["secteurs_activite"] = _score_list_field(secteurs, SCORE_SECTEUR_ACTIVITE_MAX, 3, "secteurs")
 
-    # Salaires: +10 if all 3 medians present
+    # SALAIRES (max 10) - check ranges not just median
     salaires = getattr(fiche, 'salaires', None)
-    sal_score = 0
+    sal_score, sal_comment = 0, "Manquant"
     if salaires:
-        sal_dict = salaires.model_dump() if hasattr(salaires, 'model_dump') else (
-            salaires if isinstance(salaires, dict) else {}
-        )
-        count = 0
+        sal_dict = _to_dict(salaires)
+        level_scores = []
         for level in ["junior", "confirme", "senior"]:
-            level_data = sal_dict.get(level, {}) or {}
-            if level_data.get("median"):
-                count += 1
-        sal_score = round(count * SCORE_SALAIRES_MAX / 3)
-    details["salaires"] = {
-        "score": sal_score, 
-        "max": SCORE_SALAIRES_MAX, 
-        "commentaire": "Complet" if sal_score == SCORE_SALAIRES_MAX else (
-            "Partiel" if sal_score > 0 else "Manquant"
-        )
-    }
+            ld = sal_dict.get(level, {}) or {}
+            if not ld.get("median"):
+                level_scores.append(0)
+            elif ld.get("min") and ld.get("max"):
+                level_scores.append(1.0)
+            else:
+                level_scores.append(0.5)
+        sal_score = round(sum(level_scores) / 3 * SCORE_SALAIRES_MAX)
+        filled = sum(1 for s in level_scores if s > 0)
+        if sal_score == SCORE_SALAIRES_MAX:
+            sal_comment = "Complet (3 niveaux avec fourchettes)"
+        elif sal_score > 0:
+            sal_comment = f"Partiel ({filled}/3 niveaux)"
+        else:
+            sal_comment = "Present mais vide"
+    details["salaires"] = {"score": sal_score, "max": SCORE_SALAIRES_MAX, "commentaire": sal_comment}
 
-    # Perspectives: +8 if tension + tendance + evolution_5ans
+    # PERSPECTIVES (max 8) - check depth
     perspectives = getattr(fiche, 'perspectives', None)
-    persp_score = 0
+    persp_score, persp_comment = 0, "Manquant"
     if perspectives:
-        persp_dict = perspectives.model_dump() if hasattr(perspectives, 'model_dump') else (
-            perspectives if isinstance(perspectives, dict) else {}
-        )
-        count = 0
-        if persp_dict.get("tension") is not None:
-            count += 1
-        if persp_dict.get("tendance"):
-            count += 1
-        if persp_dict.get("evolution_5ans"):
-            count += 1
-        persp_score = round(count * SCORE_PERSPECTIVES_MAX / 3)
-    details["perspectives"] = {
-        "score": persp_score, 
-        "max": SCORE_PERSPECTIVES_MAX, 
-        "commentaire": "Complet" if persp_score == SCORE_PERSPECTIVES_MAX else (
-            "Partiel" if persp_score > 0 else "Manquant"
-        )
-    }
+        persp_dict = _to_dict(perspectives)
+        sub_scores = []
+        tension = persp_dict.get("tension")
+        sub_scores.append(1.0 if isinstance(tension, (int, float)) else 0.0)
+        tendance = str(persp_dict.get("tendance") or "")
+        sub_scores.append(1.0 if len(tendance) > 2 else 0.0)
+        evol = str(persp_dict.get("evolution_5ans") or "")
+        if len(evol) > 100:
+            sub_scores.append(1.0)
+        elif len(evol) > 30:
+            sub_scores.append(0.6)
+        elif evol:
+            sub_scores.append(0.3)
+        else:
+            sub_scores.append(0.0)
+        avg = sum(sub_scores) / len(sub_scores)
+        persp_score = round(avg * SCORE_PERSPECTIVES_MAX)
+        filled = sum(1 for s in sub_scores if s > 0)
+        persp_comment = f"{filled}/3 champs" + (" (detaille)" if avg > 0.7 else "")
+    details["perspectives"] = {"score": persp_score, "max": SCORE_PERSPECTIVES_MAX, "commentaire": persp_comment}
 
-    # Métiers proches: +2 each, max 6
+    # METIERS PROCHES (max 6)
     metiers_proches = getattr(fiche, 'metiers_proches', None) or []
-    score_mp = min(len(metiers_proches) * SCORE_METIERS_PROCHES_EACH, SCORE_METIERS_PROCHES_MAX)
-    details["metiers_proches"] = {
-        "score": score_mp, 
-        "max": SCORE_METIERS_PROCHES_MAX, 
-        "commentaire": f"{len(metiers_proches)} métier(s) proche(s)"
-    }
+    details["metiers_proches"] = _score_list_field(metiers_proches, SCORE_METIERS_PROCHES_MAX, 3, "metiers_proches")
 
-    # Bonus fields
+    # MISSIONS PRINCIPALES (max 5)
     missions_principales = _safe_get_attribute_or_dict_key(fiche, 'missions_principales') or []
-    bonus_missions = SCORE_MISSIONS_PRINCIPALES_BONUS if missions_principales else 0
-    details["missions_principales"] = {
-        "score": bonus_missions, 
-        "max": SCORE_MISSIONS_PRINCIPALES_BONUS, 
-        "commentaire": f"{len(missions_principales)} mission(s)" if missions_principales else "Manquant"
-    }
+    details["missions_principales"] = _score_list_field(missions_principales, SCORE_MISSIONS_PRINCIPALES_BONUS, 4, "missions")
 
-    acces_metier = _safe_get_attribute_or_dict_key(fiche, 'acces_metier')
-    bonus_acces = SCORE_ACCES_METIER_BONUS if acces_metier else 0
-    details["acces_metier"] = {
-        "score": bonus_acces, 
-        "max": SCORE_ACCES_METIER_BONUS, 
-        "commentaire": "Présent" if acces_metier else "Manquant"
-    }
+    # ACCES METIER (max 4) - graded by length
+    acces_metier = _safe_get_attribute_or_dict_key(fiche, 'acces_metier') or ""
+    if isinstance(acces_metier, dict):
+        acces_text = str(acces_metier.get("description", "")) or str(acces_metier)
+    else:
+        acces_text = str(acces_metier)
+    if len(acces_text) >= 200:
+        acces_score, acces_comment = SCORE_ACCES_METIER_BONUS, "Detaille"
+    elif len(acces_text) >= 50:
+        acces_score, acces_comment = 2, "Basique"
+    elif acces_text:
+        acces_score, acces_comment = 1, "Tres court"
+    else:
+        acces_score, acces_comment = 0, "Manquant"
+    details["acces_metier"] = {"score": acces_score, "max": SCORE_ACCES_METIER_BONUS, "commentaire": acces_comment}
 
+    # SAVOIRS (max 6)
     savoirs = _safe_get_attribute_or_dict_key(fiche, 'savoirs') or []
-    score_sav = min(len(savoirs) * SCORE_SAVOIRS_EACH, SCORE_SAVOIRS_MAX)
-    details["savoirs"] = {
-        "score": score_sav, 
-        "max": SCORE_SAVOIRS_MAX, 
-        "commentaire": f"{len(savoirs)} savoir(s)"
-    }
+    details["savoirs"] = _score_list_field(savoirs, SCORE_SAVOIRS_MAX, 3, "savoirs")
 
+    # TOTAL
     total = sum(d["score"] for d in details.values())
-    total = min(total, 100)
+    total = max(0, min(total, 100))
 
     return {"score": total, "details": details}
-
 
 def calculate_quality_score(fiche: Any) -> Dict[str, Any]:
     """
