@@ -8,7 +8,13 @@ import json
 import logging
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, date
+
+
+def _json_serial(obj):
+    if isinstance(obj, (datetime, date)):
+        return obj.isoformat()
+    raise TypeError(f"Type {type(obj)} not serializable")
 from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -748,7 +754,7 @@ async def generate_variantes(
 Fiche source:
 Nom: {fiche.nom_epicene}
 Description: {fiche.description or 'N/A'}
-Compétences: {json.dumps(fiche.competences or [], ensure_ascii=False)}
+Compétences: {json.dumps(fiche.competences or [], ensure_ascii=False, default=_json_serial)}
 
 Retourne un JSON:
 {{
@@ -789,8 +795,8 @@ Retourne un JSON:
                             "nom": variante_data.get("nom", fiche.nom_epicene),
                             "desc": variante_data.get("description", ""),
                             "dc": variante_data.get("description_courte", ""),
-                            "comp": json.dumps(variante_data.get("competences", []), ensure_ascii=False),
-                            "form": json.dumps(variante_data.get("formations", []), ensure_ascii=False),
+                            "comp": json.dumps(variante_data.get("competences", []), ensure_ascii=False, default=_json_serial),
+                            "form": json.dumps(variante_data.get("formations", []), ensure_ascii=False, default=_json_serial),
                             "now": get_current_timestamp(),
                         }
                     )

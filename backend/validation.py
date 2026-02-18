@@ -5,7 +5,19 @@ Handles completude scoring, quality assessment, and IA/human validation.
 
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
+
+
+def _json_serial(obj):
+    """JSON serializer for objects not serializable by default."""
+    if isinstance(obj, (datetime, date)):
+        return obj.isoformat()
+    raise TypeError(f"Type {type(obj)} not serializable")
+
+
+def _dumps(obj, **kwargs):
+    """json.dumps with datetime support."""
+    return _dumps(obj, default=_json_serial, **kwargs)
 from typing import Any, Dict, List, Optional
 from types import SimpleNamespace
 from difflib import SequenceMatcher
@@ -432,7 +444,7 @@ async def validate_fiche(code_rome: str, request: Request) -> Dict[str, Any]:
                 {
                     "score": score_final, 
                     "date": now, 
-                    "details": json.dumps(rapport), 
+                    "details": _dumps(rapport), 
                     "statut": new_statut, 
                     "cr": code_rome
                 }
@@ -474,15 +486,15 @@ Code ROME: {code_rome}
 Nom: {fiche.nom_epicene}
 Description: {fiche.description or 'VIDE'}
 Description courte: {fiche.description_courte or 'VIDE'}
-Compétences: {json.dumps(fiche.competences or [], ensure_ascii=False)}
-Compétences transversales: {json.dumps(fiche.competences_transversales or [], ensure_ascii=False)}
-Formations: {json.dumps(fiche.formations or [], ensure_ascii=False)}
-Certifications: {json.dumps(fiche.certifications or [], ensure_ascii=False)}
-Conditions de travail: {json.dumps(fiche.conditions_travail or [], ensure_ascii=False)}
-Environnements: {json.dumps(fiche.environnements or [], ensure_ascii=False)}
-Secteurs d'activité: {json.dumps(fiche.secteurs_activite or [], ensure_ascii=False)}
-Salaires: {json.dumps(fiche.salaires.model_dump() if fiche.salaires else {}, ensure_ascii=False)}
-Perspectives: {json.dumps(fiche.perspectives.model_dump() if fiche.perspectives else {}, ensure_ascii=False)}
+Compétences: {_dumps(fiche.competences or [], ensure_ascii=False)}
+Compétences transversales: {_dumps(fiche.competences_transversales or [], ensure_ascii=False)}
+Formations: {_dumps(fiche.formations or [], ensure_ascii=False)}
+Certifications: {_dumps(fiche.certifications or [], ensure_ascii=False)}
+Conditions de travail: {_dumps(fiche.conditions_travail or [], ensure_ascii=False)}
+Environnements: {_dumps(fiche.environnements or [], ensure_ascii=False)}
+Secteurs d'activité: {_dumps(fiche.secteurs_activite or [], ensure_ascii=False)}
+Salaires: {_dumps(fiche.salaires.model_dump() if fiche.salaires else {}, ensure_ascii=False)}
+Perspectives: {_dumps(fiche.perspectives.model_dump() if fiche.perspectives else {}, ensure_ascii=False)}
 
 MISSION : Audite cette fiche avec rigueur et exigence. Vérifie :
 
@@ -592,7 +604,7 @@ Sois rigoureux et exigeant. Cette validation détermine si la fiche peut être p
                 {
                     "score": score,
                     "date": now,
-                    "details": json.dumps(validation_result, ensure_ascii=False),
+                    "details": _dumps(validation_result, ensure_ascii=False),
                     "statut": new_statut,
                     "cr": code_rome
                 }
@@ -825,15 +837,15 @@ async def auto_correct_fiche(
 Code ROME: {code_rome}
 Nom: {fiche.nom_epicene}
 Description actuelle: {fiche.description or 'N/A'}
-Compétences: {json.dumps(fiche.competences or [], ensure_ascii=False)}
-Formations: {json.dumps(fiche.formations or [], ensure_ascii=False)}
-Salaires: {json.dumps(fiche.salaires.model_dump() if fiche.salaires else {}, ensure_ascii=False)}
+Compétences: {_dumps(fiche.competences or [], ensure_ascii=False)}
+Formations: {_dumps(fiche.formations or [], ensure_ascii=False)}
+Salaires: {_dumps(fiche.salaires.model_dump() if fiche.salaires else {}, ensure_ascii=False)}
 
 Problèmes identifiés:
-{json.dumps(body.problemes, ensure_ascii=False)}
+{_dumps(body.problemes, ensure_ascii=False)}
 
 Suggestions:
-{json.dumps(body.suggestions, ensure_ascii=False)}
+{_dumps(body.suggestions, ensure_ascii=False)}
 
 Retourne UNIQUEMENT un JSON avec les champs corrigés (seulement ceux qui doivent changer):
 {{
@@ -872,13 +884,13 @@ Ne retourne que les champs modifiés."""
             update_params["description"] = corrections["description"]
         if "competences" in corrections:
             update_parts.append("competences = :competences")
-            update_params["competences"] = json.dumps(corrections["competences"], ensure_ascii=False)
+            update_params["competences"] = _dumps(corrections["competences"], ensure_ascii=False)
         if "formations" in corrections:
             update_parts.append("formations = :formations")
-            update_params["formations"] = json.dumps(corrections["formations"], ensure_ascii=False)
+            update_params["formations"] = _dumps(corrections["formations"], ensure_ascii=False)
         if "salaires" in corrections:
             update_parts.append("salaires = :salaires")
-            update_params["salaires"] = json.dumps(corrections["salaires"], ensure_ascii=False)
+            update_params["salaires"] = _dumps(corrections["salaires"], ensure_ascii=False)
 
         if update_parts:
             update_parts.append("date_maj = :d")
