@@ -1,10 +1,11 @@
 "use client";
 
 import { classifyFormations, matchNiveauFormation, FORMATION_LEVELS, type FormationLevel } from "@/lib/formation-levels";
+import { toLabel } from "@/lib/utils";
 
 interface FormationPathwayProps {
-  formations: string[];
-  certifications: string[];
+  formations: any[];
+  certifications: any[];
   niveauFormation: string | null | undefined;
   accesMetier: string | null | undefined;
   t: Record<string, string>;
@@ -26,7 +27,9 @@ export default function FormationPathway({
   accesMetier,
   t,
 }: FormationPathwayProps) {
-  const levels = classifyFormations(formations);
+  const formationsStr = formations.map(toLabel);
+  const certificationsStr = certifications.map(toLabel);
+  const levels = classifyFormations(formationsStr);
   const recommended = matchNiveauFormation(niveauFormation);
 
   return (
@@ -132,7 +135,7 @@ export default function FormationPathway({
             {t.certifications}
           </h4>
           <div className="flex flex-wrap gap-2">
-            {certifications.map((c, i) => (
+            {certificationsStr.map((c, i) => (
               <span
                 key={i}
                 className="px-3 py-1.5 rounded-full text-xs font-medium bg-pink-50 text-pink-700 border border-pink-200"

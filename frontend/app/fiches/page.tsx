@@ -377,24 +377,24 @@ export default function FichesPage() {
                           </td>
                           <td className="p-4">
                             <div className="flex items-center gap-1">
-                              {fiche.validation_ia_score != null ? (
+                              {(fiche as any).validation_ia_score != null ? (
                                 <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold ${
-                                  fiche.validation_ia_score >= 80 ? 'bg-green-100 text-green-700' :
-                                  fiche.validation_ia_score >= 60 ? 'bg-yellow-100 text-yellow-700' : 
+                                  (fiche as any).validation_ia_score >= 80 ? 'bg-green-100 text-green-700' :
+                                  (fiche as any).validation_ia_score >= 60 ? 'bg-yellow-100 text-yellow-700' : 
                                   'bg-red-100 text-red-700'
                                 }`}>
-                                  🤖 {fiche.validation_ia_score}
+                                  🤖 {(fiche as any).validation_ia_score}
                                 </div>
                               ) : (
                                 <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-500">
                                   🤖 -
                                 </div>
                               )}
-                              {fiche.validation_humaine != null ? (
+                              {(fiche as any).validation_humaine != null ? (
                                 <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold ${
-                                  fiche.validation_humaine ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                  (fiche as any).validation_humaine ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                                 }`}>
-                                  👤 {fiche.validation_humaine ? '✓' : '✗'}
+                                  👤 {(fiche as any).validation_humaine ? '✓' : '✗'}
                                 </div>
                               ) : (
                                 <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-500">

@@ -1181,7 +1181,9 @@ Formations existantes: {json.dumps(fiche.formations or [], ensure_ascii=False)}
 Conditions travail: {json.dumps(fiche.conditions_travail or [], ensure_ascii=False)}
 Environnements: {json.dumps(fiche.environnements or [], ensure_ascii=False)}
 
-{f'Instruction supplementaire: {commentaire}' if commentaire else ''}
+{f"""⚠️ INSTRUCTION PRIORITAIRE DE L'UTILISATEUR (A RESPECTER IMPERATIVEMENT) :
+{commentaire}
+Prends en compte cette instruction en priorite lors de l'enrichissement. Adapte les champs concernes selon ces directives.""" if commentaire else ''}
 
 Genere un JSON avec TOUS les champs suivants. Remplis TOUT, meme si des donnees existantes sont fournies ci-dessus. Sois precis et realiste pour le marche francais:
 

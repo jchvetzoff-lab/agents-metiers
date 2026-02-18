@@ -92,17 +92,29 @@ export interface SiteUtile {
   description: string;
 }
 
+// Types for enriched data - can be strings or objects
+export type EnrichedCompetence = string | { nom: string; niveau?: string; categorie?: string };
+export type EnrichedFormation = string | { nom: string; niveau?: string; duree?: string; etablissements?: string[] };
+export type EnrichedCertification = string | { nom: string; organisme?: string; obligatoire?: boolean };
+export type EnrichedCondition = string | { nom: string; description?: string };
+export type EnrichedEnvironnement = string | { nom: string; description?: string };
+export type EnrichedSecteur = string | { nom: string; code?: string };
+export type EnrichedTrait = string | { nom: string; importance?: string };
+export type EnrichedAppellation = string | { nom: string; genre?: string };
+export type EnrichedStatut = string | { nom: string; description?: string };
+export type EnrichedSavoir = string | { nom: string; categorie?: string };
+
 export interface FicheDetail extends FicheMetier {
   missions_principales: string[];
   acces_metier?: string;
-  competences: string[];
-  competences_transversales: string[];
-  savoirs: string[];
-  formations: string[];
-  certifications: string[];
-  conditions_travail: string[];
-  environnements: string[];
-  secteurs_activite: string[];
+  competences: EnrichedCompetence[];
+  competences_transversales: EnrichedCompetence[];
+  savoirs: EnrichedSavoir[];
+  formations: EnrichedFormation[];
+  certifications: EnrichedCertification[];
+  conditions_travail: EnrichedCondition[];
+  environnements: EnrichedEnvironnement[];
+  secteurs_activite: EnrichedSecteur[];
   salaires?: {
     junior: SalaireNiveau;
     confirme: SalaireNiveau;
@@ -127,7 +139,7 @@ export interface FicheDetail extends FicheMetier {
     evolutions: MobiliteItem[];
   };
   // Parcoureo-level fields
-  traits_personnalite: string[];
+  traits_personnalite: EnrichedTrait[];
   aptitudes: AptitudeItem[];
   competences_dimensions: {
     relationnel: number;
@@ -146,8 +158,8 @@ export interface FicheDetail extends FicheMetier {
     entreprenant: number;
     conventionnel: number;
   } | null;
-  autres_appellations: string[];
-  statuts_professionnels: string[];
+  autres_appellations: EnrichedAppellation[];
+  statuts_professionnels: EnrichedStatut[];
   niveau_formation: string | null;
   domaine_professionnel: {
     domaine: string;
@@ -202,16 +214,16 @@ export interface VarianteDetail extends Variante {
   description?: string;
   missions_principales: string[];
   acces_metier?: string;
-  competences: string[];
-  competences_transversales: string[];
-  savoirs: string[];
-  formations: string[];
-  certifications: string[];
-  conditions_travail: string[];
-  environnements: string[];
-  autres_appellations: string[];
-  traits_personnalite: string[];
-  secteurs_activite: string[];
+  competences: EnrichedCompetence[];
+  competences_transversales: EnrichedCompetence[];
+  savoirs: EnrichedSavoir[];
+  formations: EnrichedFormation[];
+  certifications: EnrichedCertification[];
+  conditions_travail: EnrichedCondition[];
+  environnements: EnrichedEnvironnement[];
+  autres_appellations: EnrichedAppellation[];
+  traits_personnalite: EnrichedTrait[];
+  secteurs_activite: EnrichedSecteur[];
   evolution_5ans?: string;
   conditions_travail_detaillees?: string;
   version: number;

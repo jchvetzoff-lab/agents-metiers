@@ -139,7 +139,7 @@ function TabActions() {
   const statCards = stats ? [
     { label: "Total", value: stats.total, color: "bg-indigo-50 text-indigo-700 border-indigo-200", icon: "📊" },
     { label: "Brouillons", value: stats.brouillons, color: "bg-gray-50 text-gray-600 border-gray-200", icon: "📝" },
-    { label: "Enrichies", value: (stats as Record<string, number>).enrichis || 0, color: "bg-blue-50 text-blue-700 border-blue-200", icon: "🤖" },
+    { label: "Enrichies", value: (stats as any)?.enrichis || 0, color: "bg-blue-50 text-blue-700 border-blue-200", icon: "🤖" },
     { label: "En validation", value: stats.en_validation, color: "bg-amber-50 text-amber-700 border-amber-200", icon: "🔍" },
     { label: "Publiees", value: stats.publiees, color: "bg-green-50 text-green-700 border-green-200", icon: "✅" },
     { label: "Archivees", value: stats.archivees, color: "bg-gray-50 text-gray-400 border-gray-200", icon: "📦" },
@@ -193,8 +193,8 @@ function TabActions() {
           <div className="flex items-center justify-between gap-2 overflow-x-auto">
             {[
               { label: "Brouillon", count: stats?.brouillons || 0, color: "gray", href: "/fiches?statut=brouillon", desc: "A enrichir" },
-              { label: "Enrichie", count: (stats as Record<string, number>)?.enrichis || 0, color: "blue", href: "/fiches?statut=enrichi", desc: "En attente de validation IA" },
-              { label: "Validee IA", count: ((stats as Record<string, number>)?.valides || 0) + (stats?.en_validation || 0), color: "amber", href: "/fiches?statut=valide", desc: "A valider par un humain" },
+              { label: "Enrichie", count: (stats as any)?.enrichis || 0, color: "blue", href: "/fiches?statut=enrichi", desc: "En attente de validation IA" },
+              { label: "Validee IA", count: ((stats as any)?.valides || 0) + (stats?.en_validation || 0), color: "amber", href: "/fiches?statut=valide", desc: "A valider par un humain" },
               { label: "Publiee", count: stats?.publiees || 0, color: "green", href: "/fiches?statut=publiee", desc: "Visible publiquement" },
             ].map((step, i, arr) => (
               <div key={step.label} className="flex items-center gap-2 flex-1 min-w-0">
@@ -238,7 +238,7 @@ function TabActions() {
               setValidatingIA(true);
               try {
                 const res = await api.batchValidateIA();
-                setResults(prev => [{ type: "success", message: `Validation IA : ${res.validated}/${res.total} fiches validees` }, ...prev]);
+                setResults(prev => [{ type: "success", message: `Validation IA : ${res.successes}/${res.total} fiches validees` }, ...prev]);
                 api.getStats().then(setStats);
               } catch (err: unknown) {
                 const message = err instanceof Error ? err.message : String(err);
@@ -251,7 +251,7 @@ function TabActions() {
             <Link href="/fiches?statut=enrichi"
               className="w-full flex items-center justify-center gap-1.5 px-3 py-2 border border-indigo-200 text-indigo-600 rounded-lg text-xs font-medium hover:bg-indigo-50 transition">
               Voir les fiches enrichies
-              <span className="text-xs bg-indigo-100 px-1.5 py-0.5 rounded-full">{(stats as Record<string, number>)?.enrichis || 0}</span>
+              <span className="text-xs bg-indigo-100 px-1.5 py-0.5 rounded-full">{(stats as any)?.enrichis || 0}</span>
             </Link>
           </div>
         </div>

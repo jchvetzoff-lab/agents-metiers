@@ -6,7 +6,7 @@
 import { MobiliteItem } from "./api";
 import type { Node, Edge } from "@xyflow/react";
 
-export interface ResolvedMobiliteItem extends MobiliteItem {
+export interface ResolvedMobiliteItem extends Omit<MobiliteItem, 'code_rome'> {
   code_rome: string | null;
 }
 

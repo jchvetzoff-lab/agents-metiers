@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { api, FicheDetail, Variante, VarianteDetail, Region, RegionalData, RecrutementsData } from "@/lib/api";
 import { getTranslations, translateTendance } from "@/lib/translations";
 import { isAuthenticated } from "@/lib/auth";
+import { toLabel, getDisplayName } from "@/lib/utils";
 import { FadeInView } from "@/components/motion";
 import StatusBadge from "@/components/StatusBadge";
 import FormationPathway from "@/components/FormationPathway";
@@ -99,14 +100,6 @@ function ChartTooltip({ active, payload, label, locale = "fr-FR" }: any) {
       ))}
     </div>
   );
-}
-
-/** Normalise un item qui peut etre string ou {nom: string, ...} en string affichable */
-function toLabel(item: unknown): string {
-  if (typeof item === "string") return item;
-  if (item && typeof item === "object" && "nom" in item) return String((item as Record<string, unknown>).nom);
-  if (item && typeof item === "object") return Object.values(item as Record<string, unknown>).filter(v => typeof v === "string").join(" — ") || JSON.stringify(item);
-  return String(item);
 }
 
 function BulletList({ items, color = PURPLE }: { items: unknown[]; color?: string }) {
@@ -1101,7 +1094,7 @@ export default function FicheDetailPage() {
           txt(C.gray500);
           pdf.text("Competences pratiques et techniques en situation professionnelle.", ML + 2, y);
           y += 7;
-          numberedList(d.competences!);
+          numberedList(d.competences!.map(toLabel));
         }
 
         if (hasSE) {
@@ -1498,9 +1491,7 @@ export default function FicheDetailPage() {
 
   // Helper to pick the correct gendered name for mobilité items
   const getMobiliteNom = (item: { nom: string; nom_feminin?: string; nom_epicene?: string }) => {
-    if (filterGenre === "feminin" && item.nom_feminin) return item.nom_feminin;
-    if (filterGenre === "epicene" && item.nom_epicene) return item.nom_epicene;
-    return item.nom;
+    return getDisplayName(item, filterGenre as "masculin" | "feminin" | "epicene");
   };
 
   const hasMissions = (dMissions?.length ?? 0) > 0;
@@ -1711,7 +1702,7 @@ export default function FicheDetailPage() {
                     )}
 
                     {/* VALIDE (IA OK) : Validation humaine (approuver = publier) + Re-enrichir */}
-                    {(fiche.statut === "valide" || (fiche.statut === "en_validation" && fiche.validation_ia_score != null && fiche.validation_ia_score >= 70)) && fiche.statut !== "publiee" && (
+                    {(fiche.statut === "valide" || (fiche.statut === "en_validation" && fiche.validation_ia_score != null && fiche.validation_ia_score >= 70)) && (
                       <>
                         <button onClick={() => handleValidateHuman(true)} disabled={actionLoading !== null || validationHumaneLoading}
                           className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-green-600 text-white rounded-full text-xs font-medium hover:bg-green-700 transition disabled:opacity-40 disabled:cursor-wait">
@@ -2074,21 +2065,19 @@ export default function FicheDetailPage() {
                             <div>
                               <h4 className="text-sm font-semibold text-gray-700 mb-3">Problèmes identifiés</h4>
                               <div className="space-y-2">
-                                {fiche.validation_ia_details.problemes.map((probleme, i) => (
-                                  <div key={i} className={`flex items-start gap-3 p-3 rounded-lg ${
-                                    probleme.severite === 'erreur' ? 'bg-red-50 border-l-4 border-red-400' :
-                                    probleme.severite === 'warning' ? 'bg-yellow-50 border-l-4 border-yellow-400' :
-                                    'bg-blue-50 border-l-4 border-blue-400'
-                                  }`}>
-                                    <span className={`mt-0.5 ${
-                                      probleme.severite === 'erreur' ? 'text-red-500' :
-                                      probleme.severite === 'warning' ? 'text-yellow-500' : 'text-blue-500'
-                                    }`}>
-                                      {probleme.severite === 'erreur' ? '❌' : probleme.severite === 'warning' ? '⚠️' : 'ℹ️'}
-                                    </span>
-                                    <span className="text-sm text-gray-700">{probleme.message}</span>
-                                  </div>
-                                ))}
+                                {fiche.validation_ia_details.problemes.map((probleme: any, i: number) => {
+                                  const msg = typeof probleme === "string" ? probleme : probleme?.message || JSON.stringify(probleme);
+                                  const sev = typeof probleme === "object" ? probleme?.severite : "erreur";
+                                  const colors = sev === "erreur" ? { bg: "bg-red-50", border: "border-red-400", icon: "text-red-500", emoji: "❌" }
+                                    : sev === "warning" ? { bg: "bg-yellow-50", border: "border-yellow-400", icon: "text-yellow-500", emoji: "⚠️" }
+                                    : { bg: "bg-blue-50", border: "border-blue-400", icon: "text-blue-500", emoji: "ℹ️" };
+                                  return (
+                                    <div key={i} className={`flex items-start gap-3 p-3 rounded-lg ${colors.bg} border-l-4 ${colors.border}`}>
+                                      <span className={`${colors.icon} mt-0.5`}>{colors.emoji}</span>
+                                      <span className="text-sm text-gray-700">{msg}</span>
+                                    </div>
+                                  );
+                                })}
                               </div>
                             </div>
                           )}
@@ -2098,25 +2087,26 @@ export default function FicheDetailPage() {
                             <div>
                               <h4 className="text-sm font-semibold text-gray-700 mb-3">Points forts</h4>
                               <div className="space-y-2">
-                                {fiche.validation_ia_details.points_forts.map((point, i) => (
+                                {fiche.validation_ia_details.points_forts.map((point: any, i: number) => (
                                   <div key={i} className="flex items-start gap-3 p-3 bg-green-50 rounded-lg border-l-4 border-green-400">
                                     <span className="text-green-500 mt-0.5">✅</span>
-                                    <span className="text-sm text-gray-700">{point}</span>
+                                    <span className="text-sm text-gray-700">{typeof point === "string" ? point : point?.message || JSON.stringify(point)}</span>
                                   </div>
                                 ))}
                               </div>
                             </div>
                           )}
 
-                          {/* Améliorations requises */}
-                          {fiche.validation_ia_details.ameliorations_requises && fiche.validation_ia_details.ameliorations_requises.length > 0 && (
+                          {/* Suggestions / Améliorations */}
+                          {((fiche.validation_ia_details.suggestions || fiche.validation_ia_details.ameliorations_requises) &&
+                            (fiche.validation_ia_details.suggestions?.length > 0 || fiche.validation_ia_details.ameliorations_requises?.length > 0)) && (
                             <div>
                               <h4 className="text-sm font-semibold text-gray-700 mb-3">Améliorations recommandées</h4>
                               <div className="space-y-2">
-                                {fiche.validation_ia_details.ameliorations_requises.map((amelioration, i) => (
+                                {(fiche.validation_ia_details.suggestions || fiche.validation_ia_details.ameliorations_requises).map((item: any, i: number) => (
                                   <div key={i} className="flex items-start gap-3 p-3 bg-indigo-50 rounded-lg border-l-4 border-indigo-400">
                                     <span className="text-indigo-500 mt-0.5">💡</span>
-                                    <span className="text-sm text-gray-700">{amelioration}</span>
+                                    <span className="text-sm text-gray-700">{typeof item === "string" ? item : item?.message || JSON.stringify(item)}</span>
                                   </div>
                                 ))}
                               </div>
@@ -2157,11 +2147,11 @@ export default function FicheDetailPage() {
                   </div>
 
                   {fiche.validation_humaine ? (
-                    <div className={`bg-white rounded-xl border p-6 ${fiche.validation_humaine === true ? 'border-l-4 border-green-400' : 'border-l-4 border-red-400'}`}>
+                    <div className={`bg-white rounded-xl border p-6 ${fiche.validation_humaine === 'approuvee' ? 'border-l-4 border-green-400' : 'border-l-4 border-red-400'}`}>
                       <div className="flex items-center gap-3 mb-4">
-                        <span className={`w-3 h-3 rounded-full ${fiche.validation_humaine === true ? 'bg-green-500' : 'bg-red-500'}`} />
-                        <span className={`font-semibold ${fiche.validation_humaine === true ? 'text-green-700' : 'text-red-700'}`}>
-                          {fiche.validation_humaine === true ? 'Fiche approuvée' : 'Fiche rejetée'}
+                        <span className={`w-3 h-3 rounded-full ${fiche.validation_humaine === 'approuvee' ? 'bg-green-500' : 'bg-red-500'}`} />
+                        <span className={`font-semibold ${fiche.validation_humaine === 'approuvee' ? 'text-green-700' : 'text-red-700'}`}>
+                          {fiche.validation_humaine === 'approuvee' ? 'Fiche approuvée' : 'Fiche rejetée'}
                         </span>
                       </div>
                       
@@ -2283,7 +2273,7 @@ export default function FicheDetailPage() {
                 <div>
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold text-gray-900">🚀 Publication</h3>
-                    {fiche.validation_ia_score && fiche.validation_ia_score >= 70 && fiche.validation_humaine === true && fiche.statut !== 'publie' && (
+                    {fiche.validation_ia_score && fiche.validation_ia_score >= 70 && fiche.validation_humaine === 'approve' && fiche.statut !== 'publie' && (
                       <button
                         onClick={handlePublishFinal}
                         disabled={actionLoading === 'publish'}
@@ -2330,7 +2320,7 @@ export default function FicheDetailPage() {
                         {!fiche.validation_ia_score ? "Validation IA requise avant publication." :
                          fiche.validation_ia_score < 70 ? "Score IA insuffisant (minimum 70/100)." :
                          !fiche.validation_humaine ? "Validation humaine requise avant publication." :
-                         fiche.validation_humaine !== true ? "Fiche rejetée par validation humaine." :
+                         fiche.validation_humaine !== 'approve' ? "Fiche rejetée par validation humaine." :
                          "Prêt pour publication."}
                       </p>
                     </div>
@@ -2633,7 +2623,7 @@ export default function FicheDetailPage() {
                       {fiche.formations && fiche.formations.length > 0 && (
                         <div className="space-y-2 mt-2">
                           {fiche.formations.map((f, i) => {
-                            const label = typeof f === "string" ? f : (f as Record<string, unknown>)?.nom as string || JSON.stringify(f);
+                            const label = toLabel(f);
                             const levelMatch = label.match(/bac\s*\+\s*(\d)/i);
                             const isMaster = /master|ingenieur|ingénieur|doctorat/i.test(label);
                             const isLicence = /licence|bachelor|but\b/i.test(label);
