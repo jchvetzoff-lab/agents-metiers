@@ -361,7 +361,8 @@ class ApiClient {
 
     // Retry with timeout for Render cold starts
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
+    const isWrite = options?.method && options.method !== "GET";
+    const timeoutId = setTimeout(() => controller.abort(), isWrite ? 180000 : 60000); // 180s for POST, 60s for GET
     let response: Response;
     let lastError: Error | null = null;
     const maxRetries = 2;
