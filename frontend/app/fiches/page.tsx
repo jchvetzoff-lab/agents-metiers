@@ -124,7 +124,7 @@ export default function FichesPage() {
       try {
         const allData = await api.getFiches({ limit: 1, offset: 0 });
         const newCounts: Record<string, number> = { "": allData.total };
-        const statuts = ["brouillon", "en_validation", "publiee"];
+        const statuts = ["brouillon", "enrichi", "en_validation", "valide", "publiee", "archivee"];
         await Promise.all(statuts.map(async (s) => {
           try {
             const d = await api.getFiches({ statut: s, limit: 1, offset: 0 });
