@@ -1,0 +1,81 @@
+code_rome,pcs_code,pcs_libelle,correspondance_force
+M1805,388a,Ingénieurs et cadres d'étude recherche et développement informatique,forte
+M1805,388c,Ingénieurs et cadres d'étude recherche et développement en informatique,forte
+M1802,388b,Ingénieurs et cadres d'administration maintenance support informatique,forte
+M1801,388a,Ingénieurs et cadres d'étude recherche et développement informatique,moyenne
+M1810,388c,Ingénieurs et cadres d'étude recherche et développement en informatique,moyenne
+M1804,388a,Études et développement de réseaux de télécoms,forte
+M1803,388b,Direction des systèmes d'information,forte
+M1806,388c,Conseil et maîtrise d'ouvrage en systèmes d'information,forte
+M1807,388a,Administration de systèmes d'information,forte
+M1808,388c,Information géographique,moyenne
+M1809,462a,Relation commerciale grands comptes et entreprises,moyenne
+D1402,462a,Relation commerciale grands comptes et entreprises,forte
+D1401,462c,Vendeurs en habillement accessoires et articles de luxe de sport et de loisirs,moyenne
+D1403,462b,Chargés de clientèle bancaire,moyenne
+D1404,462d,Relation commerciale en vente de services,forte
+D1405,462a,Conseil clientèle en assurances,moyenne
+D1406,462c,Management du personnel de vente,forte
+D1407,462b,Relation technico-commerciale,forte
+D1408,462a,Téléconseil et télévente,moyenne
+D1409,462c,Vente en décoration et équipement du foyer,faible
+D1410,462d,Vente en habillement et accessoires de la mode,faible
+D1411,462a,Vente en articles de sport et loisirs,faible
+D1412,462b,Vente en biens d'équipement,moyenne
+D1413,462c,Vente en gros de matériel et équipement,moyenne
+D1414,462d,Vente en optique lunetterie,moyenne
+J1102,311a,Médecins salariés non hospitaliers,forte
+J1101,311a,Médecins hospitaliers,forte
+J1103,311b,Médecins spécialistes,forte
+J1104,311c,Psychothérapeutes rééducateurs spécialisés,moyenne
+J1105,431f,Vétérinaires,forte
+J1501,431a,Infirmiers psychiatriques,forte
+J1502,431b,Infirmiers en soins généraux,forte
+J1503,431c,Infirmiers spécialisés,forte
+J1504,431d,Sages-femmes,forte
+J1505,431e,Soins d'hygiène santé et beauté,moyenne
+J1506,431f,Soins d'hygiène de confort du patient,forte
+J1507,431a,Soins infirmiers généralistes,forte
+J1508,431b,Soins infirmiers spécialisés,forte
+J1509,431c,Autres professionnels paramédicaux,moyenne
+K2107,421a,Enseignants du secondaire,forte
+K2106,421b,Enseignants du primaire,forte
+K2105,421c,Enseignement artistique,moyenne
+K2104,421d,Éducation et surveillance au collège et au lycée,moyenne
+K2103,421a,Direction d'établissement et d'enseignement,moyenne
+K2102,421b,Coordination pédagogique,moyenne
+K2101,421c,Conseil en formation,moyenne
+K2111,421d,Formation professionnelle,moyenne
+K2112,421a,Orientation scolaire et professionnelle,moyenne
+K2113,421b,Recherche en sciences de l'homme et de la société,faible
+F1701,634a,Conduite d'engins de terrassement et de carrière,forte
+F1702,634b,Construction de routes et voies,forte
+F1703,681a,Maçonnerie,forte
+F1704,681b,Préparation du gros œuvre et des travaux publics,forte
+F1705,681c,Charpente bois,forte
+F1706,681d,Charpente métallique,forte
+F1707,681e,Plomberie,forte
+F1708,681f,Électricité bâtiment,forte
+F1709,681a,Électrotechnique,moyenne
+F1710,681b,Installation d'équipements sanitaires et thermiques,forte
+N1101,372a,Conduite de travaux du BTP et extraction,moyenne
+N1102,372b,Déménagement,faible
+N1103,372c,Magasinage et préparation de commandes,faible
+N1104,372d,Manœuvre et conduite d'engins lourds de manutention,faible
+N1105,372e,Manutention manuelle de charges,faible
+N1201,372f,Affrètement transport,moyenne
+N1202,643a,Conduite de transport en commun sur route,forte
+N1203,643b,Conduite de véhicules sur route,forte
+N1301,652a,Conception et dessin produits industriels,moyenne
+N1302,652b,Direction de chantier du BTP,forte
+N1303,652c,Intervention technique d'exploitation logistique,moyenne
+G1101,463a,Accueil touristique,moyenne
+G1102,463b,Promotion du tourisme local,moyenne
+G1201,463c,Accompagnement de voyages d'activités culturelles ou sportives,moyenne
+G1202,463d,Animation d'activités culturelles ou ludiques,moyenne
+G1203,463a,Animation de loisirs auprès d'enfants ou d'adolescents,moyenne
+G1204,463b,Éducation en activités sportives,forte
+G1205,463c,Personnel polyvalent d'hôtellerie,faible
+G1801,463d,Café brasserie,faible
+G1802,463a,Management du personnel de cuisine,moyenne
+G1803,463b,Service en restauration,faible

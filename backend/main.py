@@ -12,7 +12,12 @@ import json
 import sys
 import hashlib
 import secrets
+import logging
 from pathlib import Path
+
+# Configuration du logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Ajouter le chemin vers le projet agents-metiers existant
 AGENTS_METIERS_PATH = Path(__file__).parent.parent.parent / "agents-metiers"
@@ -1571,7 +1576,9 @@ async def publish_batch(body: PublishBatchRequest, request: Request):
     return {"results": results}
 
 
-# ==================== REGIONS ====================
+# ==================== REGIONS & INSEE INTEGRATION ====================
+
+from insee_data import insee_integrator
 
 REGIONS_FRANCE = [
     {"code": "01", "nom": "Guadeloupe"},
@@ -1619,77 +1626,218 @@ async def get_regions():
     return {"regions": [{"code": r["code"], "libelle": r["nom"]} for r in REGIONS_FRANCE]}
 
 
-@app.get("/api/fiches/{code_rome}/regional")
-async def get_fiche_regional(code_rome: str, region: str = Query(...)):
-    """Retourne des données régionales pour un métier. Format: RegionalData du frontend."""
+@app.get("/api/fiches/{code_rome}/national")
+async def get_fiche_national(code_rome: str):
+    """Retourne les statistiques nationales INSEE pour un métier."""
     try:
         fiche = repo.get_fiche(code_rome)
         if not fiche:
             raise HTTPException(status_code=404, detail=f"Fiche {code_rome} non trouvée")
 
-        coeff = COEFFICIENTS_REGIONAUX.get(region, 1.0)
+        # Récupérer les statistiques INSEE nationales
+        try:
+            statistiques_insee = await insee_integrator.get_statistiques_completes(code_rome, region=None)
+            use_insee_data = True
+            logger.info(f"Données INSEE nationales récupérées pour {code_rome}: source={statistiques_insee.source}")
+        except Exception as e:
+            logger.warning(f"Erreur données INSEE nationales pour {code_rome}: {e}")
+            # Fallback sur les données de la fiche
+            statistiques_insee = None
+            use_insee_data = False
+
+        if use_insee_data and statistiques_insee:
+            # Données INSEE réelles
+            nb_emplois = statistiques_insee.nb_emplois
+            salaire_median = statistiques_insee.salaire_median
+            salaire_moyen = statistiques_insee.salaire_moyen
+            types_contrats = statistiques_insee.repartition_contrats
+            tension = statistiques_insee.tension
+            source = statistiques_insee.source
+            date_maj = statistiques_insee.date_maj.isoformat() if statistiques_insee.date_maj else None
+            
+        else:
+            # Fallback sur les données existantes de la fiche
+            logger.info(f"Utilisation données fiche existantes pour {code_rome}")
+            
+            # Perspectives de la fiche
+            persp = fiche.perspectives
+            persp_dict = persp.model_dump() if persp and hasattr(persp, 'model_dump') else (persp if isinstance(persp, dict) else {})
+            
+            nb_emplois = persp_dict.get("nombre_offres", 5000)
+            tension = persp_dict.get("tension", 0.5)
+            
+            # Salaires de la fiche
+            sal = fiche.salaires
+            sal_dict = sal.model_dump() if sal and hasattr(sal, 'model_dump') else (sal if isinstance(sal, dict) else {})
+            
+            # Calculer médiane nationale des salaires
+            all_medians = []
+            for level in ["junior", "confirme", "senior"]:
+                lvl = (sal_dict or {}).get(level, {}) or {}
+                if lvl.get("median"):
+                    all_medians.append(lvl["median"])
+            
+            salaire_median = int(sum(all_medians) / len(all_medians)) if all_medians else 35000
+            salaire_moyen = int(salaire_median * 1.05)
+            
+            # Types de contrats par défaut
+            types_contrats = fiche.types_contrats
+            if not types_contrats or not isinstance(types_contrats, dict):
+                types_contrats = {"cdi": 55, "cdd": 25, "interim": 12, "alternance": 5, "autre": 3}
+            
+            source = "fiche_existante"
+            date_maj = fiche.metadata.date_maj.isoformat() if fiche.metadata.date_maj else None
+
+        return {
+            "code_rome": code_rome,
+            "nom_metier": fiche.nom_epicene,
+            "statistiques_nationales": {
+                "nb_emplois": nb_emplois,
+                "salaire_median": salaire_median,
+                "salaire_moyen": salaire_moyen,
+                "types_contrats": types_contrats,
+                "tension": tension,
+                "source": source,
+                "date_maj": date_maj,
+                "insee_data_used": use_insee_data,
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erreur get_fiche_national {code_rome}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/fiches/{code_rome}/regional")
+async def get_fiche_regional(code_rome: str, region: str = Query(...)):
+    """Retourne des données régionales pour un métier avec vraies données INSEE. Format: RegionalData du frontend."""
+    try:
+        fiche = repo.get_fiche(code_rome)
+        if not fiche:
+            raise HTTPException(status_code=404, detail=f"Fiche {code_rome} non trouvée")
+
         region_info = next((r for r in REGIONS_FRANCE if r["code"] == region), None)
         if not region_info:
             raise HTTPException(status_code=404, detail=f"Région {region} non trouvée")
 
-        sal = fiche.salaires
-        sal_dict = sal.model_dump() if sal and hasattr(sal, 'model_dump') else (sal if isinstance(sal, dict) else {})
+        # **NOUVELLE INTEGRATION INSEE** - Récupérer les vraies données
+        try:
+            statistiques_insee = await insee_integrator.get_statistiques_completes(code_rome, region)
+            use_insee_data = True
+            logger.info(f"Données INSEE récupérées pour {code_rome} région {region}: source={statistiques_insee.source}")
+        except Exception as e:
+            logger.warning(f"Erreur données INSEE pour {code_rome}/{region}: {e}")
+            statistiques_insee = None
+            use_insee_data = False
 
-        # Nombre d'offres basé sur les perspectives de la fiche + poids population
-        persp = fiche.perspectives
-        persp_dict = persp.model_dump() if persp and hasattr(persp, 'model_dump') else (persp if isinstance(persp, dict) else {})
-        nb_offres_national = persp_dict.get("nombre_offres") or 5000
-        poids = POIDS_POPULATION.get(region, 0.03)
-        nb_offres = max(5, round(nb_offres_national * poids))
+        # Utiliser les données INSEE en priorité, fallback sur anciennes données
+        if use_insee_data and statistiques_insee:
+            # Nombre d'emplois/offres réel INSEE
+            nb_offres = statistiques_insee.nb_emplois
+            
+            # Salaires réels INSEE (déjà ajustés par région dans l'intégrateur)
+            salaire_median_insee = statistiques_insee.salaire_median
+            salaire_moyen_insee = statistiques_insee.salaire_moyen
+            
+            # Répartition contrats réelle INSEE/DARES
+            types_contrats_insee = statistiques_insee.repartition_contrats
+            
+            # Tension réelle calculée INSEE
+            tension_regionale = statistiques_insee.tension
+            
+            # Construire la structure de salaires par niveau basée sur les données INSEE
+            salaires_par_niveau = {}
+            if salaire_median_insee:
+                # Répartir par niveau d'expérience avec écarts réalistes
+                sal_junior = int(salaire_median_insee * 0.75)
+                sal_confirme = salaire_median_insee  
+                sal_senior = int(salaire_median_insee * 1.35)
+                
+                level_weights = {"junior": 0.30, "confirme": 0.50, "senior": 0.20}
+                
+                for level, median in [("junior", sal_junior), ("confirme", sal_confirme), ("senior", sal_senior)]:
+                    level_nb = max(2, round(nb_offres * level_weights[level] * 0.6))
+                    salaires_par_niveau[level] = {
+                        "min": int(median * 0.85),
+                        "max": int(median * 1.25),
+                        "median": median,
+                        "nb_offres": level_nb,
+                    }
+                
+                # Salaires globaux
+                salaires_global = {
+                    "nb_offres_avec_salaire": max(3, round(nb_offres * 0.65)),
+                    "min": sal_junior,
+                    "max": int(sal_senior * 1.25),
+                    "median": salaire_median_insee,
+                    "moyenne": salaire_moyen_insee or int(salaire_median_insee * 1.05),
+                }
+            else:
+                salaires_global = None
+                
+        else:
+            # FALLBACK: Anciennes données simulées
+            logger.info(f"Utilisation fallback données simulées pour {code_rome}/{region}")
+            
+            coeff = COEFFICIENTS_REGIONAUX.get(region, 1.0)
+            sal = fiche.salaires
+            sal_dict = sal.model_dump() if sal and hasattr(sal, 'model_dump') else (sal if isinstance(sal, dict) else {})
 
-        # Salaires régionaux réalistes basés sur les nationaux * coefficient
-        all_mins = []
-        all_maxs = []
-        all_medians = []
-        salaires_par_niveau = {}
-        level_weights = {"junior": 0.35, "confirme": 0.45, "senior": 0.20}
-        for level in ["junior", "confirme", "senior"]:
-            lvl = (sal_dict or {}).get(level, {}) or {}
-            s_min = round(lvl.get("min", 0) * coeff) if lvl.get("min") else 0
-            s_max = round(lvl.get("max", 0) * coeff) if lvl.get("max") else 0
-            s_med = round(lvl.get("median", 0) * coeff) if lvl.get("median") else 0
-            level_nb = max(2, round(nb_offres * level_weights[level] * 0.6))
-            if s_med:
-                all_mins.append(s_min)
-                all_maxs.append(s_max)
-                all_medians.append(s_med)
-            salaires_par_niveau[level] = {
-                "min": s_min or 0,
-                "max": s_max or 0,
-                "median": s_med or 0,
-                "nb_offres": level_nb,
-            } if s_med else None
+            # Nombre d'offres basé sur les perspectives de la fiche + poids population
+            persp = fiche.perspectives
+            persp_dict = persp.model_dump() if persp and hasattr(persp, 'model_dump') else (persp if isinstance(persp, dict) else {})
+            nb_offres_national = persp_dict.get("nombre_offres") or 5000
+            poids = POIDS_POPULATION.get(region, 0.03)
+            nb_offres = max(5, round(nb_offres_national * poids))
 
-        nb_avec_salaire = max(3, round(nb_offres * 0.65))
-        salaires_global = {
-            "nb_offres_avec_salaire": nb_avec_salaire,
-            "min": min(all_mins) if all_mins else 0,
-            "max": max(all_maxs) if all_maxs else 0,
-            "median": round(sum(all_medians) / len(all_medians)) if all_medians else 0,
-            "moyenne": round(sum(all_medians) / len(all_medians) * 1.03) if all_medians else 0,
-        } if all_medians else None
+            # Salaires régionaux réalistes basés sur les nationaux * coefficient
+            all_mins = []
+            all_maxs = []
+            all_medians = []
+            salaires_par_niveau = {}
+            level_weights = {"junior": 0.35, "confirme": 0.45, "senior": 0.20}
+            for level in ["junior", "confirme", "senior"]:
+                lvl = (sal_dict or {}).get(level, {}) or {}
+                s_min = round(lvl.get("min", 0) * coeff) if lvl.get("min") else 0
+                s_max = round(lvl.get("max", 0) * coeff) if lvl.get("max") else 0
+                s_med = round(lvl.get("median", 0) * coeff) if lvl.get("median") else 0
+                level_nb = max(2, round(nb_offres * level_weights[level] * 0.6))
+                if s_med:
+                    all_mins.append(s_min)
+                    all_maxs.append(s_max)
+                    all_medians.append(s_med)
+                salaires_par_niveau[level] = {
+                    "min": s_min or 0,
+                    "max": s_max or 0,
+                    "median": s_med or 0,
+                    "nb_offres": level_nb,
+                } if s_med else None
 
-        # types_contrats from fiche or defaults réalistes
-        tc = fiche.types_contrats
-        if not tc or not isinstance(tc, dict):
-            tc = {"cdi": 48, "cdd": 27, "interim": 15, "alternance": 7, "autre": 3}
+            salaires_global = {
+                "nb_offres_avec_salaire": max(3, round(nb_offres * 0.65)),
+                "min": min(all_mins) if all_mins else 0,
+                "max": max(all_maxs) if all_maxs else 0,
+                "median": round(sum(all_medians) / len(all_medians)) if all_medians else 0,
+                "moyenne": round(sum(all_medians) / len(all_medians) * 1.03) if all_medians else 0,
+            } if all_medians else None
 
-        # experience distribution réaliste
+            # types_contrats from fiche or defaults
+            types_contrats_insee = fiche.types_contrats
+            if not types_contrats_insee or not isinstance(types_contrats_insee, dict):
+                types_contrats_insee = {"cdi": 48, "cdd": 27, "interim": 15, "alternance": 7, "autre": 3}
+
+            # Tension régionale basée sur la tension nationale * variation
+            tension_nationale = persp_dict.get("tension") or 0.5
+            tension_var = {"11": 1.05, "32": 1.10, "93": 0.95, "53": 1.08}.get(region, 1.0)
+            tension_regionale = round(min(1.0, max(0.1, tension_nationale * tension_var)), 2)
+
+        # Experience distribution réaliste (commune aux deux sources)
         exp_j = round(nb_offres * 0.30)
         exp_c = round(nb_offres * 0.50)
         exp_s = round(nb_offres * 0.20)
         exp_total = exp_j + exp_c + exp_s
-
-        # Tension régionale basée sur la tension nationale * variation
-        tension_nationale = persp_dict.get("tension") or 0.5
-        # Légère variation par région
-        tension_var = {"11": 1.05, "32": 1.10, "93": 0.95, "53": 1.08}.get(region, 1.0)
-        tension_regionale = round(min(1.0, max(0.1, tension_nationale * tension_var)), 2)
 
         return {
             "region": region,
@@ -1697,7 +1845,7 @@ async def get_fiche_regional(code_rome: str, region: str = Query(...)):
             "code_rome": code_rome,
             "nb_offres": nb_offres,
             "salaires": salaires_global,
-            "types_contrats": tc,
+            "types_contrats": types_contrats_insee,
             "salaires_par_niveau": salaires_par_niveau,
             "experience_distribution": {
                 "junior": exp_j,
@@ -1708,12 +1856,15 @@ async def get_fiche_regional(code_rome: str, region: str = Query(...)):
                 "senior_pct": round(exp_s / exp_total * 100) if exp_total else 33,
             },
             "tension_regionale": tension_regionale,
-            "source": "estimation_insee",
-            "coefficient_regional": coeff,
+            "source": statistiques_insee.source if use_insee_data and statistiques_insee else "estimation_legacy",
+            "coefficient_regional": COEFFICIENTS_REGIONAUX.get(region, 1.0),
+            "insee_data_used": use_insee_data,
+            "date_maj": statistiques_insee.date_maj.isoformat() if use_insee_data and statistiques_insee and statistiques_insee.date_maj else None,
         }
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"Erreur get_fiche_regional {code_rome}/{region}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
