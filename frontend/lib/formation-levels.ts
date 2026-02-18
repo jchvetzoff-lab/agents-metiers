@@ -19,7 +19,7 @@ export const FORMATION_LEVELS: Record<FormationLevel, FormationLevelConfig> = {
   bac2: { id: "bac2", order: 3, color: "#06B6D4", bgColor: "#ECFEFF", borderColor: "#A5F3FC" },
   bac:  { id: "bac",  order: 2, color: "#F97316", bgColor: "#FFF7ED", borderColor: "#FED7AA" },
   cap:  { id: "cap",  order: 1, color: "#EAB308", bgColor: "#FEFCE8", borderColor: "#FDE68A" },
-  autre:{ id: "autre", order: 0, color: "#6B7280", bgColor: "#F9FAFB", borderColor: "#E5E7EB" },
+  autre:{ id: "autre", order: 0, color: "#10B981", bgColor: "#ECFDF5", borderColor: "#A7F3D0" },
 };
 
 const LEVEL_PATTERNS: { level: FormationLevel; pattern: RegExp }[] = [

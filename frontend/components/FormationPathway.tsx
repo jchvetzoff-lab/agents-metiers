@@ -61,7 +61,7 @@ export default function FormationPathway({
                     boxShadow: isRecommended ? `0 0 0 4px ${lvl.config.borderColor}` : undefined,
                   }}
                 >
-                  {lvl.config.order || "?"}
+                  {lvl.level === "autre" ? "✓" : lvl.config.order}
                 </div>
               </div>
 
