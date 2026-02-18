@@ -20,17 +20,17 @@ export default function ActionsPage() {
     <main className="min-h-screen bg-[#F8F9FA]">
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
-        <div className="max-w-5xl mx-auto px-4 md:px-8 py-8">
+        <div className="max-w-5xl mx-auto px-4 md:px-8 py-6">
           <FadeInView>
-            <div className="flex items-center gap-4 mb-2">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-600 to-pink-500 flex items-center justify-center shadow-lg">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex items-center gap-4">
+              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-indigo-600 to-pink-500 flex items-center justify-center shadow-lg">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
               </div>
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold gradient-text">Actions</h1>
-                <p className="text-gray-500 text-sm">Gérez vos fiches métiers et consultez l&apos;historique</p>
+                <h1 className="text-2xl font-bold text-gray-900">Centre de controle</h1>
+                <p className="text-gray-500 text-sm">Pilotez le cycle de vie de vos fiches metiers</p>
               </div>
             </div>
           </FadeInView>
@@ -45,7 +45,7 @@ export default function ActionsPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`relative px-6 py-4 text-sm font-medium transition-all whitespace-nowrap flex items-center gap-2 ${
+                className={`relative px-6 py-3.5 text-sm font-medium transition-all whitespace-nowrap flex items-center gap-2 ${
                   activeTab === tab.id
                     ? "text-indigo-600"
                     : "text-gray-500 hover:text-gray-700"
@@ -67,7 +67,7 @@ export default function ActionsPage() {
       </div>
 
       {/* Content */}
-      <div className="max-w-5xl mx-auto px-4 md:px-8 py-8">
+      <div className="max-w-5xl mx-auto px-4 md:px-8 py-6">
         {activeTab === "actions" && <TabActions />}
         {activeTab === "historique" && <TabHistorique />}
       </div>
@@ -76,43 +76,21 @@ export default function ActionsPage() {
 }
 
 // ══════════════════════════════════════
-// TAB: ACTIONS (merged utilisateurs + IA)
+// TAB: ACTIONS
 // ══════════════════════════════════════
 
 function TabActions() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [publishing, setPublishing] = useState(false);
   const [archiving, setArchiving] = useState(false);
   const [creatingFiche, setCreatingFiche] = useState(false);
   const [metierName, setMetierName] = useState("");
   const [validatingIA, setValidatingIA] = useState(false);
-  // romeCheck removed - handled by external agent
   const [results, setResults] = useState<{ type: "success" | "error"; message: string }[]>([]);
 
   useEffect(() => {
     api.getStats().then(s => { setStats(s); setLoading(false); }).catch(() => setLoading(false));
   }, []);
-
-  async function handlePublishAll() {
-    setPublishing(true);
-    try {
-      const data = await api.getFiches({ statut: "en_validation", limit: 500 });
-      if (data.results.length === 0) {
-        setResults(prev => [{ type: "error", message: "Aucune fiche en validation à publier" }, ...prev]);
-        return;
-      }
-      const codes = data.results.map(f => f.code_rome);
-      const res = await api.publishBatch(codes);
-      setResults(prev => [{ type: "success", message: `${res.results.filter(r => r.status === "success").length} fiches publiées` }, ...prev]);
-      api.getStats().then(setStats);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      setResults(prev => [{ type: "error", message }, ...prev]);
-    } finally {
-      setPublishing(false);
-    }
-  }
 
   async function handleArchiveObsolete() {
     setArchiving(true);
@@ -120,14 +98,14 @@ function TabActions() {
       const data = await api.getFiches({ limit: 500 });
       const obsolete = data.results.filter(f => f.rome_update_pending);
       if (obsolete.length === 0) {
-        setResults(prev => [{ type: "error", message: "Aucune fiche obsolète à archiver" }, ...prev]);
+        setResults(prev => [{ type: "error", message: "Aucune fiche obsolete a archiver" }, ...prev]);
         return;
       }
       let archived = 0;
       for (const fiche of obsolete) {
         try { await api.updateFiche(fiche.code_rome, { statut: "archivee" }); archived++; } catch { /* skip */ }
       }
-      setResults(prev => [{ type: "success", message: `${archived} fiche${archived > 1 ? "s" : ""} archivée${archived > 1 ? "s" : ""}` }, ...prev]);
+      setResults(prev => [{ type: "success", message: `${archived} fiche${archived > 1 ? "s" : ""} archivee${archived > 1 ? "s" : ""}` }, ...prev]);
       api.getStats().then(setStats);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
@@ -136,8 +114,6 @@ function TabActions() {
       setArchiving(false);
     }
   }
-
-  // handleRomeCheck removed - veille ROME handled by external agent
 
   async function handleCreateFiche() {
     if (!metierName.trim()) return;
@@ -149,8 +125,9 @@ function TabActions() {
         nom_feminin: metierName.trim(),
         nom_epicene: metierName.trim(),
       });
-      setResults(prev => [{ type: "success", message: `Fiche créée : ${res.code_rome}` }, ...prev]);
+      setResults(prev => [{ type: "success", message: `Fiche creee : ${res.code_rome}` }, ...prev]);
       setMetierName("");
+      api.getStats().then(setStats);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       setResults(prev => [{ type: "error", message }, ...prev]);
@@ -159,164 +136,186 @@ function TabActions() {
     }
   }
 
+  const statCards = stats ? [
+    { label: "Total", value: stats.total, color: "bg-indigo-50 text-indigo-700 border-indigo-200", icon: "📊" },
+    { label: "Brouillons", value: stats.brouillons, color: "bg-gray-50 text-gray-600 border-gray-200", icon: "📝" },
+    { label: "Enrichies", value: (stats as Record<string, number>).enrichis || 0, color: "bg-blue-50 text-blue-700 border-blue-200", icon: "🤖" },
+    { label: "En validation", value: stats.en_validation, color: "bg-amber-50 text-amber-700 border-amber-200", icon: "🔍" },
+    { label: "Publiees", value: stats.publiees, color: "bg-green-50 text-green-700 border-green-200", icon: "✅" },
+    { label: "Archivees", value: stats.archivees, color: "bg-gray-50 text-gray-400 border-gray-200", icon: "📦" },
+  ] : [];
+
   return (
-    <div className="space-y-6">
-      {/* Stats */}
+    <div className="space-y-8">
+      {/* Stats bar */}
       {loading ? (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} className="bg-white rounded-xl border border-gray-200 p-5 animate-pulse">
-              <div className="h-8 bg-gray-200 rounded mb-2" />
-              <div className="h-4 bg-gray-100 rounded w-1/2" />
+        <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+          {[1,2,3,4,5,6].map(i => (
+            <div key={i} className="bg-white rounded-xl border p-4 animate-pulse">
+              <div className="h-7 bg-gray-200 rounded mb-1" />
+              <div className="h-3 bg-gray-100 rounded w-2/3" />
             </div>
           ))}
         </div>
-      ) : stats && (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          {[
-            { label: "Total", value: stats.total, color: "#4F46E5" },
-            { label: "Brouillons", value: stats.brouillons, color: "#6B7280" },
-            { label: "En validation", value: stats.en_validation, color: "#EAB308" },
-            { label: "Publiées", value: stats.publiees, color: "#16A34A" },
-            { label: "Archivées", value: stats.archivees, color: "#9CA3AF" },
-          ].map(s => (
-            <div key={s.label} className="bg-white rounded-xl border border-gray-200 p-5 text-center">
-              <div className="text-3xl font-bold" style={{ color: s.color }}>{s.value}</div>
-              <div className="text-xs text-gray-500 mt-1">{s.label}</div>
+      ) : (
+        <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+          {statCards.map(s => (
+            <div key={s.label} className={`rounded-xl border p-4 ${s.color}`}>
+              <div className="flex items-center gap-1.5 mb-1">
+                <span className="text-sm">{s.icon}</span>
+                <span className="text-2xl font-bold">{s.value}</span>
+              </div>
+              <div className="text-xs font-medium opacity-70">{s.label}</div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Results */}
+      {/* Results toast */}
       {results.length > 0 && (
         <div className="space-y-2">
           {results.slice(0, 3).map((r, i) => (
-            <div key={i} className={`p-3 rounded-lg text-sm ${
-              r.type === "success" ? "bg-green-50 text-green-800 border border-green-200" : "bg-red-50 text-red-800 border border-red-200"
-            }`}>
+            <motion.div key={i} initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+              className={`p-3 rounded-lg text-sm flex items-center gap-2 ${
+                r.type === "success" ? "bg-green-50 text-green-800 border border-green-200" : "bg-red-50 text-red-800 border border-red-200"
+              }`}>
+              <span>{r.type === "success" ? "✓" : "✕"}</span>
               {r.message}
-            </div>
+            </motion.div>
           ))}
         </div>
       )}
 
-      {/* Section: Validation & Publication */}
+      {/* Pipeline visuel */}
       <div>
-        <h2 className="text-lg font-semibold text-gray-800 mb-2 flex items-center gap-2">
-          <span>🛡️</span> Validation & Publication
-        </h2>
-        <p className="text-sm text-gray-500 mb-4">Avant d&apos;etre publiees, les fiches enrichies par l&apos;IA passent par une validation automatique qui verifie la coherence, la completude et la qualite des donnees. Vous pouvez ensuite les relire et les publier manuellement.</p>
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Validation IA */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-6">
-            <div className="text-3xl mb-3">🤖</div>
-            <h3 className="text-base font-bold text-gray-900 mb-2">Controle qualite IA des fiches enrichies</h3>
-            <p className="text-sm text-gray-500 mb-3">L&apos;IA analyse chaque fiche enrichie pour detecter les incoherences, les donnees manquantes ou les informations douteuses. Elle attribue un score de qualite et liste les points a corriger avant publication.</p>
-            <p className="text-xs text-gray-400 mb-4">Les fiches avec un score superieur a 80/100 sont considerees comme pretes pour la relecture humaine.</p>
-            <div className="space-y-2">
-              <button onClick={async () => {
-                setValidatingIA(true);
-                try {
-                  const res = await api.batchValidateIA();
-                  setResults(prev => [{ type: "success", message: `Validation IA terminee : ${res.validated}/${res.total} fiches validees` }, ...prev]);
-                  api.getStats().then(setStats);
-                } catch (err: unknown) {
-                  const message = err instanceof Error ? err.message : String(err);
-                  setResults(prev => [{ type: "error", message }, ...prev]);
-                } finally { setValidatingIA(false); }
-              }} disabled={validatingIA}
-                className="w-full px-4 py-2.5 bg-indigo-600 text-white rounded-full text-sm font-medium hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-wait">
-                {validatingIA ? "Validation en cours..." : "Lancer la validation IA sur les fiches enrichies"}
-              </button>
-              <Link href="/fiches?statut=enrichi"
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-amber-500 text-amber-600 rounded-full text-sm font-medium hover:bg-amber-50 transition">
-                Parcourir les fiches a valider
-              </Link>
+        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Pipeline des fiches</h2>
+        <div className="bg-white rounded-2xl border border-gray-200 p-6">
+          <div className="flex items-center justify-between gap-2 overflow-x-auto">
+            {[
+              { label: "Brouillon", count: stats?.brouillons || 0, color: "gray", href: "/fiches?statut=brouillon" },
+              { label: "Enrichie", count: (stats as Record<string, number>)?.enrichis || 0, color: "blue", href: "/fiches?statut=enrichi" },
+              { label: "Validee IA", count: stats?.en_validation || 0, color: "amber", href: "/fiches?statut=en_validation" },
+              { label: "Publiee", count: stats?.publiees || 0, color: "green", href: "/fiches?statut=publiee" },
+            ].map((step, i, arr) => (
+              <div key={step.label} className="flex items-center gap-2 flex-1 min-w-0">
+                <Link href={step.href} className="flex-1 min-w-0 group">
+                  <div className={`rounded-xl border-2 p-3 text-center transition hover:shadow-md
+                    ${step.color === "gray" ? "border-gray-300 bg-gray-50 group-hover:border-gray-400" : ""}
+                    ${step.color === "blue" ? "border-blue-300 bg-blue-50 group-hover:border-blue-400" : ""}
+                    ${step.color === "amber" ? "border-amber-300 bg-amber-50 group-hover:border-amber-400" : ""}
+                    ${step.color === "green" ? "border-green-300 bg-green-50 group-hover:border-green-400" : ""}
+                  `}>
+                    <div className="text-xl font-bold">{step.count}</div>
+                    <div className="text-xs font-medium text-gray-600 truncate">{step.label}</div>
+                  </div>
+                </Link>
+                {i < arr.length - 1 && (
+                  <svg className="w-5 h-5 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Actions grid */}
+      <div className="grid md:grid-cols-3 gap-5">
+        {/* Validation IA */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-5 flex flex-col">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center text-xl">🤖</div>
+            <div>
+              <h3 className="text-sm font-bold text-gray-900">Validation IA</h3>
+              <p className="text-xs text-gray-400">Controle qualite automatique</p>
             </div>
           </div>
+          <p className="text-xs text-gray-500 mb-4 flex-1">Analyse les fiches enrichies pour detecter incoherences, donnees manquantes et attribue un score qualite. Les fiches &gt;80/100 passent en validation.</p>
+          <div className="space-y-2">
+            <button onClick={async () => {
+              setValidatingIA(true);
+              try {
+                const res = await api.batchValidateIA();
+                setResults(prev => [{ type: "success", message: `Validation IA : ${res.validated}/${res.total} fiches validees` }, ...prev]);
+                api.getStats().then(setStats);
+              } catch (err: unknown) {
+                const message = err instanceof Error ? err.message : String(err);
+                setResults(prev => [{ type: "error", message }, ...prev]);
+              } finally { setValidatingIA(false); }
+            }} disabled={validatingIA}
+              className="w-full px-3 py-2 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700 transition disabled:opacity-50">
+              {validatingIA ? "Analyse en cours..." : "Lancer la validation IA"}
+            </button>
+            <Link href="/fiches?statut=enrichi"
+              className="w-full flex items-center justify-center gap-1.5 px-3 py-2 border border-indigo-200 text-indigo-600 rounded-lg text-xs font-medium hover:bg-indigo-50 transition">
+              Voir les fiches enrichies
+              <span className="text-xs bg-indigo-100 px-1.5 py-0.5 rounded-full">{(stats as Record<string, number>)?.enrichis || 0}</span>
+            </Link>
+          </div>
+        </div>
 
-          {/* Publier */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-6">
-            <div className="text-3xl mb-3">📤</div>
-            <h3 className="text-base font-bold text-gray-900 mb-2">Publier les fiches validees</h3>
-            <p className="text-sm text-gray-500 mb-3">Une fois qu&apos;une fiche a passe le controle qualite IA et que vous l&apos;avez relue, vous pouvez la publier. Les fiches publiees deviennent visibles pour tous les utilisateurs de la plateforme.</p>
-            {stats?.en_validation ? (
-              <p className="text-xs text-indigo-600 font-medium mb-4">{stats.en_validation} fiche{stats.en_validation > 1 ? "s" : ""} en attente de publication</p>
-            ) : (
-              <p className="text-xs text-gray-400 mb-4">Aucune fiche en attente de publication pour le moment.</p>
-            )}
-            <button onClick={handlePublishAll} disabled={publishing}
-              className="w-full px-4 py-2.5 bg-green-600 text-white rounded-full text-sm font-medium hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-wait">
-              {publishing ? "Publication en cours..." : "Publier toutes les fiches validees"}
+        {/* Creer fiche */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-5 flex flex-col">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center text-xl">✨</div>
+            <div>
+              <h3 className="text-sm font-bold text-gray-900">Nouvelle fiche</h3>
+              <p className="text-xs text-gray-400">Creer un brouillon</p>
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 mb-3 flex-1">Creez une fiche brouillon que l&apos;IA enrichira avec competences, formations, salaires et perspectives.</p>
+          <input type="text" placeholder="Nom du metier..." value={metierName}
+            onChange={e => setMetierName(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && handleCreateFiche()}
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs mb-2 focus:outline-none focus:border-indigo-500" />
+          <button onClick={handleCreateFiche} disabled={creatingFiche || !metierName.trim()}
+            className="w-full px-3 py-2 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition disabled:opacity-50">
+            {creatingFiche ? "Creation..." : "Creer la fiche"}
+          </button>
+        </div>
+
+        {/* Archivage */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-5 flex flex-col">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center text-xl">📦</div>
+            <div>
+              <h3 className="text-sm font-bold text-gray-900">Archivage</h3>
+              <p className="text-xs text-gray-400">Fiches obsoletes</p>
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 mb-4 flex-1">Archivez les fiches obsoletes suite a une evolution du referentiel ROME. Elles restent consultables mais disparaissent des resultats publics.</p>
+          <div className="space-y-2">
+            <Link href="/fiches?rome_update=pending"
+              className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-orange-500 text-white rounded-lg text-xs font-medium hover:bg-orange-600 transition">
+              Fiches a mettre a jour
+            </Link>
+            <button onClick={handleArchiveObsolete} disabled={archiving}
+              className="w-full px-3 py-2 border border-gray-300 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-50 transition disabled:opacity-50">
+              {archiving ? "Archivage..." : "Archiver les obsoletes"}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Section: Gestion des fiches */}
-      <div>
-        <h2 className="text-lg font-semibold text-gray-800 mb-2 flex items-center gap-2">
-          <span>📋</span> Gestion des fiches
-        </h2>
-        <p className="text-sm text-gray-500 mb-4">Creez de nouvelles fiches metiers ou gerez les fiches existantes qui necessitent une mise a jour ou un archivage.</p>
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Creer fiche */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-6">
-            <div className="text-3xl mb-3">✨</div>
-            <h3 className="text-base font-bold text-gray-900 mb-2">Creer une nouvelle fiche metier</h3>
-            <p className="text-sm text-gray-500 mb-3">Entrez le nom d&apos;un metier pour creer une fiche brouillon. L&apos;IA pourra ensuite l&apos;enrichir automatiquement avec les competences, formations, salaires et perspectives du marche.</p>
-            <p className="text-xs text-gray-400 mb-4">La fiche sera creee en statut &laquo; brouillon &raquo; — vous pourrez la completer, l&apos;enrichir par IA, puis la valider et la publier.</p>
-            <input type="text" placeholder="Ex : Developpeur blockchain, Data engineer, Osteopathe..." value={metierName}
-              onChange={e => setMetierName(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm mb-4 focus:outline-none focus:border-indigo-500" />
-            <button onClick={handleCreateFiche} disabled={creatingFiche || !metierName.trim()}
-              className="w-full px-4 py-2.5 bg-indigo-600 text-white rounded-full text-sm font-medium hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-wait">
-              {creatingFiche ? "Creation en cours..." : "Creer la fiche"}
-            </button>
-          </div>
-
-          {/* Archiver / Fiches a mettre a jour */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-6">
-            <div className="text-3xl mb-3">📦</div>
-            <h3 className="text-base font-bold text-gray-900 mb-2">Fiches obsoletes & mises a jour</h3>
-            <p className="text-sm text-gray-500 mb-3">Certaines fiches peuvent devenir obsoletes lorsque le referentiel ROME evolue ou que le metier change significativement. Consultez les fiches concernees et archivez celles qui ne sont plus pertinentes.</p>
-            <p className="text-xs text-gray-400 mb-4">L&apos;archivage ne supprime pas la fiche — elle reste accessible mais n&apos;apparait plus dans les resultats de recherche publics.</p>
-            <div className="space-y-2">
-              <Link href="/fiches?rome_update=pending"
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-orange-500 text-white rounded-full text-sm font-medium hover:bg-orange-600 transition">
-                Voir les fiches a mettre a jour
-              </Link>
-              <button onClick={handleArchiveObsolete} disabled={archiving}
-                className="w-full px-4 py-2.5 bg-gray-600 text-white rounded-full text-sm font-medium hover:bg-gray-700 transition disabled:opacity-50 disabled:cursor-wait">
-                {archiving ? "Archivage en cours..." : "Archiver les fiches obsoletes"}
-              </button>
-            </div>
-          </div>
+      {/* Quick links */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-5">
+        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Acces rapide</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[
+            { label: "Toutes les fiches", href: "/fiches", icon: "📋" },
+            { label: "Brouillons", href: "/fiches?statut=brouillon", icon: "📝" },
+            { label: "En validation", href: "/fiches?statut=en_validation", icon: "🔍" },
+            { label: "Publiees", href: "/fiches?statut=publiee", icon: "✅" },
+          ].map(link => (
+            <Link key={link.href} href={link.href}
+              className="flex items-center gap-2 px-4 py-3 rounded-xl border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition text-sm text-gray-700 font-medium">
+              <span>{link.icon}</span>
+              {link.label}
+            </Link>
+          ))}
         </div>
       </div>
-    </div>
-  );
-}
-
-function ActionCard({ title, description, icon, buttonLabel, onClick, disabled, count }: {
-  title: string; description: string; icon: string; buttonLabel: string;
-  onClick: () => void; disabled: boolean; count?: number;
-}) {
-  return (
-    <div className="bg-white rounded-2xl border border-gray-200 p-6 flex flex-col justify-between">
-      <div>
-        <div className="text-3xl mb-3">{icon}</div>
-        <h3 className="text-base font-bold text-gray-900 mb-2">{title}</h3>
-        <p className="text-sm text-gray-500 mb-4">{description}</p>
-        {count !== undefined && (
-          <div className="text-xs text-indigo-600 font-medium mb-4">{count} fiche{count > 1 ? "s" : ""} concernée{count > 1 ? "s" : ""}</div>
-        )}
-      </div>
-      <button onClick={onClick} disabled={disabled}
-        className="w-full px-4 py-2.5 bg-indigo-600 text-white rounded-full text-sm font-medium hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-wait">
-        {buttonLabel}
-      </button>
     </div>
   );
 }
@@ -332,11 +331,11 @@ const TYPE_BADGES: Record<string, { label: string; color: string; bg: string }> 
   validation: { label: "Validation IA", color: "text-amber-700", bg: "bg-amber-100" },
   publication: { label: "Publication", color: "text-green-700", bg: "bg-green-100" },
   correction: { label: "Correction", color: "text-violet-700", bg: "bg-violet-100" },
-  creation: { label: "Création", color: "text-indigo-700", bg: "bg-indigo-100" },
+  creation: { label: "Creation", color: "text-indigo-700", bg: "bg-indigo-100" },
   modification: { label: "Modification", color: "text-gray-700", bg: "bg-gray-100" },
   archivage: { label: "Archivage", color: "text-slate-700", bg: "bg-slate-100" },
   veille_salaires: { label: "Veille salaires", color: "text-teal-700", bg: "bg-teal-100" },
-  veille_metiers: { label: "Veille métiers", color: "text-cyan-700", bg: "bg-cyan-100" },
+  veille_metiers: { label: "Veille metiers", color: "text-cyan-700", bg: "bg-cyan-100" },
 };
 
 const DATE_PRESETS = [
@@ -355,7 +354,7 @@ const TYPE_FILTERS = [
   { key: "validation_humaine", label: "Validation humaine", apiValues: ["validation_humaine"] },
   { key: "publication", label: "Publication", apiValues: ["publication"] },
   { key: "correction", label: "Correction", apiValues: ["correction"] },
-  { key: "creation", label: "Création", apiValues: ["creation"] },
+  { key: "creation", label: "Creation", apiValues: ["creation"] },
 ];
 
 function TabHistorique() {
@@ -381,7 +380,6 @@ function TabHistorique() {
 
       const filterDef = TYPE_FILTERS.find(f => f.key === typeFilter);
       if (filterDef && filterDef.apiValues.length > 1) {
-        // Multiple API values: fetch each and merge
         const allLogs: AuditLog[] = [];
         await Promise.all(filterDef.apiValues.map(async (tv) => {
           try {
@@ -410,18 +408,15 @@ function TabHistorique() {
 
   useEffect(() => { fetchLogs(); }, [fetchLogs]);
 
-  // Debounced search
   const [searchInput, setSearchInput] = useState("");
   const [agentInput, setAgentInput] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
   const [agentFocused, setAgentFocused] = useState(false);
 
-  // Suggestions: extract unique agents and code_rome+description from logs
   const [allAgents, setAllAgents] = useState<string[]>([]);
   const [allFiches, setAllFiches] = useState<{ code_rome: string; description: string }[]>([]);
 
   useEffect(() => {
-    // Load a big batch of logs to extract suggestions
     api.getAuditLogs({ limit: 200 }).then(res => {
       const agents = [...new Set(res.logs.map(l => l.agent).filter(Boolean) as string[])];
       setAllAgents(agents);
@@ -466,11 +461,10 @@ function TabHistorique() {
     <div className="space-y-6">
       {/* Filters */}
       <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
-        {/* Row 1: Search + Agent */}
         <div className="grid md:grid-cols-2 gap-4">
           <div className="relative">
-            <label className="text-xs font-medium text-gray-500 mb-1 block">Recherche (code ROME ou métier)</label>
-            <input type="text" placeholder="Ex : M1805 ou développeur"
+            <label className="text-xs font-medium text-gray-500 mb-1 block">Recherche (code ROME ou metier)</label>
+            <input type="text" placeholder="Ex : M1805 ou developpeur"
               value={searchInput}
               onChange={e => setSearchInput(e.target.value)}
               onFocus={() => setSearchFocused(true)}
@@ -491,7 +485,7 @@ function TabHistorique() {
           </div>
           <div className="relative">
             <label className="text-xs font-medium text-gray-500 mb-1 block">Utilisateur / Agent</label>
-            <input type="text" placeholder="Ex : Jérémie, Agent IA"
+            <input type="text" placeholder="Ex : Jeremie, Agent IA"
               value={agentInput}
               onChange={e => setAgentInput(e.target.value)}
               onFocus={() => setAgentFocused(true)}
@@ -511,7 +505,6 @@ function TabHistorique() {
           </div>
         </div>
 
-        {/* Row 2: Limit pills + Date presets */}
         <div className="flex flex-wrap items-center gap-6">
           <div className="flex items-center gap-2">
             <span className="text-xs font-medium text-gray-500">Afficher :</span>
@@ -527,7 +520,7 @@ function TabHistorique() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-gray-500">Période :</span>
+            <span className="text-xs font-medium text-gray-500">Periode :</span>
             <div className="flex gap-1">
               {DATE_PRESETS.map(p => (
                 <button key={p.value} onClick={() => setDatePreset(p.value)}
@@ -541,7 +534,6 @@ function TabHistorique() {
           </div>
         </div>
 
-        {/* Row 3: Type filters */}
         <div className="flex flex-wrap gap-1">
           {TYPE_FILTERS.map(f => {
             const badge = f.key !== "Tous" ? TYPE_BADGES[f.key] : null;
@@ -560,7 +552,7 @@ function TabHistorique() {
         </div>
       </div>
 
-      {/* Logs — 2 colonnes : Humain | IA */}
+      {/* Logs */}
       {loading ? (
         <div className="grid md:grid-cols-2 gap-4">
           {[1, 2].map(col => (
@@ -577,7 +569,7 @@ function TabHistorique() {
       ) : logs.length === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
           <div className="text-4xl mb-3">📭</div>
-          <p className="text-gray-500">Aucun événement trouvé</p>
+          <p className="text-gray-500">Aucun evenement trouve</p>
         </div>
       ) : (() => {
         const IA_AGENTS = ["agent ia", "agent_ia", "agentredacteurfiche", "agentcorrecteurfiche", "système", "systeme", "system", "ia"];
@@ -611,12 +603,11 @@ function TabHistorique() {
 
         return (
           <div className="grid md:grid-cols-2 gap-6">
-            {/* Colonne Humain */}
             <div>
               <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-200">
                 <span className="text-lg">👤</span>
                 <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Humain</h3>
-                <span className="text-xs text-gray-400 ml-auto">{humanLogs.length} action(s)</span>
+                <span className="text-xs text-gray-400 ml-auto">{humanLogs.length}</span>
               </div>
               <div className="space-y-2">
                 {humanLogs.length === 0 ? (
@@ -624,12 +615,11 @@ function TabHistorique() {
                 ) : humanLogs.map(renderLog)}
               </div>
             </div>
-            {/* Colonne IA */}
             <div>
               <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-200">
                 <span className="text-lg">🤖</span>
                 <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Intelligence Artificielle</h3>
-                <span className="text-xs text-gray-400 ml-auto">{iaLogs.length} action(s)</span>
+                <span className="text-xs text-gray-400 ml-auto">{iaLogs.length}</span>
               </div>
               <div className="space-y-2">
                 {iaLogs.length === 0 ? (
