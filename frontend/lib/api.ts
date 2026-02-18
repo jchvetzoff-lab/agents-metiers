@@ -359,10 +359,32 @@ class ApiClient {
       } catch { /* ignore */ }
     }
 
-    const response = await fetch(url, {
-      ...options,
-      headers,
-    });
+    // Retry with timeout for Render cold starts
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
+    let response: Response;
+    let lastError: Error | null = null;
+    const maxRetries = 2;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        response = await fetch(url, {
+          ...options,
+          headers,
+          signal: controller.signal,
+        });
+        lastError = null;
+        break;
+      } catch (err: any) {
+        lastError = err;
+        if (attempt < maxRetries && (err.name === "TypeError" || err.name === "AbortError")) {
+          await new Promise(r => setTimeout(r, 2000)); // wait 2s before retry
+          continue;
+        }
+      }
+    }
+    clearTimeout(timeoutId);
+    if (lastError) throw new Error("Serveur injoignable — reessayez dans quelques secondes");
+    response = response!;
 
     if (!response.ok) {
       const body = await response.json().catch(() => null);
