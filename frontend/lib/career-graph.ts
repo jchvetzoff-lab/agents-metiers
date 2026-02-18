@@ -20,7 +20,10 @@ async function resolveCodeRome(nom: string): Promise<string | null> {
   if (cached !== undefined) return cached;
 
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 4000);
     const res = await api.getFiches({ search: nom, limit: 5 });
+    clearTimeout(timeout);
     const normalized = nom.toLowerCase().trim();
     const match = res.results.find((r) => {
       return (

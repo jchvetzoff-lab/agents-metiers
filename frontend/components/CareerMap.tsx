@@ -265,7 +265,7 @@ export default function CareerMap({
         resolvedProches,
         resolvedEvolutions,
         compact,
-        !compact // Include level 2 only if not compact
+        false // Disable level 2 for now (too many API calls)
       );
 
       setNodes(graph.nodes);
@@ -368,22 +368,6 @@ export default function CareerMap({
           {nodes.length} métiers • Layout radial
         </div>
       </div>
-
-      {/* Add custom CSS for animations */}
-      <style jsx>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(4px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .react-flow__node {
-          z-index: 10;
-        }
-        
-        .react-flow__node[data-variant="central"] {
-          z-index: 20;
-        }
-      `}</style>
 
       <ReactFlow
         nodes={getAnimatedNodes()}
