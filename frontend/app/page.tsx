@@ -70,11 +70,9 @@ function TypingTitle({ text }: { text: string }) {
 
 function FloatingOrbs() {
   const orbs = useMemo(() => [
-    { size: 300, x: "10%", y: "20%", color: "rgba(168,85,247,0.25)", duration: 8, delay: 0 },
-    { size: 200, x: "70%", y: "60%", color: "rgba(236,72,153,0.2)", duration: 10, delay: 1 },
-    { size: 250, x: "80%", y: "10%", color: "rgba(99,102,241,0.2)", duration: 12, delay: 2 },
-    { size: 180, x: "30%", y: "70%", color: "rgba(168,85,247,0.15)", duration: 9, delay: 0.5 },
-    { size: 150, x: "50%", y: "30%", color: "rgba(236,72,153,0.15)", duration: 11, delay: 1.5 },
+    { size: 150, x: "10%", y: "20%", color: "rgba(168,85,247,0.2)", duration: 8, delay: 0 },
+    { size: 100, x: "70%", y: "60%", color: "rgba(236,72,153,0.15)", duration: 10, delay: 1 },
+    { size: 120, x: "80%", y: "10%", color: "rgba(99,102,241,0.15)", duration: 12, delay: 2 },
   ], []);
 
   return (
@@ -143,7 +141,7 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen overflow-x-hidden">
       {/* Hero */}
       <div className="relative overflow-hidden">
         {/* Animated gradient background */}

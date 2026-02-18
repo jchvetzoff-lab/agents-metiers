@@ -18,11 +18,13 @@
 @layer base {
   html {
     overscroll-behavior-y: none;
+    overflow-x: hidden;
   }
 
   body {
     @apply bg-white text-gray-900 antialiased;
     overscroll-behavior-y: none;
+    overflow-x: hidden;
   }
 
   h1, h2, h3, h4, h5, h6 {

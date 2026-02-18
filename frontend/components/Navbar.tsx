@@ -36,14 +36,21 @@ export default function Navbar() {
 
   useEffect(() => { setMobileOpen(false); }, [pathname]);
 
-  // Hide on scroll down, show on scroll up
+  // Hide on scroll down, show on scroll up (robust for fast scrolls)
   useEffect(() => {
+    let ticking = false;
     const onScroll = () => {
-      const y = window.scrollY;
-      if (y < 60) { setVisible(true); }
-      else if (y > lastScrollY.current + 10) { setVisible(false); setMobileOpen(false); }
-      else if (y < lastScrollY.current - 10) { setVisible(true); }
-      lastScrollY.current = y;
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(() => {
+          const y = window.scrollY;
+          if (y < 20) { setVisible(true); }
+          else if (y > lastScrollY.current) { setVisible(false); setMobileOpen(false); }
+          else { setVisible(true); }
+          lastScrollY.current = y;
+          ticking = false;
+        });
+      }
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
