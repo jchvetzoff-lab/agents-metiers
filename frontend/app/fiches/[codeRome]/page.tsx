@@ -2098,12 +2098,13 @@ export default function FicheDetailPage() {
                           )}
 
                           {/* Suggestions / Améliorations */}
-                          {((fiche.validation_ia_details.suggestions || fiche.validation_ia_details.ameliorations_requises) &&
-                            (fiche.validation_ia_details.suggestions?.length > 0 || fiche.validation_ia_details.ameliorations_requises?.length > 0)) && (
+                          {(() => {
+                            const items = fiche.validation_ia_details!.suggestions ?? fiche.validation_ia_details!.ameliorations_requises ?? [];
+                            return items.length > 0 ? (
                             <div>
                               <h4 className="text-sm font-semibold text-gray-700 mb-3">Améliorations recommandées</h4>
                               <div className="space-y-2">
-                                {(fiche.validation_ia_details.suggestions || fiche.validation_ia_details.ameliorations_requises).map((item: any, i: number) => (
+                                {items.map((item: any, i: number) => (
                                   <div key={i} className="flex items-start gap-3 p-3 bg-indigo-50 rounded-lg border-l-4 border-indigo-400">
                                     <span className="text-indigo-500 mt-0.5">💡</span>
                                     <span className="text-sm text-gray-700">{typeof item === "string" ? item : item?.message || JSON.stringify(item)}</span>
@@ -2111,7 +2112,8 @@ export default function FicheDetailPage() {
                                 ))}
                               </div>
                             </div>
-                          )}
+                          ) : null;
+                          })()}
                         </div>
                       )}
 

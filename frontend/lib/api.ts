@@ -185,11 +185,15 @@ export interface FicheDetail extends FicheMetier {
   validation_ia_date?: string | null;
   validation_ia_details?: {
     score: number;
+    score_global?: number;
     verdict: string;
-    resume: string;
-    criteres: Record<string, { score: number; commentaire: string }>;
-    problemes: string[];
-    suggestions: string[];
+    resume?: string;
+    criteres?: Record<string, { score: number; commentaire: string }>;
+    criteres_detailles?: Record<string, any>;
+    problemes: any[];
+    suggestions?: any[];
+    ameliorations_requises?: any[];
+    points_forts?: any[];
     details_completude?: Record<string, { score: number; max: number; commentaire: string }>;
   } | null;
   validation_humaine?: string | null;
