@@ -2114,9 +2114,56 @@ async def get_fiche_national(code_rome: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+async def _get_real_offres_count(code_rome: str, region: Optional[str] = None) -> Optional[int]:
+    """Appelle France Travail API pour obtenir le vrai nombre d'offres actives."""
+    import os, httpx
+    try:
+        client_id = os.environ.get("FRANCE_TRAVAIL_CLIENT_ID",
+            "PAR_agentsmetiersjae_c83771846a25da39885a0479ed5a3be967b5990a3b84c93da1d219de26deb009")
+        client_secret = os.environ.get("FRANCE_TRAVAIL_CLIENT_SECRET",
+            "bdc6c46f6a7854b3cbf1e4893dd6262df528b9c631dc62b117260313eea50ac8")
+        token_resp = httpx.post(
+            "https://entreprise.francetravail.fr/connexion/oauth2/access_token?realm=/partenaire",
+            data={"grant_type": "client_credentials", "client_id": client_id,
+                  "client_secret": client_secret, "scope": "api_offresdemploiv2 o2dsoffre"},
+            headers={"Content-Type": "application/x-www-form-urlencoded"}, timeout=10,
+        )
+        if token_resp.status_code != 200:
+            return None
+        token = token_resp.json()["access_token"]
+        url = f"https://api.francetravail.io/partenaire/offresdemploi/v2/offres/search?codeROME={code_rome}&range=0-0"
+        if region:
+            url += f"&region={region}"
+        resp = httpx.get(url, headers={"Authorization": f"Bearer {token}", "Accept": "application/json"}, timeout=10)
+        if resp.status_code == 200:
+            cr = resp.headers.get("Content-Range", "")
+            # Format: "offres 0-0/142"
+            if "/" in cr:
+                total = int(cr.split("/")[1])
+                return total
+        elif resp.status_code == 204:
+            return 0
+    except Exception as e:
+        logger.warning(f"France Travail count error: {e}")
+    return None
+
+# Cache pour eviter de spammer l'API (5 min)
+_ft_count_cache: dict = {}
+
+async def get_real_offres_count_cached(code_rome: str, region: Optional[str] = None) -> Optional[int]:
+    key = f"{code_rome}:{region or 'national'}"
+    now = datetime.now().timestamp()
+    if key in _ft_count_cache and now - _ft_count_cache[key][1] < 300:
+        return _ft_count_cache[key][0]
+    count = await _get_real_offres_count(code_rome, region)
+    if count is not None:
+        _ft_count_cache[key] = (count, now)
+    return count
+
+
 @app.get("/api/fiches/{code_rome}/regional")
 async def get_fiche_regional(code_rome: str, region: str = Query(...)):
-    """Retourne des données régionales pour un métier avec vraies données INSEE. Format: RegionalData du frontend."""
+    """Retourne des données régionales pour un métier avec vraies données France Travail + INSEE."""
     try:
         fiche = repo.get_fiche(code_rome)
         if not fiche:
@@ -2136,10 +2183,13 @@ async def get_fiche_regional(code_rome: str, region: str = Query(...)):
             statistiques_insee = None
             use_insee_data = False
 
+        # Vrai nombre d'offres France Travail
+        real_count = await get_real_offres_count_cached(code_rome, region)
+
         # Utiliser les données INSEE en priorité, fallback sur anciennes données
         if use_insee_data and statistiques_insee:
-            # Nombre d'emplois/offres réel INSEE
-            nb_offres = statistiques_insee.nb_emplois
+            # Nombre d'offres: France Travail réel en priorité, sinon INSEE
+            nb_offres = real_count if real_count is not None else statistiques_insee.nb_emplois
             
             # Salaires réels INSEE (déjà ajustés par région dans l'intégrateur)
             salaire_median_insee = statistiques_insee.salaire_median
@@ -2194,7 +2244,7 @@ async def get_fiche_regional(code_rome: str, region: str = Query(...)):
             persp_dict = persp.model_dump() if persp and hasattr(persp, 'model_dump') else (persp if isinstance(persp, dict) else {})
             nb_offres_national = persp_dict.get("nombre_offres") or 5000
             poids = POIDS_POPULATION.get(region, 0.03)
-            nb_offres = max(5, round(nb_offres_national * poids))
+            nb_offres = real_count if real_count is not None else max(5, round(nb_offres_national * poids))
 
             # Salaires régionaux réalistes basés sur les nationaux * coefficient
             all_mins = []
@@ -2261,6 +2311,7 @@ async def get_fiche_regional(code_rome: str, region: str = Query(...)):
             },
             "tension_regionale": tension_regionale,
             "source": statistiques_insee.source if use_insee_data and statistiques_insee else "estimation_legacy",
+            "source_offres": "france_travail_api" if real_count is not None else "estimation",
             "coefficient_regional": COEFFICIENTS_REGIONAUX.get(region, 1.0),
             "insee_data_used": use_insee_data,
             "date_maj": statistiques_insee.date_maj.isoformat() if use_insee_data and statistiques_insee and statistiques_insee.date_maj else None,
