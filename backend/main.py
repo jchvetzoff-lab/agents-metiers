@@ -1072,7 +1072,8 @@ async def review_fiche(code_rome: str, body: ReviewRequest, request: Request):
 
 @app.post("/api/fiches/{code_rome}/enrich")
 async def enrich_fiche(code_rome: str, request: Request):
-    """Enrichissement (stub) : incrémente la version. Accepte un commentaire optionnel."""
+    """Enrichissement IA via Claude : remplit les champs vides d'une fiche."""
+    import os
     try:
         fiche = repo.get_fiche(code_rome)
         if not fiche:
@@ -1086,34 +1087,168 @@ async def enrich_fiche(code_rome: str, request: Request):
         except Exception:
             pass
 
-        new_version = fiche.metadata.version + 1
+        # Read current DB row to check which fields are empty
         from sqlalchemy import text
         with repo.session() as session:
-            # Reset validation IA pour relancer le cycle
+            row = session.execute(
+                text("SELECT missions_principales, acces_metier, savoirs, types_contrats, "
+                     "mobilite, traits_personnalite, aptitudes, profil_riasec, "
+                     "autres_appellations, statuts_professionnels, niveau_formation, "
+                     "domaine_professionnel, sites_utiles, conditions_travail_detaillees, "
+                     "competences_dimensions, preferences_interets, secteurs_activite "
+                     "FROM fiches_metiers WHERE code_rome = :cr"),
+                {"cr": code_rome}
+            ).fetchone()
+
+        current = {}
+        col_names = ["missions_principales", "acces_metier", "savoirs", "types_contrats",
+                     "mobilite", "traits_personnalite", "aptitudes", "profil_riasec",
+                     "autres_appellations", "statuts_professionnels", "niveau_formation",
+                     "domaine_professionnel", "sites_utiles", "conditions_travail_detaillees",
+                     "competences_dimensions", "preferences_interets", "secteurs_activite"]
+        if row:
+            for i, col in enumerate(col_names):
+                val = row[i]
+                if isinstance(val, str):
+                    try:
+                        val = json.loads(val)
+                    except Exception:
+                        pass
+                current[col] = val
+
+        # Build prompt for Claude
+        prompt = f"""Tu es un expert des metiers en France. Enrichis cette fiche metier ROME avec des donnees precises et realistes.
+
+Code ROME: {code_rome}
+Nom: {fiche.nom_epicene}
+Description: {fiche.description or 'N/A'}
+Competences existantes: {json.dumps(fiche.competences or [], ensure_ascii=False)}
+Formations existantes: {json.dumps(fiche.formations or [], ensure_ascii=False)}
+Conditions travail: {json.dumps(fiche.conditions_travail or [], ensure_ascii=False)}
+Environnements: {json.dumps(fiche.environnements or [], ensure_ascii=False)}
+
+{f'Instruction supplementaire: {commentaire}' if commentaire else ''}
+
+Genere un JSON avec TOUS les champs suivants. Sois precis et realiste pour le marche francais:
+
+{{
+  "missions_principales": ["5-8 missions principales du metier"],
+  "acces_metier": "Texte decrivant comment acceder a ce metier (diplomes, experience, etc.)",
+  "savoirs": ["5-10 savoirs theoriques necessaires"],
+  "types_contrats": {{"cdi": 50, "cdd": 25, "interim": 15, "autre": 10}},
+  "traits_personnalite": ["5-8 traits de personnalite importants"],
+  "aptitudes": [{{"nom": "Nom aptitude", "niveau": 4}}],
+  "profil_riasec": {{"realiste": 30, "investigateur": 60, "artistique": 20, "social": 40, "entreprenant": 30, "conventionnel": 50}},
+  "autres_appellations": ["3-8 autres noms pour ce metier"],
+  "statuts_professionnels": ["Salarie", "Independant", etc.],
+  "niveau_formation": "Bac+2 a Bac+5",
+  "domaine_professionnel": {{"domaine": "Nom du domaine", "sous_domaine": "Sous-domaine", "code_domaine": "M18"}},
+  "sites_utiles": [{{"nom": "Nom", "url": "https://...", "description": "Description courte"}}],
+  "conditions_travail_detaillees": {{
+    "exigences_physiques": ["liste"],
+    "horaires": "Description horaires",
+    "deplacements": "Frequence deplacements",
+    "environnement": "Description environnement",
+    "risques": ["risques specifiques"]
+  }},
+  "competences_dimensions": {{"relationnel": 50, "intellectuel": 70, "communication": 60, "management": 30, "realisation": 80, "expression": 40, "physique_sensoriel": 20}},
+  "preferences_interets": {{"domaine_interet": "Nom domaine", "familles": [{{"nom": "Famille", "score": 75}}]}},
+  "secteurs_activite": ["3-6 secteurs d'activite"],
+  "mobilite": {{
+    "metiers_proches": [{{"code_rome": "XXXXX", "nom": "Nom metier", "nom_feminin": "Nom feminin", "nom_epicene": "Nom epicene", "contexte": "Pourquoi proche"}}],
+    "evolutions": [{{"code_rome": "XXXXX", "nom": "Nom metier", "nom_feminin": "Nom feminin", "nom_epicene": "Nom epicene", "contexte": "Type d'evolution"}}]
+  }}
+}}
+
+IMPORTANT:
+- Valeurs RIASEC et dimensions entre 0 et 100
+- Aptitudes niveau entre 1 et 5
+- Types contrats en pourcentage (total = 100)
+- Codes ROME des metiers proches doivent etre des vrais codes
+- Reponds UNIQUEMENT avec le JSON, pas de texte autour"""
+
+        # Call Claude API
+        import anthropic
+        api_key = os.environ.get("ANTHROPIC_API_KEY", config.api.anthropic_api_key if hasattr(config.api, 'anthropic_api_key') else None)
+        if not api_key:
+            raise HTTPException(status_code=500, detail="Cle API Anthropic non configuree")
+
+        client = anthropic.Anthropic(api_key=api_key)
+        message = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=4000,
+            messages=[{"role": "user", "content": prompt}]
+        )
+
+        response_text = message.content[0].text.strip()
+        # Extract JSON from response (handle markdown code blocks)
+        if response_text.startswith("```"):
+            response_text = response_text.split("```")[1]
+            if response_text.startswith("json"):
+                response_text = response_text[4:]
+        response_text = response_text.strip()
+
+        enriched = json.loads(response_text)
+
+        # Build SQL update for all enriched fields
+        update_parts = []
+        update_params = {"cr": code_rome, "d": datetime.now()}
+
+        json_fields = ["missions_principales", "savoirs", "types_contrats", "mobilite",
+                       "traits_personnalite", "aptitudes", "profil_riasec",
+                       "autres_appellations", "statuts_professionnels",
+                       "domaine_professionnel", "sites_utiles", "conditions_travail_detaillees",
+                       "competences_dimensions", "preferences_interets", "secteurs_activite"]
+
+        for field_name in json_fields:
+            if field_name in enriched:
+                update_parts.append(f"{field_name} = :{field_name}")
+                update_params[field_name] = json.dumps(enriched[field_name], ensure_ascii=False)
+
+        # String fields
+        for field_name in ["acces_metier", "niveau_formation"]:
+            if field_name in enriched and enriched[field_name]:
+                update_parts.append(f"{field_name} = :{field_name}")
+                update_params[field_name] = enriched[field_name]
+
+        if not update_parts:
+            raise HTTPException(status_code=500, detail="Aucun champ enrichi par l'IA")
+
+        new_version = fiche.metadata.version + 1
+        update_parts.extend([
+            "version = :v", "date_maj = :d",
+            "validation_ia_score = NULL", "validation_ia_date = NULL",
+            "validation_ia_details = NULL", "validation_humaine = NULL",
+            "validation_humaine_date = NULL", "validation_humaine_par = NULL",
+            "validation_humaine_commentaire = NULL"
+        ])
+        update_params["v"] = new_version
+
+        with repo.session() as session:
             session.execute(
-                text("UPDATE fiches_metiers SET version = :v, date_maj = :d, "
-                     "validation_ia_score = NULL, validation_ia_date = NULL, validation_ia_details = NULL, "
-                     "validation_humaine = NULL, validation_humaine_date = NULL, validation_humaine_par = NULL, "
-                     "validation_humaine_commentaire = NULL "
-                     "WHERE code_rome = :cr"),
-                {"v": new_version, "d": datetime.now(), "cr": code_rome}
+                text(f"UPDATE fiches_metiers SET {', '.join(update_parts)} WHERE code_rome = :cr"),
+                update_params
             )
 
         user = _get_user_name(request)
-        desc = f"Enrichissement de {fiche.nom_epicene} (v{new_version}) par {user}"
+        fields_enriched = [f for f in json_fields + ["acces_metier", "niveau_formation"] if f in enriched]
+        desc = f"Enrichissement IA de {fiche.nom_epicene} (v{new_version}) par {user} — {len(fields_enriched)} champs enrichis"
         if commentaire:
             desc += f" — Commentaire : {commentaire}"
         _add_audit("enrichissement", code_rome, user, desc)
 
         return {
-            "message": "Enrichissement terminé",
+            "message": f"Enrichissement termine — {len(fields_enriched)} champs enrichis",
             "code_rome": code_rome,
             "nom": fiche.nom_epicene,
             "version": new_version,
+            "fields_enriched": fields_enriched,
             "commentaire": commentaire,
         }
     except HTTPException:
         raise
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=500, detail=f"Erreur parsing reponse IA: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
