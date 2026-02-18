@@ -8,11 +8,10 @@ import ScoreBar, { computeScore } from "@/components/ScoreBar";
 
 const STATUT_FILTERS = [
   { value: "", label: "Tous" },
-  { value: "brouillon", label: "Brouillon" },
-  { value: "enrichi", label: "Enrichi" },
-  { value: "en_validation", label: "En validation" },
-  { value: "valide", label: "Valide" },
-  { value: "publiee", label: "Publie" },
+  { value: "a_enrichir", label: "A enrichir" },
+  { value: "a_valider", label: "A valider" },
+  { value: "validation_ia", label: "Validation IA" },
+  { value: "publiee", label: "Publiée" },
 ] as const;
 
 const SORT_OPTIONS = [
@@ -118,19 +117,38 @@ export default function FichesPage() {
     return () => { if (suggestDebounceRef.current) clearTimeout(suggestDebounceRef.current); };
   }, [searchCompetences, searchMode, fetchSuggestions]);
 
+  // Map virtual filters to real backend statuts
+  // a_enrichir = brouillon (not yet enriched)
+  // a_valider = enrichi (enriched, waiting for IA validation)
+  // validation_ia = en_validation + valide (IA done, waiting human)
+  // publiee = publiee
+  const FILTER_TO_STATUTS: Record<string, string[]> = {
+    "": [],
+    "a_enrichir": ["brouillon"],
+    "a_valider": ["enrichi"],
+    "validation_ia": ["en_validation", "valide"],
+    "publiee": ["publiee"],
+  };
+
   // Load counts
   useEffect(() => {
     (async () => {
       try {
         const allData = await api.getFiches({ limit: 1, offset: 0 });
-        const newCounts: Record<string, number> = { "": allData.total };
-        const statuts = ["brouillon", "enrichi", "en_validation", "valide", "publiee", "archivee"];
+        const rawCounts: Record<string, number> = {};
+        const statuts = ["brouillon", "enrichi", "en_validation", "valide", "publiee"];
         await Promise.all(statuts.map(async (s) => {
           try {
             const d = await api.getFiches({ statut: s, limit: 1, offset: 0 });
-            newCounts[s] = d.total;
-          } catch { newCounts[s] = 0; }
+            rawCounts[s] = d.total;
+          } catch { rawCounts[s] = 0; }
         }));
+        // Compute virtual filter counts
+        const newCounts: Record<string, number> = { "": allData.total };
+        for (const [filter, mappedStatuts] of Object.entries(FILTER_TO_STATUTS)) {
+          if (filter === "") continue;
+          newCounts[filter] = mappedStatuts.reduce((sum, s) => sum + (rawCounts[s] || 0), 0);
+        }
         setCounts(newCounts);
       } catch (e) { console.error(e); }
     })();
@@ -139,19 +157,42 @@ export default function FichesPage() {
   const loadFiches = useCallback(async () => {
     try {
       setLoading(true);
-      const statut = statutFilter || undefined;
+      const mappedStatuts = FILTER_TO_STATUTS[statutFilter] || [];
       const sort = SORT_OPTIONS.find(s => s.value === sortOption);
-      const data = await api.getFiches({
-        search: searchMode === "fuzzy" && debouncedSearch ? debouncedSearch : undefined,
-        search_competences: searchMode === "competences" && debouncedCompetences ? debouncedCompetences : undefined,
-        statut,
-        sort_by: sort?.sort_by,
-        sort_order: sort?.sort_order,
-        limit,
-        offset: page * limit,
-      });
-      setFiches(data.results);
-      setTotal(data.total);
+      
+      if (mappedStatuts.length <= 1) {
+        // Single statut or "tous" — one API call
+        const data = await api.getFiches({
+          search: searchMode === "fuzzy" && debouncedSearch ? debouncedSearch : undefined,
+          search_competences: searchMode === "competences" && debouncedCompetences ? debouncedCompetences : undefined,
+          statut: mappedStatuts[0] || undefined,
+          sort_by: sort?.sort_by,
+          sort_order: sort?.sort_order,
+          limit,
+          offset: page * limit,
+        });
+        setFiches(data.results);
+        setTotal(data.total);
+      } else {
+        // Multiple statuts (e.g. validation_ia = en_validation + valide) — merge results
+        const results = await Promise.all(mappedStatuts.map(s =>
+          api.getFiches({
+            search: searchMode === "fuzzy" && debouncedSearch ? debouncedSearch : undefined,
+            search_competences: searchMode === "competences" && debouncedCompetences ? debouncedCompetences : undefined,
+            statut: s,
+            sort_by: sort?.sort_by,
+            sort_order: sort?.sort_order,
+            limit: 500,
+            offset: 0,
+          })
+        ));
+        const allFiches = results.flatMap(r => r.results);
+        const totalCount = results.reduce((sum, r) => sum + r.total, 0);
+        // Client-side pagination for merged results
+        const start = page * limit;
+        setFiches(allFiches.slice(start, start + limit));
+        setTotal(totalCount);
+      }
     } catch (error) {
       console.error("Erreur chargement fiches:", error);
     } finally {
