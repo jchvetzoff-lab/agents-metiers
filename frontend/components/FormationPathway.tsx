@@ -4,8 +4,8 @@ import { classifyFormations, matchNiveauFormation, FORMATION_LEVELS, type Format
 import { toLabel } from "@/lib/utils";
 
 interface FormationPathwayProps {
-  formations: string[];
-  certifications: string[];
+  formations: any[];
+  certifications: any[];
   niveauFormation?: string | null;
   accesMetier?: string | null;
   t: Record<string, string>;

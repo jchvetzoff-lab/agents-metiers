@@ -182,12 +182,12 @@ export default function SalarySection({
                 >
                   <option value="">{t.nationalData}</option>
                   {regions.map(r => (
-                    <option key={r.code_region} value={r.code_region}>{r.nom}</option>
+                    <option key={r.code} value={r.code}>{r.libelle}</option>
                   ))}
                 </select>
                 {isRegional && (
                   <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-indigo-100 text-indigo-600 text-xs font-medium">
-                    📍 {regionalData?.nom_region || t.regionalData}
+                    📍 {regionalData?.region_name || t.regionalData}
                   </span>
                 )}
               </div>

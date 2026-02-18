@@ -9,7 +9,7 @@ import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion"
 interface NavItem {
   href: string;
   label: string;
-  icon: JSX.Element;
+  icon: React.ReactNode;
 }
 
 const NAV_ITEMS: NavItem[] = [
