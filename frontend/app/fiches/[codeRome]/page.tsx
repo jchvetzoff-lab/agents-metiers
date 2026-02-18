@@ -1336,7 +1336,8 @@ export default function FicheDetailPage() {
   }
 
   // ── Données dérivées (region-aware) ──
-  const isRegional = !!(selectedRegion && regionalData && !regionalLoading);
+  const isRegional = !!(selectedRegion && regionalData);
+  const isRegionalTransitioning = regionalLoading && isRegional;
   const isEstimation = isRegional && regionalData?.source === "estimation_insee";
   // Key suffix to force Recharts remount when data source changes
   const chartKey = isRegional ? `reg-${selectedRegion}` : "national";
@@ -2322,8 +2323,8 @@ export default function FicheDetailPage() {
                     {regionalLoading && (
                       <div className="w-5 h-5 border-2 border-indigo-100 border-t-indigo-600 rounded-full animate-spin" />
                     )}
-                    {selectedRegion && regionalData && !regionalLoading && (
-                      <span className="text-sm text-gray-500">
+                    {selectedRegion && regionalData && (
+                      <span className={`text-sm text-gray-500 transition-opacity ${regionalLoading ? "opacity-50" : ""}`}>
                         {regionalData.nb_offres} {t.offersInRegion || "offres dans cette région"}
                       </span>
                     )}
@@ -2347,7 +2348,7 @@ export default function FicheDetailPage() {
 
                 {/* ── Stat cards (region-aware) ── */}
                 {isRegional ? (
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                  <div className={`grid grid-cols-2 md:grid-cols-3 gap-4 mb-6 transition-opacity ${regionalLoading ? "opacity-50" : ""}`}>
                     {regionalData!.nb_offres != null && (
                       <StatCard label={t.activeOffers} value={regionalData!.nb_offres.toLocaleString(t.locale)} color="#2563EB" bgColor="#EFF6FF" icon="💼" />
                     )}
@@ -2646,7 +2647,7 @@ export default function FicheDetailPage() {
                   </span>
                 </div>
               )}
-              {recrutementsLoading ? (
+              {recrutementsLoading && !recrutements ? (
                 <div className="flex items-center justify-center py-12">
                   <div className="flex flex-col items-center gap-3">
                     <div className="w-8 h-8 rounded-full border-3 border-indigo-100 border-t-indigo-600 animate-spin" />
@@ -2750,7 +2751,7 @@ export default function FicheDetailPage() {
             <SectionAnchor id="offres" title={t.liveOffers} icon="💼" accentColor="#06B6D4">
               <p className="text-sm text-gray-500 mb-4">{t.liveOffersDesc}</p>
 
-              {offresLoading ? (
+              {offresLoading && !offres ? (
                 <div className="text-center py-8">
                   <div className="inline-block w-6 h-6 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-2" />
                   <p className="text-sm text-gray-400">{t.liveOffersLoading}</p>
