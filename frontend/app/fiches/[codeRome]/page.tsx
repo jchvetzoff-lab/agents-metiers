@@ -912,7 +912,7 @@ export default function FicheDetailPage() {
             { name: "CDI", value: d.types_contrats.cdi, color: C.purple },
             { name: "CDD", value: d.types_contrats.cdd, color: C.pink },
             { name: "Interim", value: d.types_contrats.interim, color: C.cyan },
-            { name: "Autre", value: d.types_contrats.autre, color: C.amber },
+            { name: "Alternance", value: d.types_contrats.alternance ?? d.types_contrats.autre ?? 0, color: C.amber },
           ].filter(c => c.value > 0);
 
           const labelW = 28;
@@ -1365,7 +1365,7 @@ export default function FicheDetailPage() {
         { name: t.cdi, value: contratSource.cdi },
         { name: t.cdd, value: contratSource.cdd },
         { name: t.interim, value: contratSource.interim },
-        ...(contratSource.autre > 0 ? [{ name: t.other, value: contratSource.autre }] : []),
+        ...((contratSource.alternance ?? contratSource.autre ?? 0) > 0 ? [{ name: "Alternance", value: contratSource.alternance ?? contratSource.autre ?? 0 }] : []),
       ]
     : null;
 

@@ -118,7 +118,8 @@ export interface FicheDetail extends FicheMetier {
     cdi: number;
     cdd: number;
     interim: number;
-    autre: number;
+    alternance?: number;
+    autre?: number;
   };
   mobilite?: {
     metiers_proches: MobiliteItem[];
@@ -243,7 +244,8 @@ export interface RegionalData {
     cdi: number;
     cdd: number;
     interim: number;
-    autre: number;
+    alternance?: number;
+    autre?: number;
   } | null;
   salaires_par_niveau: {
     junior: SalaireNiveauRegional | null;

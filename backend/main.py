@@ -1135,7 +1135,7 @@ Genere un JSON avec TOUS les champs suivants. Sois precis et realiste pour le ma
   "missions_principales": ["5-8 missions principales du metier"],
   "acces_metier": "Texte decrivant comment acceder a ce metier (diplomes, experience, etc.)",
   "savoirs": ["5-10 savoirs theoriques necessaires"],
-  "types_contrats": {{"cdi": 50, "cdd": 25, "interim": 15, "autre": 10}},
+  "types_contrats": {{"cdi": 50, "cdd": 25, "interim": 15, "alternance": 10}},
   "traits_personnalite": ["5-8 traits de personnalite importants"],
   "aptitudes": [{{"nom": "Nom aptitude", "niveau": 4}}],
   "profil_riasec": {{"realiste": 30, "investigateur": 60, "artistique": 20, "social": 40, "entreprenant": 30, "conventionnel": 50}},
@@ -1605,12 +1605,13 @@ COEFFICIENTS_REGIONAUX = {
 @app.get("/api/regions")
 async def get_regions():
     """Retourne la liste des régions françaises."""
-    return {"regions": REGIONS_FRANCE}
+    # Frontend attend {code, libelle} (voir type Region dans api.ts)
+    return {"regions": [{"code": r["code"], "libelle": r["nom"]} for r in REGIONS_FRANCE]}
 
 
 @app.get("/api/fiches/{code_rome}/regional")
 async def get_fiche_regional(code_rome: str, region: str = Query(...)):
-    """Retourne des données régionales simulées pour un métier."""
+    """Retourne des données régionales pour un métier. Format: RegionalData du frontend."""
     try:
         fiche = repo.get_fiche(code_rome)
         if not fiche:
@@ -1624,25 +1625,71 @@ async def get_fiche_regional(code_rome: str, region: str = Query(...)):
         sal = fiche.salaires
         sal_dict = sal.model_dump() if sal and hasattr(sal, 'model_dump') else (sal if isinstance(sal, dict) else {})
 
-        salaires_regionaux = {}
-        for level in ["junior", "confirme", "senior"]:
-            lvl = (sal_dict or {}).get(level, {}) or {}
-            salaires_regionaux[level] = {
-                "min": round(lvl.get("min", 0) * coeff) if lvl.get("min") else None,
-                "median": round(lvl.get("median", 0) * coeff) if lvl.get("median") else None,
-                "max": round(lvl.get("max", 0) * coeff) if lvl.get("max") else None,
-            }
-
         import random
         random.seed(hash(code_rome + region))
+        nb_offres = random.randint(10, 500)
+
+        # salaires globaux regionaux
+        all_mins = []
+        all_maxs = []
+        all_medians = []
+        salaires_par_niveau = {}
+        for level in ["junior", "confirme", "senior"]:
+            lvl = (sal_dict or {}).get(level, {}) or {}
+            level_nb = random.randint(5, 100)
+            s_min = round(lvl.get("min", 0) * coeff) if lvl.get("min") else 0
+            s_max = round(lvl.get("max", 0) * coeff) if lvl.get("max") else 0
+            s_med = round(lvl.get("median", 0) * coeff) if lvl.get("median") else 0
+            if s_med:
+                all_mins.append(s_min)
+                all_maxs.append(s_max)
+                all_medians.append(s_med)
+            salaires_par_niveau[level] = {
+                "min": s_min or 0,
+                "max": s_max or 0,
+                "median": s_med or 0,
+                "nb_offres": level_nb,
+            } if s_med else None
+
+        nb_avec_salaire = random.randint(5, nb_offres)
+        salaires_global = {
+            "nb_offres_avec_salaire": nb_avec_salaire,
+            "min": min(all_mins) if all_mins else 0,
+            "max": max(all_maxs) if all_maxs else 0,
+            "median": round(sum(all_medians) / len(all_medians)) if all_medians else 0,
+            "moyenne": round(sum(all_medians) / len(all_medians) * 1.05) if all_medians else 0,
+        } if all_medians else None
+
+        # types_contrats from fiche or simulated
+        tc = fiche.types_contrats
+        if not tc or not isinstance(tc, dict):
+            tc = {"cdi": 45, "cdd": 25, "interim": 15, "alternance": 15}
+
+        # experience distribution
+        exp = {
+            "junior": random.randint(20, 60),
+            "confirme": random.randint(30, 80),
+            "senior": random.randint(10, 40),
+        }
+        exp_total = exp["junior"] + exp["confirme"] + exp["senior"]
+
         return {
+            "region": region,
+            "region_name": region_info["nom"],
             "code_rome": code_rome,
-            "region": region_info,
-            "coefficient": coeff,
-            "salaires": salaires_regionaux,
-            "offres_emploi": random.randint(10, 500),
-            "tension": round(random.uniform(0.3, 0.9), 2),
-            "entreprises_secteur": random.randint(50, 2000),
+            "nb_offres": nb_offres,
+            "salaires": salaires_global,
+            "types_contrats": tc,
+            "salaires_par_niveau": salaires_par_niveau,
+            "experience_distribution": {
+                **exp,
+                "junior_pct": round(exp["junior"] / exp_total * 100),
+                "confirme_pct": round(exp["confirme"] / exp_total * 100),
+                "senior_pct": round(exp["senior"] / exp_total * 100),
+            },
+            "tension_regionale": round(random.uniform(0.3, 0.9), 2),
+            "source": "estimation_insee",
+            "coefficient_regional": coeff,
         }
     except HTTPException:
         raise
@@ -1651,33 +1698,35 @@ async def get_fiche_regional(code_rome: str, region: str = Query(...)):
 
 
 @app.get("/api/fiches/{code_rome}/recrutements")
-async def get_recrutements(code_rome: str):
-    """Retourne des stats de recrutement simulées sur 12 mois."""
+async def get_recrutements(code_rome: str, region: Optional[str] = Query(None)):
+    """Retourne des stats de recrutement simulées sur 12 mois. Format: RecrutementsData."""
     try:
         fiche = repo.get_fiche(code_rome)
         if not fiche:
             raise HTTPException(status_code=404, detail=f"Fiche {code_rome} non trouvée")
 
+        region_name = None
+        if region:
+            region_info = next((r for r in REGIONS_FRANCE if r["code"] == region), None)
+            region_name = region_info["nom"] if region_info else None
+
         import random
-        random.seed(hash(code_rome))
-        mois = []
+        random.seed(hash(code_rome + (region or "")))
+        recrutements = []
         base = random.randint(50, 300)
         for i in range(12):
             month_date = datetime.now() - timedelta(days=30 * (11 - i))
             variation = random.uniform(0.7, 1.3)
-            mois.append({
+            recrutements.append({
                 "mois": month_date.strftime("%Y-%m"),
-                "offres": round(base * variation),
-                "candidatures": round(base * variation * random.uniform(2, 5)),
-                "recrutements": round(base * variation * random.uniform(0.3, 0.7)),
+                "nb_offres": round(base * variation),
             })
 
         return {
             "code_rome": code_rome,
-            "periode": "12 derniers mois",
-            "donnees_mensuelles": mois,
-            "total_offres": sum(m["offres"] for m in mois),
-            "total_recrutements": sum(m["recrutements"] for m in mois),
+            "region": region,
+            "region_name": region_name,
+            "recrutements": recrutements,
         }
     except HTTPException:
         raise
@@ -1686,13 +1735,18 @@ async def get_recrutements(code_rome: str):
 
 
 @app.get("/api/fiches/{code_rome}/offres")
-async def get_offres(code_rome: str):
-    """Retourne les offres d'emploi depuis France Travail ou données simulées."""
+async def get_offres(code_rome: str, region: Optional[str] = Query(None), limit: int = Query(15, ge=1, le=50)):
+    """Retourne les offres d'emploi. Format: OffresData du frontend."""
     import os
     try:
         fiche = repo.get_fiche(code_rome)
         if not fiche:
             raise HTTPException(status_code=404, detail=f"Fiche {code_rome} non trouvée")
+
+        region_name = None
+        if region:
+            region_info = next((r for r in REGIONS_FRANCE if r["code"] == region), None)
+            region_name = region_info["nom"] if region_info else None
 
         # Try France Travail API
         client_id = os.environ.get("FRANCE_TRAVAIL_CLIENT_ID")
@@ -1701,7 +1755,6 @@ async def get_offres(code_rome: str):
         if client_id and client_secret:
             try:
                 import httpx
-                # Get token
                 token_resp = httpx.post(
                     "https://entreprise.francetravail.fr/connexion/oauth2/access_token?realm=/partenaire",
                     data={
@@ -1714,60 +1767,73 @@ async def get_offres(code_rome: str):
                 )
                 if token_resp.status_code == 200:
                     token = token_resp.json()["access_token"]
-                    offres_resp = httpx.get(
-                        f"https://api.francetravail.io/partenaire/offresdemploi/v2/offres/search?codeROME={code_rome}&range=0-14",
+                    url = f"https://api.francetravail.io/partenaire/offresdemploi/v2/offres/search?codeROME={code_rome}&range=0-{limit-1}"
+                    if region:
+                        url += f"&region={region}"
+                    offres_resp = httpx.get(url,
                         headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
                     )
                     if offres_resp.status_code == 200:
                         data = offres_resp.json()
                         offres = []
-                        for o in data.get("resultats", [])[:15]:
+                        for o in data.get("resultats", [])[:limit]:
                             offres.append({
-                                "id": o.get("id"),
-                                "titre": o.get("intitule"),
+                                "offre_id": o.get("id", ""),
+                                "titre": o.get("intitule", ""),
                                 "entreprise": o.get("entreprise", {}).get("nom", "Non communiqué"),
                                 "lieu": o.get("lieuTravail", {}).get("libelle", ""),
-                                "contrat": o.get("typeContratLibelle", ""),
+                                "type_contrat": o.get("typeContratLibelle", ""),
                                 "salaire": o.get("salaire", {}).get("libelle", ""),
+                                "experience": o.get("experienceLibelle", ""),
                                 "date_publication": o.get("dateCreation"),
                                 "url": o.get("origineOffre", {}).get("urlOrigine", ""),
                             })
+                        total = len(offres)
+                        try:
+                            total = data.get("filtresPossibles", [{}])[0].get("agregation", [{}])[0].get("nbResultats", len(offres))
+                        except Exception:
+                            pass
                         return {
                             "code_rome": code_rome,
-                            "source": "france_travail",
-                            "total": data.get("filtresPossibles", [{}])[0].get("agregation", [{}])[0].get("nbResultats", len(offres)) if data.get("filtresPossibles") else len(offres),
+                            "region": region,
+                            "region_name": region_name,
+                            "total": total,
                             "offres": offres,
+                            "from_cache": False,
                         }
             except Exception as e:
                 print(f"France Travail API error: {e}")
 
         # Fallback: simulated data
         import random
-        random.seed(hash(code_rome + "offres"))
+        random.seed(hash(code_rome + (region or "") + "offres"))
         entreprises = ["TechCorp", "InnoSoft", "DataPro", "ServicePlus", "ConseilExpert",
                        "GroupeAlpha", "SolutionsPro", "AgenceDigitale", "CabinetConseil", "StartupIA"]
         villes = ["Paris", "Lyon", "Marseille", "Toulouse", "Bordeaux", "Nantes", "Lille", "Strasbourg"]
         contrats = ["CDI", "CDD", "Intérim", "Alternance", "Stage"]
 
         offres = []
-        for i in range(random.randint(5, 15)):
+        for i in range(random.randint(5, min(limit, 15))):
             days_ago = random.randint(1, 30)
             offres.append({
-                "id": f"OFF{random.randint(100000, 999999)}",
+                "offre_id": f"OFF{random.randint(100000, 999999)}",
                 "titre": f"{fiche.nom_epicene} - {random.choice(['Junior', 'Confirmé', 'Senior'])}",
                 "entreprise": random.choice(entreprises),
                 "lieu": random.choice(villes),
-                "contrat": random.choice(contrats),
+                "type_contrat": random.choice(contrats),
                 "salaire": f"{random.randint(25, 65)}K€ - {random.randint(35, 85)}K€",
+                "experience": random.choice(["Débutant", "1-3 ans", "3-5 ans", "5+ ans"]),
                 "date_publication": (datetime.now() - timedelta(days=days_ago)).isoformat(),
-                "url": "",
+                "url": None,
             })
 
         return {
             "code_rome": code_rome,
-            "source": "simulation",
+            "region": region,
+            "region_name": region_name,
             "total": len(offres),
             "offres": offres,
+            "from_cache": False,
         }
     except HTTPException:
         raise
