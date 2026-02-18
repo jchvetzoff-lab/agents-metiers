@@ -1135,7 +1135,7 @@ Genere un JSON avec TOUS les champs suivants. Sois precis et realiste pour le ma
   "missions_principales": ["5-8 missions principales du metier"],
   "acces_metier": "Texte decrivant comment acceder a ce metier (diplomes, experience, etc.)",
   "savoirs": ["5-10 savoirs theoriques necessaires"],
-  "types_contrats": {{"cdi": 50, "cdd": 25, "interim": 15, "alternance": 10}},
+  "types_contrats": {{"cdi": 50, "cdd": 25, "interim": 15, "independant": 10}},
   "traits_personnalite": ["5-8 traits de personnalite importants"],
   "aptitudes": [{{"nom": "Nom aptitude", "niveau": 4}}],
   "profil_riasec": {{"realiste": 30, "investigateur": 60, "artistique": 20, "social": 40, "entreprenant": 30, "conventionnel": 50}},
@@ -1663,7 +1663,7 @@ async def get_fiche_regional(code_rome: str, region: str = Query(...)):
         # types_contrats from fiche or simulated
         tc = fiche.types_contrats
         if not tc or not isinstance(tc, dict):
-            tc = {"cdi": 45, "cdd": 25, "interim": 15, "alternance": 15}
+            tc = {"cdi": 45, "cdd": 25, "interim": 15, "independant": 15}
 
         # experience distribution
         exp = {
@@ -1810,7 +1810,7 @@ async def get_offres(code_rome: str, region: Optional[str] = Query(None), limit:
         entreprises = ["TechCorp", "InnoSoft", "DataPro", "ServicePlus", "ConseilExpert",
                        "GroupeAlpha", "SolutionsPro", "AgenceDigitale", "CabinetConseil", "StartupIA"]
         villes = ["Paris", "Lyon", "Marseille", "Toulouse", "Bordeaux", "Nantes", "Lille", "Strasbourg"]
-        contrats = ["CDI", "CDD", "Intérim", "Alternance", "Stage"]
+        contrats = ["CDI", "CDD", "Intérim", "Indépendant", "Stage"]
 
         offres = []
         for i in range(random.randint(5, min(limit, 15))):
