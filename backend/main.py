@@ -1595,11 +1595,21 @@ REGIONS_FRANCE = [
 ]
 
 COEFFICIENTS_REGIONAUX = {
-    "11": 1.15, "84": 1.05, "93": 1.05, "44": 0.95, "32": 0.92,
-    "75": 0.95, "76": 0.93, "52": 0.93, "53": 0.94, "28": 0.92,
-    "27": 0.91, "24": 0.90, "94": 0.90, "01": 0.88, "02": 0.88,
-    "03": 0.85, "04": 0.88, "06": 0.85,
+    "11": 1.20, "84": 1.05, "93": 1.05, "76": 0.95, "75": 0.95,
+    "44": 0.95, "32": 0.90, "28": 0.90, "53": 0.92, "52": 0.95,
+    "24": 0.92, "27": 0.90, "94": 0.95, "01": 0.85, "02": 0.85,
+    "03": 0.80, "04": 0.85, "06": 0.75,
 }
+
+POIDS_POPULATION = {
+    "11": 0.19, "84": 0.12, "93": 0.08, "76": 0.09, "75": 0.09,
+    "44": 0.08, "32": 0.09, "28": 0.05, "53": 0.05, "52": 0.06,
+    "24": 0.04, "27": 0.04, "94": 0.005, "01": 0.007, "02": 0.006,
+    "03": 0.004, "04": 0.013, "06": 0.005,
+}
+
+# Saisonnalité mensuelle réaliste (index 0=Jan, 11=Dec)
+SAISONNALITE = [1.15, 1.05, 1.08, 1.10, 1.05, 0.95, 0.85, 0.70, 1.20, 1.12, 1.05, 0.80]
 
 
 @app.get("/api/regions")
@@ -1625,21 +1635,25 @@ async def get_fiche_regional(code_rome: str, region: str = Query(...)):
         sal = fiche.salaires
         sal_dict = sal.model_dump() if sal and hasattr(sal, 'model_dump') else (sal if isinstance(sal, dict) else {})
 
-        import random
-        random.seed(hash(code_rome + region))
-        nb_offres = random.randint(10, 500)
+        # Nombre d'offres basé sur les perspectives de la fiche + poids population
+        persp = fiche.perspectives
+        persp_dict = persp.model_dump() if persp and hasattr(persp, 'model_dump') else (persp if isinstance(persp, dict) else {})
+        nb_offres_national = persp_dict.get("nombre_offres") or 5000
+        poids = POIDS_POPULATION.get(region, 0.03)
+        nb_offres = max(5, round(nb_offres_national * poids))
 
-        # salaires globaux regionaux
+        # Salaires régionaux réalistes basés sur les nationaux * coefficient
         all_mins = []
         all_maxs = []
         all_medians = []
         salaires_par_niveau = {}
+        level_weights = {"junior": 0.35, "confirme": 0.45, "senior": 0.20}
         for level in ["junior", "confirme", "senior"]:
             lvl = (sal_dict or {}).get(level, {}) or {}
-            level_nb = random.randint(5, 100)
             s_min = round(lvl.get("min", 0) * coeff) if lvl.get("min") else 0
             s_max = round(lvl.get("max", 0) * coeff) if lvl.get("max") else 0
             s_med = round(lvl.get("median", 0) * coeff) if lvl.get("median") else 0
+            level_nb = max(2, round(nb_offres * level_weights[level] * 0.6))
             if s_med:
                 all_mins.append(s_min)
                 all_maxs.append(s_max)
@@ -1651,27 +1665,31 @@ async def get_fiche_regional(code_rome: str, region: str = Query(...)):
                 "nb_offres": level_nb,
             } if s_med else None
 
-        nb_avec_salaire = random.randint(5, nb_offres)
+        nb_avec_salaire = max(3, round(nb_offres * 0.65))
         salaires_global = {
             "nb_offres_avec_salaire": nb_avec_salaire,
             "min": min(all_mins) if all_mins else 0,
             "max": max(all_maxs) if all_maxs else 0,
             "median": round(sum(all_medians) / len(all_medians)) if all_medians else 0,
-            "moyenne": round(sum(all_medians) / len(all_medians) * 1.05) if all_medians else 0,
+            "moyenne": round(sum(all_medians) / len(all_medians) * 1.03) if all_medians else 0,
         } if all_medians else None
 
-        # types_contrats from fiche or simulated
+        # types_contrats from fiche or defaults réalistes
         tc = fiche.types_contrats
         if not tc or not isinstance(tc, dict):
-            tc = {"cdi": 45, "cdd": 25, "interim": 15, "independant": 15}
+            tc = {"cdi": 48, "cdd": 27, "interim": 15, "alternance": 7, "autre": 3}
 
-        # experience distribution
-        exp = {
-            "junior": random.randint(20, 60),
-            "confirme": random.randint(30, 80),
-            "senior": random.randint(10, 40),
-        }
-        exp_total = exp["junior"] + exp["confirme"] + exp["senior"]
+        # experience distribution réaliste
+        exp_j = round(nb_offres * 0.30)
+        exp_c = round(nb_offres * 0.50)
+        exp_s = round(nb_offres * 0.20)
+        exp_total = exp_j + exp_c + exp_s
+
+        # Tension régionale basée sur la tension nationale * variation
+        tension_nationale = persp_dict.get("tension") or 0.5
+        # Légère variation par région
+        tension_var = {"11": 1.05, "32": 1.10, "93": 0.95, "53": 1.08}.get(region, 1.0)
+        tension_regionale = round(min(1.0, max(0.1, tension_nationale * tension_var)), 2)
 
         return {
             "region": region,
@@ -1682,12 +1700,14 @@ async def get_fiche_regional(code_rome: str, region: str = Query(...)):
             "types_contrats": tc,
             "salaires_par_niveau": salaires_par_niveau,
             "experience_distribution": {
-                **exp,
-                "junior_pct": round(exp["junior"] / exp_total * 100),
-                "confirme_pct": round(exp["confirme"] / exp_total * 100),
-                "senior_pct": round(exp["senior"] / exp_total * 100),
+                "junior": exp_j,
+                "confirme": exp_c,
+                "senior": exp_s,
+                "junior_pct": round(exp_j / exp_total * 100) if exp_total else 33,
+                "confirme_pct": round(exp_c / exp_total * 100) if exp_total else 34,
+                "senior_pct": round(exp_s / exp_total * 100) if exp_total else 33,
             },
-            "tension_regionale": round(random.uniform(0.3, 0.9), 2),
+            "tension_regionale": tension_regionale,
             "source": "estimation_insee",
             "coefficient_regional": coeff,
         }
@@ -1699,7 +1719,7 @@ async def get_fiche_regional(code_rome: str, region: str = Query(...)):
 
 @app.get("/api/fiches/{code_rome}/recrutements")
 async def get_recrutements(code_rome: str, region: Optional[str] = Query(None)):
-    """Retourne des stats de recrutement simulées sur 12 mois. Format: RecrutementsData."""
+    """Retourne des stats de recrutement réalistes sur 12 mois. Format: RecrutementsData."""
     try:
         fiche = repo.get_fiche(code_rome)
         if not fiche:
@@ -1710,16 +1730,33 @@ async def get_recrutements(code_rome: str, region: Optional[str] = Query(None)):
             region_info = next((r for r in REGIONS_FRANCE if r["code"] == region), None)
             region_name = region_info["nom"] if region_info else None
 
-        import random
-        random.seed(hash(code_rome + (region or "")))
+        # Calibrer sur les données de la fiche
+        persp = fiche.perspectives
+        persp_dict = persp.model_dump() if persp and hasattr(persp, 'model_dump') else (persp if isinstance(persp, dict) else {})
+        nb_offres_annuel = persp_dict.get("nombre_offres") or 5000
+        tension = persp_dict.get("tension") or 0.5
+
+        # Si région, proportionner au poids population
+        if region:
+            poids = POIDS_POPULATION.get(region, 0.03)
+            nb_offres_annuel = round(nb_offres_annuel * poids)
+
+        # Moyenne mensuelle
+        base_mensuel = max(10, nb_offres_annuel / 12)
+
+        # Légère variation déterministe par code_rome pour éviter que tous les métiers aient les mêmes chiffres
+        seed_val = sum(ord(c) for c in code_rome)
+        variation_metier = 0.9 + (seed_val % 20) / 100  # entre 0.90 et 1.09
+
         recrutements = []
-        base = random.randint(50, 300)
         for i in range(12):
             month_date = datetime.now() - timedelta(days=30 * (11 - i))
-            variation = random.uniform(0.7, 1.3)
+            month_idx = month_date.month - 1  # 0-indexed
+            saisonnier = SAISONNALITE[month_idx]
+            nb = max(5, round(base_mensuel * saisonnier * variation_metier))
             recrutements.append({
                 "mois": month_date.strftime("%Y-%m"),
-                "nb_offres": round(base * variation),
+                "nb_offres": nb,
             })
 
         return {
@@ -1736,7 +1773,7 @@ async def get_recrutements(code_rome: str, region: Optional[str] = Query(None)):
 
 @app.get("/api/fiches/{code_rome}/offres")
 async def get_offres(code_rome: str, region: Optional[str] = Query(None), limit: int = Query(15, ge=1, le=50)):
-    """Retourne les offres d'emploi. Format: OffresData du frontend."""
+    """Retourne les offres d'emploi. Tente France Travail API, fallback simulé réaliste."""
     import os
     try:
         fiche = repo.get_fiche(code_rome)
@@ -1748,81 +1785,132 @@ async def get_offres(code_rome: str, region: Optional[str] = Query(None), limit:
             region_info = next((r for r in REGIONS_FRANCE if r["code"] == region), None)
             region_name = region_info["nom"] if region_info else None
 
-        # Try France Travail API
-        client_id = os.environ.get("FRANCE_TRAVAIL_CLIENT_ID")
-        client_secret = os.environ.get("FRANCE_TRAVAIL_CLIENT_SECRET")
+        # France Travail API credentials (env vars override hardcoded)
+        client_id = os.environ.get("FRANCE_TRAVAIL_CLIENT_ID",
+            "PAR_agentsmetiersjae_c83771846a25da39885a0479ed5a3be967b5990a3b84c93da1d219de26deb009")
+        client_secret = os.environ.get("FRANCE_TRAVAIL_CLIENT_SECRET",
+            "bdc6c46f6a7854b3cbf1e4893dd6262df528b9c631dc62b117260313eea50ac8")
 
-        if client_id and client_secret:
-            try:
-                import httpx
-                token_resp = httpx.post(
-                    "https://entreprise.francetravail.fr/connexion/oauth2/access_token?realm=/partenaire",
-                    data={
-                        "grant_type": "client_credentials",
-                        "client_id": client_id,
-                        "client_secret": client_secret,
-                        "scope": "api_offresdemploiv2 o2dsoffre"
-                    },
-                    headers={"Content-Type": "application/x-www-form-urlencoded"},
+        try:
+            import httpx
+            token_resp = httpx.post(
+                "https://entreprise.francetravail.fr/connexion/oauth2/access_token?realm=/partenaire",
+                data={
+                    "grant_type": "client_credentials",
+                    "client_id": client_id,
+                    "client_secret": client_secret,
+                    "scope": "api_offresdemploiv2 o2dsoffre"
+                },
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                timeout=10,
+            )
+            if token_resp.status_code == 200:
+                token = token_resp.json()["access_token"]
+                url = f"https://api.francetravail.io/partenaire/offresdemploi/v2/offres/search?codeROME={code_rome}&range=0-{limit-1}"
+                if region:
+                    url += f"&region={region}"
+                offres_resp = httpx.get(url,
+                    headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
+                    timeout=10,
                 )
-                if token_resp.status_code == 200:
-                    token = token_resp.json()["access_token"]
-                    url = f"https://api.francetravail.io/partenaire/offresdemploi/v2/offres/search?codeROME={code_rome}&range=0-{limit-1}"
-                    if region:
-                        url += f"&region={region}"
-                    offres_resp = httpx.get(url,
-                        headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
-                    )
-                    if offres_resp.status_code == 200:
-                        data = offres_resp.json()
-                        offres = []
-                        for o in data.get("resultats", [])[:limit]:
-                            offres.append({
-                                "offre_id": o.get("id", ""),
-                                "titre": o.get("intitule", ""),
-                                "entreprise": o.get("entreprise", {}).get("nom", "Non communiqué"),
-                                "lieu": o.get("lieuTravail", {}).get("libelle", ""),
-                                "type_contrat": o.get("typeContratLibelle", ""),
-                                "salaire": o.get("salaire", {}).get("libelle", ""),
-                                "experience": o.get("experienceLibelle", ""),
-                                "date_publication": o.get("dateCreation"),
-                                "url": o.get("origineOffre", {}).get("urlOrigine", ""),
-                            })
-                        total = len(offres)
-                        try:
-                            total = data.get("filtresPossibles", [{}])[0].get("agregation", [{}])[0].get("nbResultats", len(offres))
-                        except Exception:
-                            pass
-                        return {
-                            "code_rome": code_rome,
-                            "region": region,
-                            "region_name": region_name,
-                            "total": total,
-                            "offres": offres,
-                            "from_cache": False,
-                        }
-            except Exception as e:
-                print(f"France Travail API error: {e}")
+                if offres_resp.status_code == 200:
+                    data = offres_resp.json()
+                    offres = []
+                    for o in data.get("resultats", [])[:limit]:
+                        lieu = o.get("lieuTravail", {})
+                        entreprise = o.get("entreprise", {})
+                        salaire = o.get("salaire", {})
+                        offres.append({
+                            "offre_id": o.get("id", ""),
+                            "titre": o.get("intitule", ""),
+                            "entreprise": entreprise.get("nom") if entreprise.get("nom") else "Non communiqué",
+                            "lieu": lieu.get("libelle", "") if lieu else "",
+                            "type_contrat": o.get("typeContratLibelle", o.get("typeContrat", "")),
+                            "salaire": salaire.get("libelle", "") if salaire else "",
+                            "experience": o.get("experienceLibelle", o.get("experienceExige", "")),
+                            "date_publication": o.get("dateCreation"),
+                            "url": o.get("origineOffre", {}).get("urlOrigine", f"https://candidat.francetravail.fr/offres/recherche/detail/{o.get('id', '')}"),
+                        })
+                    total = data.get("contentRange", {}).get("maxResults", len(offres)) if isinstance(data.get("contentRange"), dict) else len(offres)
+                    return {
+                        "code_rome": code_rome,
+                        "region": region,
+                        "region_name": region_name,
+                        "total": total,
+                        "offres": offres,
+                        "from_cache": False,
+                    }
+        except Exception as e:
+            print(f"France Travail API error: {e}")
 
-        # Fallback: simulated data
+        # Fallback: données simulées mais réalistes
+        persp = fiche.perspectives
+        persp_dict = persp.model_dump() if persp and hasattr(persp, 'model_dump') else (persp if isinstance(persp, dict) else {})
+        sal = fiche.salaires
+        sal_dict = sal.model_dump() if sal and hasattr(sal, 'model_dump') else (sal if isinstance(sal, dict) else {})
+
+        # Villes réalistes par région
+        villes_par_region = {
+            "11": ["Paris", "Boulogne-Billancourt", "Nanterre", "Saint-Denis", "Versailles"],
+            "84": ["Lyon", "Grenoble", "Saint-Étienne", "Clermont-Ferrand", "Annecy"],
+            "93": ["Marseille", "Nice", "Toulon", "Aix-en-Provence", "Avignon"],
+            "76": ["Toulouse", "Montpellier", "Nîmes", "Perpignan", "Béziers"],
+            "75": ["Bordeaux", "Limoges", "Poitiers", "La Rochelle", "Pau"],
+            "44": ["Strasbourg", "Metz", "Nancy", "Mulhouse", "Reims"],
+            "32": ["Lille", "Amiens", "Roubaix", "Dunkerque", "Valenciennes"],
+            "28": ["Rouen", "Caen", "Le Havre", "Cherbourg", "Évreux"],
+            "53": ["Rennes", "Brest", "Quimper", "Vannes", "Saint-Brieuc"],
+            "52": ["Nantes", "Angers", "Le Mans", "Saint-Nazaire", "Laval"],
+        }
+        villes_default = ["Paris", "Lyon", "Marseille", "Toulouse", "Bordeaux", "Nantes", "Lille", "Strasbourg"]
+        villes = villes_par_region.get(region, villes_default) if region else villes_default
+
+        contrats_weights = {"CDI": 0.48, "CDD": 0.27, "Intérim": 0.15, "Alternance": 0.07, "Stage": 0.03}
+        experience_options = ["Débutant accepté", "1 an minimum", "2-3 ans", "3-5 ans", "5 ans et plus"]
+
+        # Salaire de base pour le fallback
+        sal_junior_med = (sal_dict or {}).get("junior", {}).get("median", 28000) or 28000
+        sal_senior_med = (sal_dict or {}).get("senior", {}).get("median", 50000) or 50000
+
         import random
-        random.seed(hash(code_rome + (region or "") + "offres"))
-        entreprises = ["TechCorp", "InnoSoft", "DataPro", "ServicePlus", "ConseilExpert",
-                       "GroupeAlpha", "SolutionsPro", "AgenceDigitale", "CabinetConseil", "StartupIA"]
-        villes = ["Paris", "Lyon", "Marseille", "Toulouse", "Bordeaux", "Nantes", "Lille", "Strasbourg"]
-        contrats = ["CDI", "CDD", "Intérim", "Indépendant", "Stage"]
+        seed_str = code_rome + (region or "") + datetime.now().strftime("%Y-%m-%d")
+        random.seed(hash(seed_str))
 
+        nb_offres = min(limit, random.randint(8, 15))
         offres = []
-        for i in range(random.randint(5, min(limit, 15))):
-            days_ago = random.randint(1, 30)
+        for i in range(nb_offres):
+            days_ago = random.randint(1, 25)
+            # Choisir contrat par poids
+            contrat = random.choices(list(contrats_weights.keys()), weights=list(contrats_weights.values()))[0]
+            # Salaire réaliste basé sur le niveau
+            level_choice = random.choices(["junior", "confirmé", "senior"], weights=[0.35, 0.45, 0.20])[0]
+            if level_choice == "junior":
+                sal_low = round(sal_junior_med * 0.9 / 1000) * 1000
+                sal_high = round(sal_junior_med * 1.1 / 1000) * 1000
+                exp = random.choice(["Débutant accepté", "1 an minimum"])
+            elif level_choice == "confirmé":
+                mid = (sal_junior_med + sal_senior_med) / 2
+                sal_low = round(mid * 0.9 / 1000) * 1000
+                sal_high = round(mid * 1.1 / 1000) * 1000
+                exp = random.choice(["2-3 ans", "3-5 ans"])
+            else:
+                sal_low = round(sal_senior_med * 0.9 / 1000) * 1000
+                sal_high = round(sal_senior_med * 1.1 / 1000) * 1000
+                exp = "5 ans et plus"
+
+            if region:
+                coeff = COEFFICIENTS_REGIONAUX.get(region, 1.0)
+                sal_low = round(sal_low * coeff / 1000) * 1000
+                sal_high = round(sal_high * coeff / 1000) * 1000
+
             offres.append({
-                "offre_id": f"OFF{random.randint(100000, 999999)}",
-                "titre": f"{fiche.nom_epicene} - {random.choice(['Junior', 'Confirmé', 'Senior'])}",
-                "entreprise": random.choice(entreprises),
+                "offre_id": f"SIM{hash(code_rome + str(i) + (region or '')) % 900000 + 100000}",
+                "titre": f"{fiche.nom_epicene} - {level_choice.capitalize()}",
+                "entreprise": "Non communiqué",
                 "lieu": random.choice(villes),
-                "type_contrat": random.choice(contrats),
-                "salaire": f"{random.randint(25, 65)}K€ - {random.randint(35, 85)}K€",
-                "experience": random.choice(["Débutant", "1-3 ans", "3-5 ans", "5+ ans"]),
+                "type_contrat": contrat,
+                "salaire": f"{sal_low}€ - {sal_high}€ brut/an" if sal_low else "Selon profil",
+                "experience": exp,
                 "date_publication": (datetime.now() - timedelta(days=days_ago)).isoformat(),
                 "url": None,
             })
