@@ -9,14 +9,14 @@ import { api, Stats, AuditLog } from "@/lib/api";
 function KPICard({ label, value, icon, color }: { label: string; value: number | string; icon: string; color: string }) {
   return (
     <FadeInView>
-      <div className={`relative overflow-hidden rounded-2xl border border-white/20 p-6 backdrop-blur-xl bg-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_rgba(79,70,229,0.12)] transition-all duration-300 border-l-4 ${color}`}>
+      <div className={`relative overflow-hidden rounded-2xl border border-white/20 p-4 md:p-6 backdrop-blur-xl bg-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_32px_rgba(79,70,229,0.12)] transition-all duration-300 border-l-4 ${color}`}>
         <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent pointer-events-none" />
         <div className="relative flex items-center justify-between">
           <div>
-            <p className="text-sm text-gray-500 font-medium">{label}</p>
-            <p className="text-3xl font-bold text-gray-900 mt-1">{value}</p>
+            <p className="text-xs md:text-sm text-gray-500 font-medium">{label}</p>
+            <p className="text-2xl md:text-3xl font-bold text-gray-900 mt-1">{value}</p>
           </div>
-          <span className="text-3xl">{icon}</span>
+          <span className="text-2xl md:text-3xl">{icon}</span>
         </div>
       </div>
     </FadeInView>
@@ -156,21 +156,21 @@ export default function Home() {
           }}
         />
         <FloatingOrbs />
-        <div className="relative max-w-6xl mx-auto px-4 py-24 md:py-32">
+        <div className="relative max-w-6xl mx-auto px-4 py-16 md:py-32">
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: "easeOut" }}
           >
             <div className="text-center">
-              <h1 className="text-5xl md:text-7xl lg:text-8xl font-extrabold text-white mb-6 tracking-tight drop-shadow-lg">
+              <h1 className="text-3xl sm:text-5xl md:text-7xl lg:text-8xl font-extrabold text-white mb-4 md:mb-6 tracking-tight drop-shadow-lg">
                 <TypingTitle text="Agents Métiers" />
               </h1>
               <motion.p
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 1.2, duration: 0.6 }}
-                className="text-xl md:text-2xl text-white/80 max-w-2xl mx-auto mb-10"
+                className="text-base md:text-2xl text-white/80 max-w-2xl mx-auto mb-8 md:mb-10 px-2"
               >
                 Référentiel intelligent de {stats?.total ?? "..."} fiches métiers ROME, enrichies et validées par IA.
               </motion.p>
@@ -178,12 +178,12 @@ export default function Home() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 1.5, duration: 0.6 }}
-                className="flex gap-4 justify-center"
+                className="flex gap-3 md:gap-4 justify-center flex-wrap px-4"
               >
-                <Link href="/fiches" className="px-8 py-3.5 bg-white text-indigo-700 rounded-full text-base font-bold hover:bg-indigo-50 hover:scale-105 transition-all shadow-xl">
+                <Link href="/fiches" className="px-6 md:px-8 py-3 md:py-3.5 bg-white text-indigo-700 rounded-full text-sm md:text-base font-bold hover:bg-indigo-50 hover:scale-105 transition-all shadow-xl">
                   Explorer les fiches
                 </Link>
-                <Link href="/actions" className="px-8 py-3.5 bg-white/15 text-white border border-white/30 rounded-full text-base font-bold hover:bg-white/25 hover:scale-105 transition-all backdrop-blur-sm">
+                <Link href="/actions" className="px-6 md:px-8 py-3 md:py-3.5 bg-white/15 text-white border border-white/30 rounded-full text-sm md:text-base font-bold hover:bg-white/25 hover:scale-105 transition-all backdrop-blur-sm">
                   Actions
                 </Link>
               </motion.div>
@@ -200,7 +200,7 @@ export default function Home() {
         }
       `}</style>
 
-      <div className="max-w-6xl mx-auto px-4 py-10">
+      <div className="max-w-6xl mx-auto px-4 py-6 md:py-10">
         {/* Section titre */}
         <FadeInView>
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Tableau de bord</h2>
