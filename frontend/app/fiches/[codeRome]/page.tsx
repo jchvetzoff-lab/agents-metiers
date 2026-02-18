@@ -2163,10 +2163,37 @@ export default function FicheDetailPage() {
                   </div>
                 )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  {fiche.niveau_formation && (
-                    <div className="p-4 bg-[#F9F8FF] rounded-xl border border-indigo-200/60">
+                  {(fiche.niveau_formation || (fiche.formations && fiche.formations.length > 0)) && (
+                    <div className="p-4 bg-[#F9F8FF] rounded-xl border border-indigo-200/60 md:col-span-2">
                       <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t.formationLevel}</span>
-                      <p className="text-lg font-bold text-[#1A1A2E] mt-1">{fiche.niveau_formation}</p>
+                      {fiche.niveau_formation && (
+                        <p className="text-base font-bold text-[#1A1A2E] mt-1 mb-3">{fiche.niveau_formation}</p>
+                      )}
+                      {fiche.formations && fiche.formations.length > 0 && (
+                        <div className="space-y-2 mt-2">
+                          {fiche.formations.map((f, i) => {
+                            const levelMatch = f.match(/bac\s*\+\s*(\d)/i);
+                            const isMaster = /master|ingenieur|ingénieur|doctorat/i.test(f);
+                            const isLicence = /licence|bachelor|but\b/i.test(f);
+                            const isBTS = /bts|dut|deust/i.test(f);
+                            const isBac = /bac\s+pro|baccalauréat|bp\b/i.test(f);
+                            const isCAP = /cap\b|bep\b|titre\s+professionnel/i.test(f);
+                            const color = isMaster ? "#7C3AED" : isLicence ? "#4F46E5" : isBTS ? "#06B6D4" : isBac ? "#F97316" : isCAP ? "#EAB308" : "#6B7280";
+                            const bgColor = isMaster ? "#F5F3FF" : isLicence ? "#EEF2FF" : isBTS ? "#ECFEFF" : isBac ? "#FFF7ED" : isCAP ? "#FEFCE8" : "#F9FAFB";
+                            const level = isMaster ? "Bac+5" : isLicence ? "Bac+3" : isBTS ? "Bac+2" : isBac ? "Bac" : isCAP ? "CAP/BEP" : null;
+                            return (
+                              <div key={i} className="flex items-center gap-3 p-2.5 rounded-lg border" style={{ backgroundColor: bgColor, borderColor: `${color}30` }}>
+                                {level && (
+                                  <span className="px-2 py-0.5 rounded-md text-xs font-bold text-white shrink-0" style={{ backgroundColor: color }}>
+                                    {level}
+                                  </span>
+                                )}
+                                <span className="text-sm text-gray-700">{f}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   )}
                   {fiche.statuts_professionnels && fiche.statuts_professionnels.length > 0 && (
