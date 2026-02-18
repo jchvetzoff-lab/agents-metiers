@@ -19,11 +19,21 @@ const STATUS_CONFIG: Record<string, StatusConfig> = {
     className: "bg-stone-100 text-stone-600",
     icon: "📝",
   },
+  enrichi: {
+    label: "Enrichi",
+    className: "bg-blue-100 text-blue-700",
+    icon: "✨",
+  },
   en_validation: {
     label: "En validation",
     className: "bg-indigo-100 text-indigo-700",
     icon: "🔍",
     pulse: true,
+  },
+  valide: {
+    label: "Validé IA",
+    className: "bg-amber-100 text-amber-700",
+    icon: "🤖",
   },
   publiee: {
     label: "Publiée",
