@@ -55,3 +55,4 @@ Exemple :
 ```bash
 curl "http://localhost:8000/api/fiches?statut=publiee&search=data&limit=10"
 ```
+# Endpoint /api/fiches/{code_rome}/national deployé et fonctionnel
