@@ -454,6 +454,106 @@ export default function FicheDetailPage() {
 
       <HistoriqueSection fiche={fiche} enrichmentDiff={enrichmentDiff} showDiffPanel={showDiffPanel} onSetShowDiffPanel={setShowDiffPanel} onClearDiff={() => setEnrichmentDiff(null)} actionMessage={actionMessage} onClearActionMessage={() => setActionMessage(null)} />
 
+      {/* ── VALIDATION IA DETAILS ── */}
+      {authenticated && fiche.statut !== "brouillon" && fiche.statut !== "publiee" && (fiche as any).validation_ia_details && (() => {
+        const details = (fiche as any).validation_ia_details;
+        const score = details.score_global || (fiche as any).validation_ia_score || 0;
+        const verdict = details.verdict || "";
+        const problemes: any[] = details.problemes || [];
+        const pointsForts: string[] = details.points_forts || [];
+        const ameliorations: string[] = details.ameliorations_requises || [];
+        const criteres: Record<string, any> = details.criteres_detailles || {};
+        const scoreColor = score >= 80 ? "text-green-600" : score >= 60 ? "text-amber-600" : "text-red-600";
+        const scoreBg = score >= 80 ? "bg-green-50 border-green-200" : score >= 60 ? "bg-amber-50 border-amber-200" : "bg-red-50 border-red-200";
+        return (
+          <div className="bg-white border-b border-gray-200">
+            <div className="max-w-7xl mx-auto px-4 md:px-8 py-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  🔍 Rapport de Validation IA
+                </h3>
+                <div className={`px-4 py-2 rounded-xl border font-bold text-lg ${scoreBg} ${scoreColor}`}>
+                  {score}/100
+                  <span className="text-xs font-medium ml-2 opacity-70">{verdict === "bonne_qualite" ? "Bonne qualite" : verdict === "excellente" ? "Excellente" : verdict === "a_ameliorer" ? "A ameliorer" : verdict}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                {/* Points forts */}
+                {pointsForts.length > 0 && (
+                  <div className="bg-green-50 rounded-xl p-4 border border-green-200">
+                    <h4 className="font-semibold text-green-800 text-sm mb-2 flex items-center gap-1.5">✅ Points forts ({pointsForts.length})</h4>
+                    <ul className="space-y-1.5">
+                      {pointsForts.map((p, i) => (
+                        <li key={i} className="text-xs text-green-700 flex items-start gap-2">
+                          <span className="text-green-400 mt-0.5 shrink-0">●</span>
+                          {p}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Problemes + ameliorations */}
+                <div className="space-y-3">
+                  {problemes.length > 0 && (
+                    <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
+                      <h4 className="font-semibold text-amber-800 text-sm mb-2 flex items-center gap-1.5">⚠️ Problemes detectes ({problemes.length})</h4>
+                      <ul className="space-y-1.5">
+                        {problemes.map((p, i) => (
+                          <li key={i} className="text-xs text-amber-700 flex items-start gap-2">
+                            <span className={`mt-0.5 shrink-0 ${p.severite === "error" ? "text-red-500" : p.severite === "warning" ? "text-amber-500" : "text-blue-400"}`}>
+                              {p.severite === "error" ? "🔴" : p.severite === "warning" ? "🟡" : "🔵"}
+                            </span>
+                            {p.message}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {ameliorations.length > 0 && (
+                    <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
+                      <h4 className="font-semibold text-blue-800 text-sm mb-2 flex items-center gap-1.5">💡 Ameliorations requises</h4>
+                      <ul className="space-y-1.5">
+                        {ameliorations.map((a, i) => (
+                          <li key={i} className="text-xs text-blue-700 flex items-start gap-2">
+                            <span className="text-blue-400 mt-0.5 shrink-0">→</span>
+                            {a}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Criteres detailles */}
+              {Object.keys(criteres).length > 0 && (
+                <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                  <h4 className="font-semibold text-gray-800 text-sm mb-3">📊 Criteres detailles</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {Object.entries(criteres).map(([key, val]: [string, any]) => (
+                      <div key={key} className="bg-white rounded-lg p-3 border border-gray-100">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-medium text-gray-600">{key.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</span>
+                          <span className={`text-sm font-bold ${(val.score / val.max) >= 0.8 ? "text-green-600" : (val.score / val.max) >= 0.6 ? "text-amber-600" : "text-red-600"}`}>
+                            {val.score}/{val.max}
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-1.5">
+                          <div className={`h-1.5 rounded-full ${(val.score / val.max) >= 0.8 ? "bg-green-500" : (val.score / val.max) >= 0.6 ? "bg-amber-500" : "bg-red-500"}`} style={{ width: `${(val.score / val.max) * 100}%` }} />
+                        </div>
+                        {val.commentaire && <p className="text-[10px] text-gray-400 mt-1 leading-tight">{val.commentaire}</p>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── FILTRES VARIANTES ── */}
       {variantes.length > 0 && (
         <div className="bg-white border-b border-gray-200">
