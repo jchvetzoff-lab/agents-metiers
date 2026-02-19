@@ -247,7 +247,7 @@ export default function CareerMap({
         edges={edges}
         nodeTypes={nodeTypes}
         fitView
-        fitViewOptions={{ padding: 0.25, maxZoom: 1.2 }}
+        fitViewOptions={{ padding: 0.4, maxZoom: 1.0 }}
         minZoom={0.2}
         maxZoom={2}
         panOnDrag

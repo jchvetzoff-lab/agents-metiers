@@ -36,15 +36,20 @@ export function buildCareerGraph(
   const nodes: Node[] = [];
   const edges: Edge[] = [];
 
-  const centerX = compact ? 300 : 500;
-  const centerY = compact ? 250 : 320;
-  const radius = compact ? 200 : 300;
-
   // All satellite items
   const allItems: SatelliteItem[] = [
     ...evolutions.map(e => ({ ...e, type: "evolution" as const })),
     ...proches.map(p => ({ ...p, type: "proche" as const })),
   ];
+
+  // Dynamic radius: ensure nodes don't overlap
+  // Each node is ~220px wide, we need circumference > count * 220
+  const nodeSpacing = compact ? 180 : 240;
+  const minRadius = compact ? 200 : 320;
+  const dynamicRadius = Math.max(minRadius, (allItems.length * nodeSpacing) / (2 * Math.PI));
+  const radius = dynamicRadius;
+  const centerX = radius + (compact ? 150 : 180);
+  const centerY = radius + (compact ? 100 : 120);
 
   // Central node — larger
   nodes.push({
