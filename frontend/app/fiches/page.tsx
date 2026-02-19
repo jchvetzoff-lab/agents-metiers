@@ -171,7 +171,7 @@ export default function FichesPage() {
           limit,
           offset: page * limit,
         });
-        setFiches(data.results);
+        setFiches(data.results.filter((f: any) => f.code_rome));
         setTotal(data.total);
       } else {
         // Multiple statuts (e.g. validation_ia = en_validation + valide) — merge results
@@ -186,7 +186,7 @@ export default function FichesPage() {
             offset: 0,
           })
         ));
-        const allFiches = results.flatMap(r => r.results);
+        const allFiches = results.flatMap(r => r.results).filter((f: any) => f.code_rome);
         const totalCount = results.reduce((sum, r) => sum + r.total, 0);
         // Client-side pagination for merged results
         const start = page * limit;
