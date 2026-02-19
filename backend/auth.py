@@ -14,8 +14,9 @@ from .models import LoginRequest, RegisterRequest
 
 router = APIRouter()
 
-# JWT Configuration
-JWT_SECRET = secrets.token_hex(32)
+# JWT Configuration — use env var for persistence across deploys, fallback to random
+import os
+JWT_SECRET = os.environ.get("JWT_SECRET", secrets.token_hex(32))
 
 # Hardcoded test accounts + DB accounts
 _TEST_ACCOUNTS = {
