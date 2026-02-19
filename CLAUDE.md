@@ -137,6 +137,7 @@ const FILTER_TO_STATUTS = {
 | `FRANCE_TRAVAIL_CLIENT_ID` | Client ID France Travail | Non (fallback hardcode) |
 | `FRANCE_TRAVAIL_CLIENT_SECRET` | Secret France Travail | Non (fallback hardcode) |
 | `INSEE_API_TOKEN` | Token API INSEE | Non (fallback data integrees) |
+| `JWT_SECRET` | Secret for JWT signing (64-char hex) | Oui (sinon regenere a chaque restart → sessions perdues) |
 | `API_KEYS` | Cles API publique (comma-sep) | Non (default: `am_dev_key_2026`) |
 
 Le frontend n'a qu'une variable : `NEXT_PUBLIC_API_URL=https://agents-metiers.onrender.com`
@@ -235,7 +236,7 @@ cd frontend && npm run dev
 - **Build** : ~10-15 min
 - **Timeout** : Pas de hard limit mais les requetes longues (enrichissement) prennent 30-90s
 - **Memoire** : Limitee → `pandas` a ete supprime, remplace par `csv` stdlib
-- **JWT** : Secret regenere a chaque restart → sessions perdues
+- ~~**JWT** : Secret regenere a chaque restart → sessions perdues~~ → **RESOLU** : `JWT_SECRET` env var (valeur dans `.env`, a configurer sur Render)
 
 ### Vercel free tier
 - **100 deployments/jour** max
