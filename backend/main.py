@@ -67,6 +67,12 @@ def run_database_migration() -> None:
                         session.execute(text(f'ALTER TABLE fiches_metiers ADD COLUMN {column_name} {column_type}'))
                     except Exception as e:
                         logger.info(f"Migration skip {column_name}: {e}")
+
+            # Widen code_rome column for custom codes (CUSTOM-XXXXX)
+            try:
+                session.execute(text("ALTER TABLE fiches_metiers ALTER COLUMN code_rome TYPE VARCHAR(20)"))
+            except Exception:
+                pass
     except Exception as e:
         logger.warning(f"Migration error (non-fatal): {e}")
 

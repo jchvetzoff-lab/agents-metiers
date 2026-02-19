@@ -46,7 +46,7 @@ class FicheMetierResponse(BaseModel):
 
 class FicheMetierCreate(BaseModel):
     """Model for creating fiche métier."""
-    code_rome: str
+    code_rome: Optional[str] = ""
     nom_masculin: str
     nom_feminin: str
     nom_epicene: str

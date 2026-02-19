@@ -307,7 +307,7 @@ class FicheMetierDB(Base):
     __tablename__ = "fiches_metiers"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    code_rome = Column(String(10), unique=True, nullable=False, index=True)
+    code_rome = Column(String(20), unique=True, nullable=False, index=True)
     code_ogr = Column(String(10), nullable=True)
 
     nom_masculin = Column(String(255), nullable=False)
