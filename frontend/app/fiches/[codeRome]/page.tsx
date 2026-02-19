@@ -1693,8 +1693,12 @@ export default function FicheDetailPage() {
                     {fiche.statut === "brouillon" && (
                       <button onClick={() => handleEnrich(false)} disabled={actionLoading !== null}
                         className="inline-flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 sm:py-1.5 w-full sm:w-auto bg-indigo-600 text-white rounded-full text-xs font-medium hover:bg-indigo-700 transition disabled:opacity-40 disabled:cursor-wait">
-                        {actionLoading === "enrich" ? <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "✨"}
-                        Enrichir par IA
+                        {actionLoading === "enrich" ? (
+                          <>
+                            <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            Enrichissement + Validation IA en cours...
+                          </>
+                        ) : "✨ Enrichir + Valider par IA"}
                       </button>
                     )}
 
@@ -1717,8 +1721,9 @@ export default function FicheDetailPage() {
                     {fiche.statut === "valide" && (
                       <>
                         {fiche.validation_ia_score != null && (
-                          <div className="w-full text-xs text-green-600 font-medium mb-1">
-                            Score IA : {fiche.validation_ia_score}/100 ✓
+                          <div className="w-full flex items-center gap-2 text-xs font-medium mb-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg text-green-700">
+                            <span className="text-base">✅</span>
+                            Score IA : {fiche.validation_ia_score}/100 — Prete a publier
                           </div>
                         )}
                         <button onClick={() => handleValidateHuman(true)} disabled={actionLoading !== null || validationHumaneLoading}
