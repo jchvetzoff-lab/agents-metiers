@@ -34,7 +34,7 @@ agents-metiers/
 │   ├── models.py              # SQLAlchemy models + Pydantic schemas (603 lignes)
 │   └── repository.py          # Repository pattern, CRUD operations (623 lignes)
 ├── backend/
-│   ├── main.py                # FastAPI app, tous les endpoints (1229 lignes) ⚠️ monolithique
+│   ├── main.py                # FastAPI app, CORS, startup, health (138 lignes) ✅ clean
 │   ├── shared.py              # Singleton repo + config (22 lignes)
 │   ├── auth.py                # JWT auth maison (139 lignes)
 │   ├── enrichment.py          # Enrichissement Claude AI (532 lignes)
@@ -251,13 +251,12 @@ cd frontend && npm run dev
 
 ## Problemes connus / dette technique
 
-1. **`backend/main.py` est monolithique** (1229 lignes) — a splitter en modules (routes, middleware, etc.)
-2. **`frontend/app/fiches/[codeRome]/page.tsx` est monolithique** (3149 lignes) — a splitter en composants
-3. **JWT secret ephemere** — se perd a chaque redeploy Render. Solution : env var `JWT_SECRET` fixe
-4. **Pas de pagination backend** sur `/api/fiches` — renvoie tout d'un coup (1589 fiches)
-5. **`en_validation` et `archivee` sont dans le code** mais plus dans l'enum actif (legacy)
-6. **Pas de tests** — aucun test unitaire ou integration
-7. **Pas de CI/CD** au-dela du auto-deploy Render/Vercel
+1. ~~`backend/main.py` monolithique~~ → **RESOLU** : splitte en routes_fiches, routes_stats, routes_admin (138 lignes)
+2. **`frontend/app/fiches/[codeRome]/page.tsx` est gros** (~2984 lignes) — composants extraits (ActionButtons, OffresSection, RegionalSection, HistoriqueSection) mais pas encore integres dans page.tsx
+3. ~~JWT secret ephemere~~ → **RESOLU** : lit `JWT_SECRET` depuis env var (fallback random)
+4. **Pagination** : limit/offset existent dans l'API mais le tri/recherche charge tout en memoire (acceptable pour ~1600 fiches)
+5. ~~Pas de tests~~ → **RESOLU** : 17 tests (auth + validation + scoring), pytest
+6. **Pas de CI/CD** au-dela du auto-deploy Render/Vercel
 
 ---
 
