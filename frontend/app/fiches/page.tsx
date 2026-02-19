@@ -171,7 +171,7 @@ export default function FichesPage() {
           limit,
           offset: page * limit,
         });
-        setFiches(data.results.filter((f: any) => f.code_rome));
+        setFiches(data.results);
         setTotal(data.total);
       } else {
         // Multiple statuts (e.g. validation_ia = en_validation + valide) — merge results
@@ -186,7 +186,7 @@ export default function FichesPage() {
             offset: 0,
           })
         ));
-        const allFiches = results.flatMap(r => r.results).filter((f: any) => f.code_rome);
+        const allFiches = results.flatMap(r => r.results);
         const totalCount = results.reduce((sum, r) => sum + r.total, 0);
         // Client-side pagination for merged results
         const start = page * limit;
@@ -260,7 +260,7 @@ export default function FichesPage() {
       <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
         {suggestions.map((fiche) => (
           <button
-            key={fiche.code_rome}
+            key={fiche.code_rome || fiche.nom_epicene || Math.random().toString()}
             type="button"
             onClick={() => selectSuggestion(fiche)}
             className="w-full flex items-center gap-3 px-4 py-3 hover:bg-indigo-50 transition-colors text-left border-b border-gray-50 last:border-0"
@@ -370,13 +370,13 @@ export default function FichesPage() {
                 const score = computeScore(fiche);
                 const isSelected = selected.has(fiche.code_rome);
                 return (
-                  <div key={fiche.code_rome} className={`sojai-card p-4 ${isSelected ? "ring-2 ring-indigo-400 bg-indigo-50/50" : ""}`}>
+                  <div key={fiche.code_rome || fiche.nom_epicene || Math.random().toString()} className={`sojai-card p-4 ${isSelected ? "ring-2 ring-indigo-400 bg-indigo-50/50" : ""}`}>
                     <div className="flex items-start gap-3">
                       <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(fiche.code_rome)}
                         className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 mt-1 shrink-0" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <span className="badge badge-purple text-xs">{fiche.code_rome}</span>
+                          <span className="badge badge-purple text-xs">{fiche.code_rome || "NOUVEAU"}</span>
                           <StatusBadge statut={fiche.statut} />
                           {fiche.rome_update_pending && (
                             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-700 border border-orange-300">MAJ ROME</span>
@@ -407,10 +407,10 @@ export default function FichesPage() {
                               <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-500">👤 -</div>
                             )}
                           </div>
-                          <Link href={`/fiches/${fiche.code_rome}`}
+                          {fiche.code_rome ? <Link href={`/fiches/${fiche.code_rome}`}
                             className="inline-flex items-center px-4 py-2 rounded-full border border-[#4A39C0] text-[#4A39C0] text-xs font-semibold hover:bg-[#4A39C0] hover:text-white transition-all min-h-[44px]">
                             Voir
-                          </Link>
+                          </Link> : <span className="inline-flex items-center px-4 py-2 rounded-full border border-gray-300 text-gray-400 text-xs font-semibold min-h-[44px]">En attente de code</span>}
                         </div>
                         <div className="mt-2"><ScoreBar score={score} /></div>
                       </div>
@@ -458,12 +458,12 @@ export default function FichesPage() {
                       const score = computeScore(fiche);
                       const isSelected = selected.has(fiche.code_rome);
                       return (
-                        <tr key={fiche.code_rome} className={`border-b border-border-subtle hover:bg-background-light transition-colors ${isSelected ? "bg-indigo-50" : ""}`}>
+                        <tr key={fiche.code_rome || fiche.nom_epicene || Math.random().toString()} className={`border-b border-border-subtle hover:bg-background-light transition-colors ${isSelected ? "bg-indigo-50" : ""}`}>
                           <td className="p-4">
                             <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(fiche.code_rome)}
                               className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
                           </td>
-                          <td className="p-4"><span className="badge badge-purple text-xs">{fiche.code_rome}</span></td>
+                          <td className="p-4"><span className="badge badge-purple text-xs">{fiche.code_rome || "NOUVEAU"}</span></td>
                           <td className="p-4">
                             <div className="font-semibold text-text-dark">{fiche.nom_epicene || fiche.nom_masculin}</div>
                             {fiche.description_courte && <div className="text-sm text-text-muted line-clamp-1 mt-1">{fiche.description_courte}</div>}
@@ -506,10 +506,10 @@ export default function FichesPage() {
                           </td>
                           <td className="p-4"><ScoreBar score={score} /></td>
                           <td className="p-4 text-center">
-                            <Link href={`/fiches/${fiche.code_rome}`}
+                            {fiche.code_rome ? <Link href={`/fiches/${fiche.code_rome}`}
                               className="inline-flex items-center px-4 py-2 rounded-full border border-[#4A39C0] text-[#4A39C0] text-xs font-semibold hover:bg-[#4A39C0] hover:text-white hover:scale-105 hover:shadow-md transition-all duration-200 ease-out">
                               Voir
-                            </Link>
+                            </Link> : <span className="text-xs text-gray-400">En attente de code</span>}
                           </td>
                         </tr>
                       );
