@@ -19,7 +19,7 @@ DEFAULT_PAGINATION_LIMIT = 50
 MAX_PAGINATION_LIMIT = 500
 DEFAULT_AUDIT_LIMIT = 15
 MAX_AUDIT_LIMIT = 100
-FUZZY_SEARCH_THRESHOLD = 0.4
+FUZZY_SEARCH_THRESHOLD = 0.55
 FUZZY_COMPETENCES_THRESHOLD = 0.5
 
 logger = logging.getLogger(__name__)
@@ -68,19 +68,42 @@ def add_audit_log(type_evt: str, code_rome: str, agent: str, description: str, v
     repo.add_audit_log(audit_log)
 
 
+def _normalize(s: str) -> str:
+    """Remove accents for search matching."""
+    import unicodedata
+    return "".join(
+        c for c in unicodedata.normalize("NFD", s.lower())
+        if unicodedata.category(c) != "Mn"
+    )
+
+
 def fuzzy_match(query: str, text: str, threshold: float = FUZZY_SEARCH_THRESHOLD) -> float:
-    query_lower = query.lower()
-    text_lower = text.lower()
+    if not text:
+        return 0.0
+    query_lower = _normalize(query.strip())
+    text_lower = _normalize(text)
+    # Exact substring match — highest priority
     if query_lower in text_lower:
-        return 1.0
+        # Bonus if it starts a word
+        words = text_lower.split()
+        for word in words:
+            if word.startswith(query_lower):
+                return 1.0
+        return 0.95
+    # Short queries (<4 chars): only accept substring matches to avoid noise
+    if len(query_lower) < 4:
+        return 0.0
+    # Fuzzy match on individual words
     words = text_lower.split()
     best_word_score = 0.0
     for word in words:
+        # Only compare with words of similar length to avoid short-word noise
+        if abs(len(word) - len(query_lower)) > max(len(query_lower), 4):
+            continue
         ratio = SequenceMatcher(None, query_lower, word).ratio()
         if ratio > best_word_score:
             best_word_score = ratio
-    full_ratio = SequenceMatcher(None, query_lower, text_lower).ratio()
-    return max(best_word_score, full_ratio)
+    return best_word_score
 
 
 def search_fiches_fuzzy(fiches: List[Any], query: str, threshold: float = FUZZY_SEARCH_THRESHOLD) -> List[Any]:

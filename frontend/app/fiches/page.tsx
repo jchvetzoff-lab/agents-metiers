@@ -245,15 +245,8 @@ export default function FichesPage() {
   };
 
   const selectSuggestion = (fiche: FicheMetier) => {
-    const name = fiche.nom_epicene || fiche.nom_masculin || fiche.code_rome;
-    if (searchMode === "fuzzy") {
-      setSearch(name);
-    } else {
-      setSearchCompetences(name);
-    }
-    setShowSuggestions(false);
-    setSuggestions([]);
-    setPage(0);
+    // Navigate directly to the fiche
+    window.location.href = `/fiches/${fiche.code_rome}`;
   };
 
   const startIdx = page * limit + 1;
