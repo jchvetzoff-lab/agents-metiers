@@ -59,6 +59,7 @@ from .models import (
     FicheMetierResponse, FicheMetierCreate, FicheMetierUpdate,
     StatsResponse, PublishBatchRequest, VariantesGenerateRequest
 )
+from .api_public import public_api_router
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -81,6 +82,7 @@ app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(validation.router, prefix="/api", tags=["validation"])
 app.include_router(enrichment.router, prefix="/api", tags=["enrichment"])
 app.include_router(regions.router, prefix="/api", tags=["regions"])
+app.include_router(public_api_router)
 
 
 # ==================== HELPER FUNCTIONS ====================
