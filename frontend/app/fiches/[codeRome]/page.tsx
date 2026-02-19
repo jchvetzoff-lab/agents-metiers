@@ -1630,85 +1630,16 @@ export default function FicheDetailPage() {
         </div>
       </div>
 
-      {/* ── ACTION FEEDBACK TOAST ── */}
-      {actionMessage && (
-        <div className={`border-b ${actionMessage.type === "success" ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"}`}>
-          <div className="max-w-7xl mx-auto px-4 md:px-8 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm">
-              {actionMessage.type === "success" ? (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-              ) : (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-              )}
-              <span className={actionMessage.type === "success" ? "text-green-800" : "text-red-800"}>{actionMessage.text}</span>
-            </div>
-            <button onClick={() => setActionMessage(null)} className="text-gray-400 hover:text-gray-600">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ── DIFF PANEL ── */}
-      {enrichmentDiff && showDiffPanel && (
-        <div className="border-b border-indigo-200 bg-indigo-50/50">
-          <div className="max-w-7xl mx-auto px-4 md:px-8 py-4">
-            <button onClick={() => setShowDiffPanel(!showDiffPanel)} className="flex items-center gap-2 text-sm font-semibold text-indigo-700 mb-3">
-              <span>📝</span> Modifications ({Object.keys(enrichmentDiff).length} champ{Object.keys(enrichmentDiff).length > 1 ? "s" : ""})
-              <svg className={`w-4 h-4 transition-transform ${showDiffPanel ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-            </button>
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {Object.entries(enrichmentDiff).map(([field, { before, after }]) => {
-                const isListField = Array.isArray(before) || Array.isArray(after);
-                return (
-                  <div key={field} className="bg-white rounded-lg border border-gray-200 p-3">
-                    <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{field.replace(/_/g, " ")}</div>
-                    {isListField ? (
-                      <div className="space-y-1">
-                        {(() => {
-                          const beforeLabels = (Array.isArray(before) ? before : []).map((x: any) => toLabel(x));
-                          const afterLabels = (Array.isArray(after) ? after : []).map((x: any) => toLabel(x));
-                          const removed = beforeLabels.filter((l: string) => !afterLabels.includes(l));
-                          const added = afterLabels.filter((l: string) => !beforeLabels.includes(l));
-                          return (
-                            <>
-                              {removed.map((item: string, i: number) => (
-                                <div key={`r-${i}`} className="text-sm text-red-600 line-through bg-red-50 px-2 py-1 rounded">− {item}</div>
-                              ))}
-                              {added.map((item: string, i: number) => (
-                                <div key={`a-${i}`} className="text-sm text-green-700 bg-green-50 px-2 py-1 rounded">+ {item}</div>
-                              ))}
-                              {removed.length === 0 && added.length === 0 && (
-                                <div className="text-xs text-gray-400 italic">Contenu modifié (détails complexes)</div>
-                              )}
-                            </>
-                          );
-                        })()}
-                      </div>
-                    ) : (
-                      <div className="space-y-1">
-                        {before != null && (
-                          <div className="text-sm text-red-600 line-through bg-red-50 px-2 py-1 rounded truncate">
-                            {typeof before === "object" ? toLabel(before) : String(before).slice(0, 200)}
-                          </div>
-                        )}
-                        {after != null && (
-                          <div className="text-sm text-green-700 bg-green-50 px-2 py-1 rounded truncate">
-                            {typeof after === "object" ? toLabel(after) : String(after).slice(0, 200)}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-            <button onClick={() => { setShowDiffPanel(false); setEnrichmentDiff(null); }} className="mt-3 text-xs text-gray-500 hover:text-gray-700">
-              Fermer
-            </button>
-          </div>
-        </div>
-      )}
+      {/* ── ACTION FEEDBACK TOAST + DIFF PANEL ── */}
+      <HistoriqueSection
+        fiche={fiche}
+        enrichmentDiff={enrichmentDiff}
+        showDiffPanel={showDiffPanel}
+        onSetShowDiffPanel={setShowDiffPanel}
+        onClearDiff={() => setEnrichmentDiff(null)}
+        actionMessage={actionMessage}
+        onClearActionMessage={() => setActionMessage(null)}
+      />
 
       {/* ── FILTRES VARIANTES ── */}
       {variantes.length > 0 && (
@@ -2319,50 +2250,17 @@ export default function FicheDetailPage() {
             {/* ═══ STATISTIQUES ═══ */}
             {hasStats && (
               <SectionAnchor id="stats" title={t.statsTitle} icon="📊" accentColor="#00C8C8">
-                {/* ── Region selector ── */}
-                {regions.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-3 mb-6 p-4 bg-[#F9F8FF] rounded-xl border border-indigo-200">
-                    <label className="text-sm font-semibold text-indigo-600">{t.filterByRegion || "Filtrer par région"} :</label>
-                    <select
-                      value={selectedRegion}
-                      onChange={(e) => setSelectedRegion(e.target.value)}
-                      className="px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                    >
-                      <option value="">{t.allFrance || "France entière"}</option>
-                      {regions.filter(r => parseInt(r.code) >= 11).map(r => (
-                        <option key={r.code} value={r.code}>{r.libelle}</option>
-                      ))}
-                      <optgroup label="Outre-mer">
-                        {regions.filter(r => parseInt(r.code) < 11).map(r => (
-                          <option key={r.code} value={r.code}>{r.libelle}</option>
-                        ))}
-                      </optgroup>
-                    </select>
-                    {regionalLoading && (
-                      <div className="w-5 h-5 border-2 border-indigo-100 border-t-indigo-600 rounded-full animate-spin" />
-                    )}
-                    {selectedRegion && regionalData && (
-                      <span className={`text-sm text-gray-500 transition-opacity ${regionalLoading ? "opacity-50" : ""}`}>
-                        {regionalData.nb_offres} {t.offersInRegion || "offres dans cette région"}
-                      </span>
-                    )}
-                  </div>
-                )}
-
-                {/* ── Regional badge indicator ── */}
-                {isRegional && (
-                  <div className="flex items-center gap-2 mb-4">
-                    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${isEstimation ? "bg-amber-100 text-amber-700" : "bg-indigo-100 text-indigo-600"}`}>
-                      <span>📍</span> {regionalData!.region_name} — {isEstimation ? t.estimationInsee : `${t.regionalLive} France Travail`}
-                    </span>
-                    {!isEstimation && regionalData!.nb_offres === 0 && (
-                      <span className="text-sm text-gray-400 italic">{t.noOffersRegion}</span>
-                    )}
-                    {isEstimation && regionalData!.coefficient_regional && (
-                      <span className="text-xs text-gray-400">Coeff. {regionalData!.coefficient_regional.toFixed(2)}</span>
-                    )}
-                  </div>
-                )}
+                {/* ── Region selector + badge ── */}
+                <RegionalSection
+                  regions={regions}
+                  selectedRegion={selectedRegion}
+                  onSelectRegion={setSelectedRegion}
+                  regionalData={regionalData}
+                  regionalLoading={regionalLoading}
+                  isRegional={isRegional}
+                  isEstimation={isEstimation}
+                  t={t}
+                />
 
                 {/* ── Stat cards (region-aware) ── */}
                 {isRegional ? (
@@ -2767,113 +2665,13 @@ export default function FicheDetailPage() {
             {/* ═══ OFFRES D'EMPLOI ═══ */}
             {effectiveAge !== "11-15" && (
             <SectionAnchor id="offres" title={t.liveOffers} icon="💼" accentColor="#06B6D4">
-              <p className="text-sm text-gray-500 mb-4">{t.liveOffersDesc}</p>
-
-              {offresLoading && !offres ? (
-                <div className="text-center py-8">
-                  <div className="inline-block w-6 h-6 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-2" />
-                  <p className="text-sm text-gray-400">{t.liveOffersLoading}</p>
-                </div>
-              ) : offres && offres.offres.length > 0 ? (
-                <>
-                  {/* Header avec compteur + filtre contrat */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-                    <span className="text-sm font-semibold text-gray-700">
-                      {offresContractFilter === "all" ? offres.offres.length : offres.offres.filter(o => offresContractFilter === "all" || (o.type_contrat && o.type_contrat.includes(offresContractFilter === "MIS" ? "intérim" : offresContractFilter))).length} {t.liveOffersCount}
-                    </span>
-                    <div className="flex gap-1.5 flex-wrap">
-                      {[
-                        { value: "all", label: t.liveOfferAllContracts },
-                        { value: "CDI", label: "CDI" },
-                        { value: "CDD", label: "CDD" },
-                        { value: "MIS", label: "Interim" },
-                      ].map(opt => (
-                        <button
-                          key={opt.value}
-                          onClick={() => setOffresContractFilter(opt.value)}
-                          className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
-                            offresContractFilter === opt.value
-                              ? "bg-indigo-600 text-white shadow-sm"
-                              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                          }`}
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Liste des offres */}
-                  <div className="space-y-3">
-                    {offres.offres
-                      .filter(o => offresContractFilter === "all" || (o.type_contrat && o.type_contrat.includes(offresContractFilter === "MIS" ? "intérim" : offresContractFilter)))
-                      .slice(0, 20)
-                      .map((offre, idx) => {
-                        const daysAgo = offre.date_publication
-                          ? Math.floor((Date.now() - new Date(offre.date_publication).getTime()) / 86400000)
-                          : null;
-                        const dateLabel = daysAgo === null ? "" : daysAgo === 0 ? t.liveOfferToday : t.liveOfferDaysAgo.replace("{n}", String(daysAgo));
-                        return (
-                          <div key={offre.offre_id || idx} className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md hover:border-indigo-400/20 transition-all group">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="flex-1 min-w-0">
-                                <h4 className="font-semibold text-gray-900 text-sm leading-tight truncate group-hover:text-indigo-600 transition-colors">
-                                  {offre.titre}
-                                </h4>
-                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-xs text-gray-500">
-                                  <span className="flex items-center gap-1">
-                                    🏢 {offre.entreprise || t.liveOfferConfidential}
-                                  </span>
-                                  {offre.lieu && (
-                                    <span className="flex items-center gap-1">📍 {offre.lieu}</span>
-                                  )}
-                                  {offre.type_contrat && (
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-indigo-600/10 text-indigo-600 font-medium">
-                                      {offre.type_contrat}
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-gray-400">
-                                  {offre.salaire && (
-                                    <span className="flex items-center gap-1">💰 {offre.salaire}</span>
-                                  )}
-                                  {offre.experience && (
-                                    <span className="flex items-center gap-1">📋 {offre.experience}</span>
-                                  )}
-                                  {dateLabel && (
-                                    <span>{t.liveOfferPosted} {dateLabel}</span>
-                                  )}
-                                </div>
-                              </div>
-                              {offre.url && (
-                                <a
-                                  href={offre.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="shrink-0 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 transition-colors"
-                                >
-                                  {t.liveOffersViewMore} →
-                                </a>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                  </div>
-
-                  {/* Info cache */}
-                  {offres.from_cache && (
-                    <p className="text-xs text-gray-400 mt-3 text-right">{t.liveOfferCachedAt}</p>
-                  )}
-                </>
-              ) : offres && offres.offres.length === 0 ? (
-                <div className="text-center py-8 bg-gray-50 rounded-xl">
-                  <span className="text-3xl mb-2 block">📭</span>
-                  <p className="text-sm text-gray-400">{t.liveOffersEmpty}</p>
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-400 text-sm">{t.liveOffersError}</div>
-              )}
+              <OffresSection
+                offres={offres}
+                offresLoading={offresLoading}
+                offresContractFilter={offresContractFilter}
+                onSetContractFilter={setOffresContractFilter}
+                t={t}
+              />
               <SourceTag>{t.sourceFtOffers}</SourceTag>
             </SectionAnchor>
             )}
