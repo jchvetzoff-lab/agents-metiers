@@ -159,7 +159,7 @@ export default function FicheDetailPage() {
   async function handlePublish() {
     if (!confirm("Publier cette fiche ? Elle sera visible publiquement.")) return;
     setActionLoading("publish");
-    try { await api.publishFiche(codeRome); showActionMessage("success", "Fiche publiee avec succes"); await reloadFiche(); }
+    try { await api.publishFiche(codeRome); showActionMessage("success", "Fiche publiée avec succès"); await reloadFiche(); }
     catch (err: any) { showActionMessage("error", err.message || "Erreur lors de la publication"); }
     finally { setActionLoading(null); }
   }
@@ -175,8 +175,8 @@ export default function FicheDetailPage() {
     setActionLoading("variantes");
     try {
       const res = await api.generateVariantes(codeRome, { langues: ["fr"], genres: ["masculin", "feminin", "epicene"], tranches_age: ["18+", "15-18", "11-15"], formats: ["standard", "falc"] });
-      showActionMessage("success", `${res.variantes_generees} variantes generees`); await reloadFiche();
-    } catch (err: any) { showActionMessage("error", err.message || "Erreur lors de la generation de variantes"); }
+      showActionMessage("success", `${res.variantes_generees} variantes générées`); await reloadFiche();
+    } catch (err: any) { showActionMessage("error", err.message || "Erreur lors de la génération de variantes"); }
     finally { setActionLoading(null); }
   }
 
@@ -190,15 +190,15 @@ export default function FicheDetailPage() {
   async function handleValidateHuman(approved: boolean) {
     let name = validatorName.trim();
     if (!name) { const prompted = window.prompt("Votre nom (pour tracer la validation) :"); if (!prompted?.trim()) return; name = prompted.trim(); setValidatorName(name); }
-    if (approved) { if (!window.confirm("Etes-vous sur de vouloir valider cette fiche ?\n\nCette action entrainera sa publication immediate.")) return; }
-    else { if (!window.confirm("Rejeter cette fiche ? Elle sera renvoyee en brouillon pour re-enrichissement.")) return; }
+    if (approved) { if (!window.confirm("Êtes-vous sûr de vouloir valider cette fiche ?\n\nCette action entraînera sa publication immédiate.")) return; }
+    else { if (!window.confirm("Rejeter cette fiche ? Elle sera renvoyée en brouillon pour ré-enrichissement.")) return; }
     setValidationHumaneLoading(true);
     try {
       const res = await api.validateHuman(codeRome, approved, validationComment.trim() || "", validatorName.trim());
       if (approved) {
-        try { await api.publishFiche(codeRome); showActionMessage("success", `Fiche validee et publiee par ${res.validated_by}`); }
-        catch { showActionMessage("success", `Fiche validee par ${res.validated_by} (publication manuelle requise)`); }
-      } else { showActionMessage("success", `Fiche rejetee par ${res.validated_by} — renvoyee en brouillon`); }
+        try { await api.publishFiche(codeRome); showActionMessage("success", `Fiche validée et publiée par ${res.validated_by}`); }
+        catch { showActionMessage("success", `Fiche validée par ${res.validated_by} (publication manuelle requise)`); }
+      } else { showActionMessage("success", `Fiche rejetée par ${res.validated_by} — renvoyée en brouillon`); }
       setValidationComment(""); setValidatorName(""); await reloadFiche();
     } catch (err: any) { showActionMessage("error", err.message || "Erreur lors de la validation humaine"); }
     finally { setValidationHumaneLoading(false); }

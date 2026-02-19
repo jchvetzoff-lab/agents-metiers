@@ -102,14 +102,14 @@ function TabActions() {
       const data = await api.getFiches({ limit: 500 });
       const obsolete = data.results.filter(f => f.rome_update_pending);
       if (obsolete.length === 0) {
-        setResults(prev => [{ type: "error", message: "Aucune fiche obsolete a archiver" }, ...prev]);
+        setResults(prev => [{ type: "error", message: "Aucune fiche obsolète à archiver" }, ...prev]);
         return;
       }
       let archived = 0;
       for (const fiche of obsolete) {
         try { await api.updateFiche(fiche.code_rome, { statut: "archivee" }); archived++; } catch { /* skip */ }
       }
-      setResults(prev => [{ type: "success", message: `${archived} fiche${archived > 1 ? "s" : ""} archivee${archived > 1 ? "s" : ""}` }, ...prev]);
+      setResults(prev => [{ type: "success", message: `${archived} fiche${archived > 1 ? "s" : ""} archivée${archived > 1 ? "s" : ""}` }, ...prev]);
       api.getStats().then(setStats);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
@@ -131,7 +131,7 @@ function TabActions() {
         nom_feminin: metierName.trim(),
         nom_epicene: metierName.trim(),
       });
-      setResults(prev => [{ type: "success", message: `Fiche creee : ${res.code_rome}` }, ...prev]);
+      setResults(prev => [{ type: "success", message: `Fiche créée : ${res.code_rome}` }, ...prev]);
       setMetierName("");
       api.getStats().then(setStats);
     } catch (err: unknown) {
@@ -147,8 +147,8 @@ function TabActions() {
     { label: "Brouillons", value: stats.brouillons, color: "bg-gray-50 text-gray-600 border-gray-200", icon: "📝" },
     { label: "Enrichies", value: (stats as any)?.enrichis || 0, color: "bg-blue-50 text-blue-700 border-blue-200", icon: "🤖" },
     { label: "En validation", value: stats.en_validation, color: "bg-amber-50 text-amber-700 border-amber-200", icon: "🔍" },
-    { label: "Publiees", value: stats.publiees, color: "bg-green-50 text-green-700 border-green-200", icon: "✅" },
-    { label: "Archivees", value: stats.archivees, color: "bg-gray-50 text-gray-400 border-gray-200", icon: "📦" },
+    { label: "Publiées", value: stats.publiees, color: "bg-green-50 text-green-700 border-green-200", icon: "✅" },
+    { label: "Archivées", value: stats.archivees, color: "bg-gray-50 text-gray-400 border-gray-200", icon: "📦" },
   ] : [];
 
   return (
@@ -201,7 +201,7 @@ function TabActions() {
               { label: "Brouillon", count: stats?.brouillons || 0, color: "gray", href: "/fiches?statut=brouillon", desc: "A enrichir" },
               { label: "Enrichie", count: (stats as any)?.enrichis || 0, color: "blue", href: "/fiches?statut=enrichi", desc: "En attente de validation IA" },
               { label: "Validee IA", count: ((stats as any)?.valides || 0) + (stats?.en_validation || 0), color: "amber", href: "/fiches?statut=valide", desc: "A valider par un humain" },
-              { label: "Publiee", count: stats?.publiees || 0, color: "green", href: "/fiches?statut=publiee", desc: "Visible publiquement" },
+              { label: "Publiée", count: stats?.publiees || 0, color: "green", href: "/fiches?statut=publiee", desc: "Visible publiquement" },
             ].map((step, i, arr) => (
               <div key={step.label} className="flex flex-col sm:flex-row items-center gap-2 flex-1 min-w-0">
                 <Link href={step.href} className="flex-1 min-w-0 w-full group">
@@ -249,7 +249,7 @@ function TabActions() {
               setValidatingIA(true);
               try {
                 const res = await api.batchValidateIA();
-                setResults(prev => [{ type: "success", message: `Validation IA : ${res.successes}/${res.total} fiches validees` }, ...prev]);
+                setResults(prev => [{ type: "success", message: `Validation IA : ${res.successes}/${res.total} fiches validées` }, ...prev]);
                 api.getStats().then(setStats);
               } catch (err: unknown) {
                 const message = err instanceof Error ? err.message : String(err);
@@ -318,7 +318,7 @@ function TabActions() {
             { label: "Toutes les fiches", href: "/fiches", icon: "📋" },
             { label: "Brouillons", href: "/fiches?statut=brouillon", icon: "📝" },
             { label: "En validation", href: "/fiches?statut=en_validation", icon: "🔍" },
-            { label: "Publiees", href: "/fiches?statut=publiee", icon: "✅" },
+            { label: "Publiées", href: "/fiches?statut=publiee", icon: "✅" },
           ].map(link => (
             <Link key={link.href} href={link.href}
               className="flex items-center gap-2 px-4 py-3 rounded-xl border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition text-sm text-gray-700 font-medium">

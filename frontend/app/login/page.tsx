@@ -55,9 +55,9 @@ export default function LoginPage() {
     try {
       if (phase === "signup") {
         await api.register(email, password, name);
-        // Compte cree, basculer vers login
+        // Compte créé, basculer vers login
         setPhase("login");
-        setSuccess("Compte cree avec succes. Connectez-vous.");
+        setSuccess("Compte créé avec succès. Connectez-vous.");
         setPassword("");
       } else {
         const result = await api.login(email, password);
@@ -233,7 +233,7 @@ export default function LoginPage() {
                 </>
               ) : (
                 <>
-                  Deja un compte ?{" "}
+                  Déjà un compte ?{" "}
                   <span className="font-semibold text-indigo-600">Se connecter</span>
                 </>
               )}
