@@ -293,14 +293,14 @@ IMPORTANT:
 
         new_version = fiche.metadata.version + 1
         update_parts.extend([
-            "version = :v", "date_maj = :d", "statut = 'enrichi'",
-            "validation_ia_score = NULL", "validation_ia_date = NULL",
-            "validation_ia_details = NULL", "validation_humaine = NULL",
+            "version = :v", "date_maj = :d",
+            "validation_humaine = NULL",
             "validation_humaine_date = NULL", "validation_humaine_par = NULL",
             "validation_humaine_commentaire = NULL"
         ])
         update_params["v"] = new_version
 
+        # First, apply the enrichment
         with create_db_session_context() as session:
             session.execute(
                 text(f"UPDATE fiches_metiers SET {', '.join(update_parts)} WHERE code_rome = :cr"),
@@ -309,18 +309,73 @@ IMPORTANT:
 
         user = get_user_name_from_request(request)
         fields_enriched = [f for f in json_fields + ["acces_metier", "niveau_formation"] if f in enriched]
-        desc = f"Enrichissement IA de {fiche.nom_epicene} (v{new_version}) par {user} — {len(fields_enriched)} champs enrichis"
+
+        # Now run automatic validation (completude score)
+        from .validation import calculate_completude_score, calculate_quality_score, _dumps, VALIDATION_IA_MIN_SCORE_PASS
+        # Reload fiche after enrichment
+        updated_fiche = repo.get_fiche(code_rome)
+        completude = calculate_completude_score(updated_fiche)
+        qualite = calculate_quality_score(updated_fiche)
+        score_final = round((completude["score"] + qualite["score"]) / 2)
+
+        if score_final >= 80:
+            verdict = "excellent"
+        elif score_final >= 70:
+            verdict = "bon"
+        elif score_final >= 40:
+            verdict = "insuffisant"
+        else:
+            verdict = "critique"
+
+        resume = (f"Score global {score_final}/100 — "
+                 f"Complétude {completude['score']}/100, Qualité {qualite['score']}/100")
+
+        rapport = {
+            "score": score_final,
+            "verdict": verdict,
+            "resume": resume,
+            "criteres": {
+                "completude": {"score": completude["score"], "commentaire": f"Score de complétude : {completude['score']}/100"},
+                "qualite": {"score": qualite["score"], "commentaire": f"Score de qualité : {qualite['score']}/100"},
+            },
+            "problemes": qualite["problemes"],
+            "suggestions": qualite["suggestions"],
+            "details_completude": completude["details"],
+        }
+
+        # Set status based on score
+        new_statut = "valide" if score_final >= VALIDATION_IA_MIN_SCORE_PASS else "enrichi"
+        now = get_current_timestamp()
+
+        with create_db_session_context() as session:
+            session.execute(
+                text("UPDATE fiches_metiers SET validation_ia_score = :score, validation_ia_date = :date, "
+                     "validation_ia_details = :details, statut = :statut WHERE code_rome = :cr"),
+                {
+                    "score": score_final,
+                    "date": now,
+                    "details": _dumps(rapport),
+                    "statut": new_statut,
+                    "cr": code_rome
+                }
+            )
+
+        desc = f"Enrichissement IA de {fiche.nom_epicene} (v{new_version}) par {user} — {len(fields_enriched)} champs enrichis — Score: {score_final}/100 → {new_statut}"
         if commentaire:
             desc += f" — Commentaire : {commentaire}"
         add_audit_log("enrichissement", code_rome, user, desc)
 
         return {
-            "message": f"Enrichissement terminé — {len(fields_enriched)} champs enrichis",
+            "message": f"Enrichissement terminé — {len(fields_enriched)} champs enrichis — Score: {score_final}/100",
             "code_rome": code_rome,
             "nom": fiche.nom_epicene,
             "version": new_version,
             "fields_enriched": fields_enriched,
             "commentaire": commentaire,
+            "validation_score": score_final,
+            "validation_verdict": verdict,
+            "validation_statut": new_statut,
+            "validation_rapport": rapport,
         }
     except HTTPException:
         raise

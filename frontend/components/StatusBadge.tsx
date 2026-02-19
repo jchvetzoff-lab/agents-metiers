@@ -24,14 +24,8 @@ const STATUS_CONFIG: Record<string, StatusConfig> = {
     className: "bg-blue-100 text-blue-700",
     icon: "✨",
   },
-  en_validation: {
-    label: "En validation",
-    className: "bg-indigo-100 text-indigo-700",
-    icon: "🔍",
-    pulse: true,
-  },
   valide: {
-    label: "Validé IA",
+    label: "Validé",
     className: "bg-amber-100 text-amber-700",
     icon: "🤖",
   },
@@ -39,11 +33,6 @@ const STATUS_CONFIG: Record<string, StatusConfig> = {
     label: "Publiée",
     className: "badge-success",
     icon: "✅",
-  },
-  archivee: {
-    label: "Archivée",
-    className: "bg-gray-100 text-gray-600",
-    icon: "📦",
   },
 };
 

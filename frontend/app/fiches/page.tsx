@@ -8,9 +8,9 @@ import ScoreBar, { computeScore } from "@/components/ScoreBar";
 
 const STATUT_FILTERS = [
   { value: "", label: "Tous" },
-  { value: "a_enrichir", label: "A enrichir" },
-  { value: "a_valider", label: "A valider" },
-  { value: "validation_ia", label: "Validation IA" },
+  { value: "brouillon", label: "Brouillon" },
+  { value: "enrichi", label: "Enrichi" },
+  { value: "valide", label: "Validé" },
   { value: "publiee", label: "Publiée" },
 ] as const;
 
@@ -124,9 +124,9 @@ export default function FichesPage() {
   // publiee = publiee
   const FILTER_TO_STATUTS: Record<string, string[]> = {
     "": [],
-    "a_enrichir": ["brouillon"],
-    "a_valider": ["enrichi"],
-    "validation_ia": ["en_validation", "valide"],
+    "brouillon": ["brouillon"],
+    "enrichi": ["enrichi"],
+    "valide": ["valide"],
     "publiee": ["publiee"],
   };
 
@@ -136,7 +136,7 @@ export default function FichesPage() {
       try {
         const allData = await api.getFiches({ limit: 1, offset: 0 });
         const rawCounts: Record<string, number> = {};
-        const statuts = ["brouillon", "enrichi", "en_validation", "valide", "publiee"];
+        const statuts = ["brouillon", "enrichi", "valide", "publiee"];
         await Promise.all(statuts.map(async (s) => {
           try {
             const d = await api.getFiches({ statut: s, limit: 1, offset: 0 });

@@ -322,19 +322,15 @@ async def get_stats() -> StatsResponse:
         total = repo.count_fiches()
         brouillons = repo.count_fiches(StatutFiche.BROUILLON)
         enrichis = repo.count_fiches(StatutFiche.ENRICHI)
-        en_validation = repo.count_fiches(StatutFiche.EN_VALIDATION)
         valides = repo.count_fiches(StatutFiche.VALIDE)
         publiees = repo.count_fiches(StatutFiche.PUBLIEE)
-        archivees = repo.count_fiches(StatutFiche.ARCHIVEE)
 
         return StatsResponse(
             total=total,
             brouillons=brouillons,
             enrichis=enrichis,
-            en_validation=en_validation,
             valides=valides,
             publiees=publiees,
-            archivees=archivees
         )
     except Exception as e:
         logger.error(f"Error getting stats: {e}")

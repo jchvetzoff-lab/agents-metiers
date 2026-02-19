@@ -91,10 +91,8 @@ class StatsResponse(BaseModel):
     total: int
     brouillons: int
     enrichis: int = 0
-    en_validation: int
     valides: int = 0
     publiees: int
-    archivees: int
 
 
 # ==================== VALIDATION MODELS ====================

@@ -436,7 +436,7 @@ async def validate_fiche(code_rome: str, request: Request) -> Dict[str, Any]:
 
         # Save to DB
         now = get_current_timestamp()
-        new_statut = "en_validation" if score_final >= VALIDATION_IA_MIN_SCORE_PASS else "brouillon"
+        new_statut = "valide" if score_final >= VALIDATION_IA_MIN_SCORE_PASS else "enrichi"
         
         with create_db_session_context() as session:
             session.execute(
@@ -714,7 +714,7 @@ async def review_fiche(code_rome: str, body: ReviewRequest, request: Request) ->
             new_statut = "publiee"
             val_humaine = "approuvee"
         else:
-            new_statut = "brouillon"
+            new_statut = "enrichi"
             val_humaine = "rejetee"
 
         user = get_user_name_from_request(request)
