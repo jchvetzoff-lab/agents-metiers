@@ -6,13 +6,14 @@ import json
 import logging
 import os
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import anthropic
 from fastapi import APIRouter, HTTPException, Request
 from sqlalchemy import text
 
 from .shared import repo, config
+from .validation import calculate_completude_score
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -65,7 +66,79 @@ def clamp_value(value: float, min_val: float, max_val: float) -> float:
     return max(min_val, min(max_val, value))
 
 
+# Fields that can be enriched
+ENRICHABLE_FIELDS = [
+    "description", "description_courte", "competences", "competences_transversales",
+    "formations", "certifications", "conditions_travail", "environnements",
+    "salaires", "perspectives", "missions_principales", "acces_metier", "savoirs",
+    "types_contrats", "mobilite", "traits_personnalite", "aptitudes", "profil_riasec",
+    "autres_appellations", "statuts_professionnels", "niveau_formation",
+    "domaine_professionnel", "sites_utiles", "conditions_travail_detaillees",
+    "competences_dimensions", "preferences_interets", "secteurs_activite"
+]
+
+
+def snapshot_fiche_state(fiche: Any, db_current: Dict) -> Dict:
+    """Snapshot current fiche state for all enrichable fields."""
+    snap = {}
+    for field in ENRICHABLE_FIELDS:
+        val = getattr(fiche, field, None)
+        if val is None:
+            val = db_current.get(field)
+        if hasattr(val, 'model_dump'):
+            val = val.model_dump()
+        snap[field] = val
+    return snap
+
+
+def compute_diff(before: Dict, after: Dict) -> Dict:
+    """Compute diff between before and after states. Returns {field: {before, after}} for changed fields."""
+    diff = {}
+    for field in ENRICHABLE_FIELDS:
+        b = before.get(field)
+        a = after.get(field)
+        # Normalize for comparison
+        b_json = json.dumps(b, ensure_ascii=False, sort_keys=True, default=str) if b is not None else "null"
+        a_json = json.dumps(a, ensure_ascii=False, sort_keys=True, default=str) if a is not None else "null"
+        if b_json != a_json:
+            diff[field] = {"before": b, "after": a}
+    return diff
+
+
+def identify_weak_fields(fiche: Any) -> List[Dict]:
+    """Identify fields with score < max using completude scoring."""
+    score_data = calculate_completude_score(fiche)
+    weak = []
+    for field_name, detail in score_data.get("details", {}).items():
+        if detail["score"] < detail["max"]:
+            weak.append({
+                "field": field_name,
+                "score": detail["score"],
+                "max": detail["max"],
+                "commentaire": detail.get("commentaire", ""),
+            })
+    return weak
+
+
 # ==================== ENRICHMENT ROUTES ====================
+
+@router.get("/fiches/{code_rome}/last-diff")
+async def get_last_diff(code_rome: str) -> Dict[str, Any]:
+    """Return the last enrichment diff for a fiche."""
+    try:
+        with create_db_session_context() as session:
+            row = session.execute(
+                text("SELECT last_enrichment_diff FROM fiches_metiers WHERE code_rome = :cr"),
+                {"cr": code_rome}
+            ).fetchone()
+        if not row or not row[0]:
+            return {"code_rome": code_rome, "diff": None}
+        diff = json.loads(row[0]) if isinstance(row[0], str) else row[0]
+        return {"code_rome": code_rome, "diff": diff}
+    except Exception as e:
+        logger.error(f"Error getting last diff for {code_rome}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.post("/fiches/{code_rome}/enrich")
 async def enrich_fiche(code_rome: str, request: Request) -> Dict[str, Any]:
@@ -127,6 +200,13 @@ async def enrich_fiche(code_rome: str, request: Request) -> Dict[str, Any]:
 
         current_json = json.dumps(all_current, ensure_ascii=False, indent=2)
 
+        # Feature 3: Snapshot before state
+        before_snapshot = snapshot_fiche_state(fiche, current)
+
+        # Feature 4: Identify weak fields for incremental enrichment
+        weak_fields = identify_weak_fields(fiche)
+        weak_field_names = [w["field"] for w in weak_fields]
+
         # Build prompt for Claude
         if commentaire:
             prompt = f"""Tu es un expert des métiers en France. Voici une fiche métier ROME existante qui doit être AMÉLIORÉE selon les instructions de l'utilisateur.
@@ -159,6 +239,17 @@ Description: {fiche.description or 'N/A'}
 {current_json}
 
 Génère un JSON avec TOUS les champs suivants. Améliore et complète les données existantes. Sois précis et réaliste pour le marché français :"""
+
+        # Feature 4: Add weak fields context to prompt
+        if weak_fields:
+            weak_info = "\n".join([f"  - {w['field']}: score {w['score']}/{w['max']} ({w['commentaire']})" for w in weak_fields])
+            prompt += f"""
+
+═══ ENRICHISSEMENT INCRÉMENTAL ═══
+Focus on improving these specific weak fields (score < max):
+{weak_info}
+
+Do NOT modify fields that are already well-filled. Preserve existing quality data."""
 
         prompt += f"""
 
@@ -300,6 +391,30 @@ IMPORTANT:
         ])
         update_params["v"] = new_version
 
+        # Feature 4: If incremental, only update weak fields (preserve strong fields)
+        if weak_field_names and not commentaire:
+            # Map scoring field names to DB field names (they mostly match)
+            allowed_updates = set(weak_field_names)
+            # Always allow these meta fields
+            allowed_updates.update(["description", "description_courte"])
+            filtered_parts = []
+            filtered_params = {"cr": code_rome}
+            for part in update_parts:
+                field_name = part.split(" = ")[0].strip()
+                if field_name in allowed_updates or field_name in ("version", "date_maj", "validation_humaine", "validation_humaine_date", "validation_humaine_par", "validation_humaine_commentaire"):
+                    filtered_parts.append(part)
+                    # Copy relevant params
+                    param_key = field_name
+                    if param_key in update_params:
+                        filtered_params[param_key] = update_params[param_key]
+            # Always include version/date params
+            for k in ("v", "d"):
+                if k in update_params:
+                    filtered_params[k] = update_params[k]
+            if filtered_parts:
+                update_parts = filtered_parts
+                update_params = filtered_params
+
         # First, apply the enrichment
         with create_db_session_context() as session:
             session.execute(
@@ -309,6 +424,34 @@ IMPORTANT:
 
         user = get_user_name_from_request(request)
         fields_enriched = [f for f in json_fields + ["acces_metier", "niveau_formation"] if f in enriched]
+
+        # Feature 3: Compute diff after enrichment
+        updated_fiche_for_diff = repo.get_fiche(code_rome)
+        # Read updated DB columns
+        after_current = {}
+        with create_db_session_context() as session:
+            row2 = session.execute(
+                text(f"SELECT {', '.join(column_names)} FROM fiches_metiers WHERE code_rome = :cr"),
+                {"cr": code_rome}
+            ).fetchone()
+        if row2:
+            for i, col in enumerate(column_names):
+                val = row2[i]
+                if isinstance(val, str):
+                    try:
+                        val = json.loads(val)
+                    except Exception:
+                        pass
+                after_current[col] = val
+        after_snapshot = snapshot_fiche_state(updated_fiche_for_diff, after_current)
+        enrichment_diff = compute_diff(before_snapshot, after_snapshot)
+
+        # Save diff to DB
+        with create_db_session_context() as session:
+            session.execute(
+                text("UPDATE fiches_metiers SET last_enrichment_diff = :diff WHERE code_rome = :cr"),
+                {"diff": json.dumps(enrichment_diff, ensure_ascii=False, default=str), "cr": code_rome}
+            )
 
         # Now run automatic validation (completude score)
         from .validation import calculate_completude_score, calculate_quality_score, _dumps, VALIDATION_IA_MIN_SCORE_PASS
@@ -363,6 +506,8 @@ IMPORTANT:
         desc = f"Enrichissement IA de {fiche.nom_epicene} (v{new_version}) par {user} — {len(fields_enriched)} champs enrichis — Score: {score_final}/100 → {new_statut}"
         if commentaire:
             desc += f" — Commentaire : {commentaire}"
+        if enrichment_diff:
+            desc += f" — Diff: {len(enrichment_diff)} champ(s) modifié(s)"
         add_audit_log("enrichissement", code_rome, user, desc)
 
         return {
@@ -376,6 +521,7 @@ IMPORTANT:
             "validation_verdict": verdict,
             "validation_statut": new_statut,
             "validation_rapport": rapport,
+            "diff": enrichment_diff,
         }
     except HTTPException:
         raise

@@ -6,13 +6,15 @@ import { api, Stats, AuditLog } from "@/lib/api";
 import { FadeInView } from "@/components/motion";
 import Link from "next/link";
 
-type Tab = "actions" | "historique";
+type Tab = "actions" | "analytics" | "export" | "historique";
 
 export default function ActionsPage() {
   const [activeTab, setActiveTab] = useState<Tab>("actions");
 
   const tabs: { id: Tab; label: string; icon: string }[] = [
     { id: "actions", label: "Actions", icon: "⚡" },
+    { id: "analytics", label: "Analytics", icon: "📊" },
+    { id: "export", label: "Export", icon: "📥" },
     { id: "historique", label: "Historique", icon: "📋" },
   ];
 
@@ -69,6 +71,8 @@ export default function ActionsPage() {
       {/* Content */}
       <div className="max-w-5xl mx-auto px-4 md:px-8 py-6">
         {activeTab === "actions" && <TabActions />}
+        {activeTab === "analytics" && <TabAnalytics />}
+        {activeTab === "export" && <TabExport />}
         {activeTab === "historique" && <TabHistorique />}
       </div>
     </main>
@@ -321,6 +325,196 @@ function TabActions() {
             </Link>
           ))}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════
+// TAB: ANALYTICS (Feature 5)
+// ══════════════════════════════════════
+
+function TabAnalytics() {
+  const [dashboard, setDashboard] = useState<{
+    status_counts: { total: number; brouillons: number; enrichis: number; valides: number; publiees: number };
+    enrichment_history: { date: string; count_enriched: number }[];
+    score_distribution: { bucket: string; count: number }[];
+    top_weak_fields: { field: string; avg_deficit: number; count_weak: number }[];
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.getEnrichmentDashboard()
+      .then(setDashboard)
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <div className="w-8 h-8 border-3 border-indigo-100 border-t-indigo-600 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!dashboard) {
+    return <div className="text-center py-12 text-gray-500">Erreur de chargement des analytics</div>;
+  }
+
+  const { status_counts, enrichment_history, score_distribution, top_weak_fields } = dashboard;
+  const maxEnrichPerDay = Math.max(...enrichment_history.map(h => h.count_enriched), 1);
+  const maxScoreBucket = Math.max(...score_distribution.map(s => s.count), 1);
+
+  return (
+    <div className="space-y-8">
+      {/* Progress cards */}
+      <div>
+        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Progression du référentiel</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[
+            { label: "Enrichies", value: status_counts.enrichis, total: status_counts.total, color: "#3B82F6", bg: "#EFF6FF" },
+            { label: "Validées", value: status_counts.valides, total: status_counts.total, color: "#F59E0B", bg: "#FFFBEB" },
+            { label: "Publiées", value: status_counts.publiees, total: status_counts.total, color: "#10B981", bg: "#ECFDF5" },
+            { label: "Brouillons", value: status_counts.brouillons, total: status_counts.total, color: "#6B7280", bg: "#F9FAFB" },
+          ].map(card => (
+            <div key={card.label} className="rounded-xl border p-4" style={{ backgroundColor: card.bg }}>
+              <div className="text-2xl font-bold" style={{ color: card.color }}>{card.value}</div>
+              <div className="text-xs text-gray-500 font-medium">{card.label} / {card.total}</div>
+              <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div className="h-full rounded-full transition-all" style={{ width: `${card.total > 0 ? (card.value / card.total) * 100 : 0}%`, backgroundColor: card.color }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Enrichments per day (CSS bars) */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-6">
+        <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">Enrichissements par jour</h3>
+        {enrichment_history.length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-8">Aucune donnée d&apos;enrichissement</p>
+        ) : (
+          <div className="flex items-end gap-1 h-40 overflow-x-auto">
+            {enrichment_history.slice().reverse().map((h, i) => (
+              <div key={i} className="flex flex-col items-center gap-1 min-w-[24px]" title={`${h.date}: ${h.count_enriched}`}>
+                <span className="text-[9px] text-gray-400 font-medium">{h.count_enriched}</span>
+                <div
+                  className="w-5 rounded-t-sm transition-all"
+                  style={{
+                    height: `${Math.max((h.count_enriched / maxEnrichPerDay) * 120, 4)}px`,
+                    backgroundColor: "#4F46E5",
+                    opacity: 0.7 + (h.count_enriched / maxEnrichPerDay) * 0.3,
+                  }}
+                />
+                <span className="text-[8px] text-gray-400 -rotate-45 origin-top-left whitespace-nowrap">
+                  {h.date.slice(5)}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Score distribution */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-6">
+          <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">Distribution des scores</h3>
+          <div className="space-y-3">
+            {score_distribution.map((s, i) => {
+              const colors = ["#EF4444", "#F97316", "#EAB308", "#22C55E", "#10B981"];
+              return (
+                <div key={s.bucket} className="flex items-center gap-3">
+                  <span className="text-xs text-gray-600 font-medium w-12">{s.bucket}</span>
+                  <div className="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all flex items-center justify-end pr-2"
+                      style={{ width: `${Math.max((s.count / maxScoreBucket) * 100, 8)}%`, backgroundColor: colors[i] }}
+                    >
+                      <span className="text-[10px] font-bold text-white">{s.count}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Top weak fields */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-6">
+          <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">Champs les plus faibles</h3>
+          {top_weak_fields.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-8">Aucune donnée</p>
+          ) : (
+            <div className="space-y-3">
+              {top_weak_fields.slice(0, 5).map((f, i) => (
+                <div key={f.field} className="flex items-center gap-3">
+                  <span className="w-6 h-6 rounded-full bg-red-100 text-red-600 text-xs font-bold flex items-center justify-center shrink-0">{i + 1}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-gray-700 truncate capitalize">{f.field.replace(/_/g, " ")}</div>
+                    <div className="text-[10px] text-gray-400">{f.count_weak} fiches faibles • déficit moyen: {f.avg_deficit} pts</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════
+// TAB: EXPORT (Feature 6)
+// ══════════════════════════════════════
+
+function TabExport() {
+  const [publishedCount, setPublishedCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    api.getStats().then(s => setPublishedCount(s.publiees)).catch(() => {});
+  }, []);
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-2xl border border-gray-200 p-6">
+        <h2 className="text-lg font-bold text-gray-900 mb-2">Export des fiches publiées</h2>
+        <p className="text-sm text-gray-500 mb-6">
+          Téléchargez l&apos;ensemble des fiches publiées au format CSV ou JSON.
+          {publishedCount != null && (
+            <span className="ml-1 font-semibold text-indigo-600">{publishedCount} fiche{publishedCount > 1 ? "s" : ""} publiée{publishedCount > 1 ? "s" : ""} disponible{publishedCount > 1 ? "s" : ""}.</span>
+          )}
+        </p>
+        <div className="flex flex-wrap gap-4">
+          <a
+            href={api.getExportCsvUrl()}
+            download
+            className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition shadow-sm"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Export CSV
+          </a>
+          <a
+            href={api.getExportJsonUrl()}
+            download
+            className="inline-flex items-center gap-2 px-6 py-3 border-2 border-indigo-600 text-indigo-600 rounded-xl text-sm font-semibold hover:bg-indigo-50 transition"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Export JSON
+          </a>
+        </div>
+      </div>
+
+      <div className="bg-gray-50 rounded-xl border border-gray-200 p-5 text-sm text-gray-500">
+        <h4 className="font-semibold text-gray-700 mb-2">Contenu de l&apos;export</h4>
+        <ul className="list-disc list-inside space-y-1">
+          <li><strong>CSV :</strong> code_rome, nom, description, compétences, formations, salaires (junior/confirmé/senior), score</li>
+          <li><strong>JSON :</strong> données complètes de chaque fiche publiée</li>
+        </ul>
       </div>
     </div>
   );

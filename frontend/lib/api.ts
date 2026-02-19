@@ -733,6 +733,38 @@ class ApiClient {
 
   // ==================== AUTH ====================
 
+  // ==================== ENRICHMENT DIFF ====================
+
+  async getLastDiff(codeRome: string): Promise<{ code_rome: string; diff: Record<string, { before: any; after: any }> | null }> {
+    return this.request(`/api/fiches/${codeRome}/last-diff`);
+  }
+
+  // ==================== DASHBOARD ====================
+
+  async getEnrichmentDashboard(): Promise<{
+    status_counts: { total: number; brouillons: number; enrichis: number; valides: number; publiees: number };
+    enrichment_history: { date: string; count_enriched: number }[];
+    score_distribution: { bucket: string; count: number }[];
+    top_weak_fields: { field: string; avg_deficit: number; count_weak: number }[];
+  }> {
+    return this.request("/api/dashboard/enrichment");
+  }
+
+  // ==================== EXPORT ====================
+
+  async getExportCount(): Promise<{ publiees: number }> {
+    const stats = await this.getStats();
+    return { publiees: stats.publiees };
+  }
+
+  getExportCsvUrl(): string {
+    return `${this.baseUrl}/api/export/csv`;
+  }
+
+  getExportJsonUrl(): string {
+    return `${this.baseUrl}/api/export/json`;
+  }
+
   async login(email: string, password: string): Promise<{ token: string; user: { id: number; email: string; name: string } }> {
     return this.request("/api/auth/login", {
       method: "POST",
