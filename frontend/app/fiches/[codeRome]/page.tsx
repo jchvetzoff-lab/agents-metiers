@@ -1685,7 +1685,7 @@ export default function FicheDetailPage() {
               {/* Langue */}
               <div className="flex items-center gap-3">
                 <span className="text-xs font-bold text-gray-500 uppercase tracking-wider w-14">{t.langue}</span>
-                {[{ v: "fr", l: "FR" }, { v: "en", l: "EN" }, { v: "es", l: "ES" }, { v: "it", l: "IT" }, { v: "pt", l: "PT" }, { v: "ar", l: "AR" }, { v: "de", l: "DE" }].map(lang => (
+                {[{ v: "fr", l: "FR" }].map(lang => (
                   <label key={lang.v} className="flex items-center gap-1.5 text-sm text-gray-700 cursor-pointer">
                     <input type="radio" name="filter-langue" value={lang.v} checked={filterLangue === lang.v}
                       onChange={() => setFilterLangue(lang.v)}
