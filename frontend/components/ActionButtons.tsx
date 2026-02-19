@@ -38,8 +38,8 @@ export default function ActionButtons({
 
   return (
     <div className="w-full md:w-auto space-y-3">
-      {/* Score de complétude */}
-      {fiche.score_completude != null && (() => {
+      {/* Score de complétude + validation details (enrichi/valide only) */}
+      {fiche.score_completude != null && fiche.statut !== "publiee" && fiche.statut !== "brouillon" && (() => {
         const sc = fiche.score_completude!;
         const color = sc >= 80 ? "#16A34A" : sc >= 50 ? "#EAB308" : "#DC2626";
         const colorBg = sc >= 80 ? "bg-green-50" : sc >= 50 ? "bg-amber-50" : "bg-red-50";
@@ -73,7 +73,8 @@ export default function ActionButtons({
         );
       })()}
 
-      {/* Validation badges */}
+      {/* Validation badges (enrichi/valide only) */}
+      {fiche.statut !== "publiee" && fiche.statut !== "brouillon" && (
       <div className="flex flex-wrap gap-2">
         {fiche.validation_ia_score != null && (
           <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${
@@ -92,6 +93,7 @@ export default function ActionButtons({
           </span>
         )}
       </div>
+      )}
 
       {/* Pipeline: Brouillon → Enrichi → Valide IA → Publiee */}
       <div className="flex items-center gap-1 sm:gap-1.5 text-[9px] sm:text-[10px] flex-wrap">
