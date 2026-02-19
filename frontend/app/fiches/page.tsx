@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { api, FicheMetier } from "@/lib/api";
 import StatusBadge from "@/components/StatusBadge";
@@ -45,8 +46,9 @@ export default function FichesPage() {
   const [debouncedCompetences, setDebouncedCompetences] = useState("");
   const [searchMode, setSearchMode] = useState<"fuzzy" | "competences">("fuzzy");
   // Read statut from URL params (e.g. /fiches?statut=enrichi)
-  const initialStatut = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("statut") || "" : "";
-  const [statutFilter, setStatutFilter] = useState(initialStatut);
+  const searchParams = useSearchParams();
+  const urlStatut = searchParams.get("statut") || "";
+  const [statutFilter, setStatutFilter] = useState(urlStatut);
   const [sortOption, setSortOption] = useState("score_desc");
   const [page, setPage] = useState(0);
   const limit = 50;
@@ -67,6 +69,9 @@ export default function FichesPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [batchRunning, setBatchRunning] = useState(false);
   const [batchProgress, setBatchProgress] = useState({ done: 0, total: 0, action: "" });
+
+  // Sync URL params → filter state
+  useEffect(() => { setStatutFilter(urlStatut); setPage(0); }, [urlStatut]);
 
   // Debounce main search
   useEffect(() => {
