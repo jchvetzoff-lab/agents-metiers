@@ -66,7 +66,7 @@ export default function OffresSection({
                   : null;
                 const dateLabel = daysAgo === null ? "" : daysAgo === 0 ? t.liveOfferToday : t.liveOfferDaysAgo.replace("{n}", String(daysAgo));
                 return (
-                  <div key={offre.offre_id || idx} className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md hover:border-indigo-400/20 transition-all group">
+                  <a key={offre.offre_id || idx} href={offre.url || "#"} target="_blank" rel="noopener noreferrer" className="block bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md hover:border-indigo-400/30 transition-all group cursor-pointer no-underline">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
                         <h4 className="font-semibold text-gray-900 text-sm leading-tight truncate group-hover:text-indigo-600 transition-colors">
@@ -97,18 +97,11 @@ export default function OffresSection({
                           )}
                         </div>
                       </div>
-                      {offre.url && (
-                        <a
-                          href={offre.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="shrink-0 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 transition-colors"
-                        >
-                          {t.liveOffersViewMore} →
-                        </a>
-                      )}
+                      <span className="shrink-0 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium group-hover:bg-indigo-700 transition-colors">
+                        Voir l'offre →
+                      </span>
                     </div>
-                  </div>
+                  </a>
                 );
               })}
           </div>

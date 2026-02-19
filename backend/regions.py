@@ -637,7 +637,7 @@ async def get_offres(
                 "salaire": f"{sal_low}€ - {sal_high}€ brut/an" if sal_low else "Selon profil",
                 "experience": exp,
                 "date_publication": (get_current_timestamp() - timedelta(days=days_ago)).isoformat(),
-                "url": None,
+                "url": f"https://candidat.francetravail.fr/offres/recherche?motsCles={code_rome}",
             })
 
         return {
