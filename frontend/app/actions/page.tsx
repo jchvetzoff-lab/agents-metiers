@@ -123,8 +123,10 @@ function TabActions() {
     if (!metierName.trim()) return;
     setCreatingFiche(true);
     try {
+      // Generate a unique custom code (CUSTOM-XXXXX)
+      const customCode = `CUSTOM-${Date.now().toString(36).toUpperCase().slice(-5)}`;
       const res = await api.createFiche({
-        code_rome: "",
+        code_rome: customCode,
         nom_masculin: metierName.trim(),
         nom_feminin: metierName.trim(),
         nom_epicene: metierName.trim(),

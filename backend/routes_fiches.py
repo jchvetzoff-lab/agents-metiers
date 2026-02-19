@@ -102,6 +102,9 @@ async def get_fiches(
 async def create_fiche(fiche_data: FicheMetierCreate) -> Dict[str, Any]:
     """Create new fiche métier."""
     try:
+        if not fiche_data.code_rome or not fiche_data.code_rome.strip():
+            raise HTTPException(status_code=400, detail="Le code ROME est obligatoire")
+        fiche_data.code_rome = fiche_data.code_rome.strip()
         existing = repo.get_fiche(fiche_data.code_rome)
         if existing:
             raise HTTPException(status_code=400, detail=f"La fiche {fiche_data.code_rome} existe déjà")
