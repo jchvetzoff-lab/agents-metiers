@@ -785,11 +785,12 @@ function TabHistorique() {
           <p className="text-gray-500">Aucun evenement trouve</p>
         </div>
       ) : (() => {
-        const HUMAN_TYPES = ["validation_humaine", "creation"];
+        const HUMAN_TYPES = ["validation_humaine", "creation", "publication"];
         const isHuman = (log: AuditLog) => {
           if (HUMAN_TYPES.includes(log.type_evenement)) return true;
-          // Re-enrichissement avec commentaire = humain
+          // Seul un re-enrichissement AVEC commentaire est considéré humain
           if (log.type_evenement === "enrichissement" && log.description?.toLowerCase().includes("commentaire")) return true;
+          // Tout le reste (enrichissement standard, validation_ia, etc.) = IA
           return false;
         };
         const humanLogs = logs.filter(l => isHuman(l));
