@@ -120,6 +120,12 @@ app.include_router(translate_router, prefix="/api", tags=["translate"])
 
 # ==================== HEALTH ====================
 
+@app.get("/health")
+async def health() -> Dict[str, str]:
+    """Health check endpoint."""
+    return {"status": "ok"}
+
+
 @app.get("/")
 async def root() -> Dict[str, Any]:
     """API root endpoint."""
