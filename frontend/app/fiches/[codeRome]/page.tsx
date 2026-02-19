@@ -1702,17 +1702,27 @@ export default function FicheDetailPage() {
                       </button>
                     )}
 
-                    {/* ENRICHI (score < 70) : show score + problems + Re-enrichir */}
+                    {/* ENRICHI : Validation IA + Re-enrichir */}
                     {fiche.statut === "enrichi" && (
                       <>
                         {fiche.validation_ia_score != null && (
-                          <div className="w-full text-xs text-red-600 font-medium mb-1">
-                            Score IA : {fiche.validation_ia_score}/100 — La fiche necessite un re-enrichissement
+                          <div className={`w-full text-xs font-medium mb-1 ${fiche.validation_ia_score >= 70 ? "text-green-600" : "text-red-600"}`}>
+                            Score IA : {fiche.validation_ia_score}/100 {fiche.validation_ia_score >= 70 ? "— Prete pour validation" : "— Re-enrichissement recommande"}
                           </div>
                         )}
+                        <button onClick={handleValidateIA} disabled={actionLoading !== null || validationIALoading}
+                          className="inline-flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 sm:py-1.5 w-full sm:w-auto bg-amber-600 text-white rounded-full text-xs font-medium hover:bg-amber-700 transition disabled:opacity-40 disabled:cursor-wait">
+                          {validationIALoading ? <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "🤖"}
+                          Validation IA
+                        </button>
+                        <button onClick={() => handleEnrich(false)} disabled={actionLoading !== null}
+                          className="inline-flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 sm:py-1.5 w-full sm:w-auto bg-indigo-600 text-white rounded-full text-xs font-medium hover:bg-indigo-700 transition disabled:opacity-40 disabled:cursor-wait">
+                          {actionLoading === "enrich" ? <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "✨"}
+                          Re-enrichir
+                        </button>
                         <button onClick={() => setShowEnrichComment(true)}
-                          className="inline-flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 sm:py-1.5 w-full sm:w-auto bg-indigo-600 text-white rounded-full text-xs font-medium hover:bg-indigo-700 transition">
-                          ✨ Re-enrichir avec commentaire
+                          className="inline-flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 sm:py-1.5 w-full sm:w-auto border border-indigo-300 text-indigo-600 rounded-full text-xs font-medium hover:bg-indigo-50 transition">
+                          💬 Re-enrichir avec commentaire
                         </button>
                       </>
                     )}
