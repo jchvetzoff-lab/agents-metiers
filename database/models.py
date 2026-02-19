@@ -343,6 +343,9 @@ class FicheMetierDB(Base):
     competences_dimensions = Column(JSON, nullable=True)
     preferences_interets = Column(JSON, nullable=True)
 
+    # Translations cache (JSON)
+    translations = Column(JSON, default=dict)
+
     # Données salariales (JSON)
     salaires = Column(JSON, default=dict)
 

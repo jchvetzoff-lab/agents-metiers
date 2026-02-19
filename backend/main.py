@@ -58,6 +58,7 @@ def run_database_migration() -> None:
                 "competences_dimensions": "JSON",
                 "preferences_interets": "JSON",
                 "last_enrichment_diff": "JSON",
+                "translations": "JSON",
             }
 
             for column_name, column_type in new_columns.items():
@@ -112,6 +113,9 @@ from .routes_admin import router as admin_router
 app.include_router(fiches_router, tags=["fiches"])
 app.include_router(stats_router, tags=["stats"])
 app.include_router(admin_router, tags=["admin"])
+
+from .routes_translate import router as translate_router
+app.include_router(translate_router, prefix="/api", tags=["translate"])
 
 
 # ==================== HEALTH ====================

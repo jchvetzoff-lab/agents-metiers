@@ -733,6 +733,17 @@ class ApiClient {
 
   // ==================== AUTH ====================
 
+  // ==================== TRANSLATION ====================
+
+  async translateFiche(codeRome: string, lang: string): Promise<{
+    code_rome: string;
+    lang: string;
+    cached: boolean;
+    translation: Record<string, any>;
+  }> {
+    return this.request(`/api/fiches/${codeRome}/translate?lang=${lang}`);
+  }
+
   // ==================== ENRICHMENT DIFF ====================
 
   async getLastDiff(codeRome: string): Promise<{ code_rome: string; diff: Record<string, { before: any; after: any }> | null }> {

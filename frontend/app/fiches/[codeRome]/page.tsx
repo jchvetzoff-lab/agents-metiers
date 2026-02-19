@@ -188,6 +188,11 @@ export default function FicheDetailPage() {
   const [activeSection, setActiveSection] = useState("infos");
   const [pdfLoading, setPdfLoading] = useState(false);
 
+  // AI Translation
+  const [translateLang, setTranslateLang] = useState("fr");
+  const [translatedData, setTranslatedData] = useState<Record<string, any> | null>(null);
+  const [translateLoading, setTranslateLoading] = useState(false);
+
   // Variante filters
   const [filterGenre, setFilterGenre] = useState("masculin");
   const [filterTranche, setFilterTranche] = useState("18+");
@@ -230,6 +235,25 @@ export default function FicheDetailPage() {
   // ── i18n: derive language from applied variante ──
   const lang = appliedVariante?.langue || "fr";
   const t = getTranslations(lang);
+
+  async function handleTranslateChange(newLang: string) {
+    setTranslateLang(newLang);
+    if (newLang === "fr") {
+      setTranslatedData(null);
+      return;
+    }
+    setTranslateLoading(true);
+    try {
+      const res = await api.translateFiche(codeRome, newLang);
+      setTranslatedData(res.translation);
+    } catch (err: any) {
+      console.error("Translation error:", err);
+      setTranslatedData(null);
+      setTranslateLang("fr");
+    } finally {
+      setTranslateLoading(false);
+    }
+  }
 
   async function handleApplyFilter() {
     // If filters match the original fiche defaults, just show the original fiche
@@ -1488,22 +1512,24 @@ export default function FicheDetailPage() {
 
   // Display data: use variante content when applied, fallback to fiche
   const v = appliedVariante;
+  // Translation overlay: when translatedData is set, override text fields
+  const tr = translatedData;
   const dNom = v?.nom || fiche.nom_epicene;
-  const dDescription = v?.description || fiche.description;
-  const dDescriptionCourte = v?.description_courte || fiche.description_courte;
-  const dCompetences = v?.competences?.length ? v.competences : fiche.competences;
+  const dDescription = tr?.description || v?.description || fiche.description;
+  const dDescriptionCourte = tr?.desc_courte || v?.description_courte || fiche.description_courte;
+  const dCompetences = tr?.competences?.length ? tr.competences : (v?.competences?.length ? v.competences : fiche.competences);
   const dCompetencesTransversales = v?.competences_transversales?.length ? v.competences_transversales : fiche.competences_transversales;
-  const dMissions = v?.missions_principales?.length ? v.missions_principales : fiche.missions_principales;
-  const dAcces = v?.acces_metier || fiche.acces_metier;
+  const dMissions = tr?.missions_principales?.length ? tr.missions_principales : (v?.missions_principales?.length ? v.missions_principales : fiche.missions_principales);
+  const dAcces = tr?.acces_metier || v?.acces_metier || fiche.acces_metier;
   const dSavoirs = v?.savoirs?.length ? v.savoirs : fiche.savoirs;
-  const dFormations = v?.formations?.length ? v.formations : fiche.formations;
-  const dCertifications = v?.certifications?.length ? v.certifications : fiche.certifications;
-  const dConditions = v?.conditions_travail?.length ? v.conditions_travail : fiche.conditions_travail;
-  const dEnvironnements = v?.environnements?.length ? v.environnements : fiche.environnements;
+  const dFormations = tr?.formations?.length ? tr.formations : (v?.formations?.length ? v.formations : fiche.formations);
+  const dCertifications = tr?.certifications?.length ? tr.certifications : (v?.certifications?.length ? v.certifications : fiche.certifications);
+  const dConditions = tr?.conditions_travail?.length ? tr.conditions_travail : (v?.conditions_travail?.length ? v.conditions_travail : fiche.conditions_travail);
+  const dEnvironnements = tr?.environnements?.length ? tr.environnements : (v?.environnements?.length ? v.environnements : fiche.environnements);
   const dAutresAppellations = v?.autres_appellations?.length ? v.autres_appellations : fiche.autres_appellations;
   const dTraitsPersonnalite = v?.traits_personnalite?.length ? v.traits_personnalite : fiche.traits_personnalite;
-  const dSecteurs = v?.secteurs_activite?.length ? v.secteurs_activite : fiche.secteurs_activite;
-  const dEvolution5ans = v?.evolution_5ans || fiche.perspectives?.evolution_5ans;
+  const dSecteurs: any[] = tr?.secteurs_activite?.length ? tr.secteurs_activite : (v?.secteurs_activite?.length ? v.secteurs_activite : fiche.secteurs_activite);
+  const dEvolution5ans = tr?.perspectives_text || v?.evolution_5ans || fiche.perspectives?.evolution_5ans;
   const effectiveAge = appliedVariante?.tranche_age || "18+";
 
   // Helper to pick the correct gendered name for mobilité items
@@ -1569,6 +1595,36 @@ export default function FicheDetailPage() {
                   <span>Cette fiche a été modifiée dans le référentiel ROME. Vérifiez les changements dans la <Link href="/actions" className="font-semibold underline hover:text-orange-900">page Veille ROME</Link>.</span>
                 </div>
               )}
+              {/* Language selector */}
+              <div className="flex items-center gap-2 mb-2">
+                <select
+                  value={translateLang}
+                  onChange={(e) => handleTranslateChange(e.target.value)}
+                  disabled={translateLoading}
+                  className="text-xs border border-gray-300 rounded-lg px-2 py-1.5 bg-white text-gray-700 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 disabled:opacity-50"
+                >
+                  <option value="fr">🇫🇷 FR</option>
+                  <option value="en">🇬🇧 EN</option>
+                  <option value="es">🇪🇸 ES</option>
+                  <option value="de">🇩🇪 DE</option>
+                  <option value="it">🇮🇹 IT</option>
+                  <option value="pt">🇵🇹 PT</option>
+                  <option value="ar">🇸🇦 AR</option>
+                  <option value="ja">🇯🇵 JA</option>
+                  <option value="zh">🇨🇳 ZH</option>
+                </select>
+                {translateLoading && (
+                  <div className="flex items-center gap-1.5 text-xs text-indigo-600">
+                    <div className="w-3.5 h-3.5 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+                    Translating...
+                  </div>
+                )}
+                {translatedData && translateLang !== "fr" && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-700 border border-amber-200">
+                    🤖 Translated by AI
+                  </span>
+                )}
+              </div>
               <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#1A1A2E] mb-1">{dNom}</h1>
               {dDescriptionCourte && <p className="text-gray-500 max-w-2xl">{dDescriptionCourte}</p>}
             </div>
