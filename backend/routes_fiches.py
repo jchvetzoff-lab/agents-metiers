@@ -99,7 +99,7 @@ async def get_fiches(
 
 
 @router.post("/api/fiches", status_code=201)
-async def create_fiche(fiche_data: FicheMetierCreate) -> Dict[str, Any]:
+async def create_fiche(fiche_data: FicheMetierCreate, request: Request) -> Dict[str, Any]:
     """Create new fiche métier."""
     try:
         # Auto-generate code for custom fiches (not in official ROME)
@@ -121,6 +121,8 @@ async def create_fiche(fiche_data: FicheMetierCreate) -> Dict[str, Any]:
             metadata=MetadataFiche(statut=StatutFiche.BROUILLON, version=1)
         )
         fiche_creee = repo.create_fiche(nouvelle_fiche)
+        user = get_user_name_from_request(request)
+        add_audit_log("creation", fiche_data.code_rome, user, f"Création de {fiche_data.nom_epicene or fiche_data.nom_masculin or fiche_data.code_rome}")
         return {
             "message": "Fiche créée avec succès",
             "code_rome": fiche_creee.code_rome,
@@ -217,7 +219,7 @@ async def get_fiche_detail(code_rome: str) -> Dict[str, Any]:
 
 
 @router.patch("/api/fiches/{code_rome}")
-async def update_fiche(code_rome: str, update_data: FicheMetierUpdate) -> Dict[str, Any]:
+async def update_fiche(code_rome: str, update_data: FicheMetierUpdate, request: Request) -> Dict[str, Any]:
     """Update existing fiche métier."""
     try:
         fiche = repo.get_fiche(code_rome)
@@ -241,6 +243,13 @@ async def update_fiche(code_rome: str, update_data: FicheMetierUpdate) -> Dict[s
 
         updated_fiche = FicheMetier(**fiche_dict)
         repo.update_fiche(updated_fiche)
+
+        # Audit log for corrections
+        changed_fields = list(update_dict.keys())
+        user = get_user_name_from_request(request)
+        desc = f"Correction de {fiche.nom_epicene or code_rome} ({', '.join(changed_fields[:5])}{'...' if len(changed_fields) > 5 else ''})"
+        add_audit_log("correction", code_rome, user, desc)
+
         return {"message": "Fiche mise à jour", "code_rome": code_rome, "version": updated_fiche.metadata.version}
     except HTTPException:
         raise
