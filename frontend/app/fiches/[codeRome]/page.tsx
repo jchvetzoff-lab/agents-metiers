@@ -192,6 +192,7 @@ export default function FicheDetailPage() {
   const [translateLang, setTranslateLang] = useState("fr");
   const [translatedData, setTranslatedData] = useState<Record<string, any> | null>(null);
   const [translateLoading, setTranslateLoading] = useState(false);
+  const [translateError, setTranslateError] = useState(false);
 
   // Variante filters
   const [filterGenre, setFilterGenre] = useState("masculin");
@@ -237,7 +238,9 @@ export default function FicheDetailPage() {
   const t = getTranslations(lang);
 
   async function handleTranslateChange(newLang: string) {
+    if (newLang === translateLang) return;
     setTranslateLang(newLang);
+    setTranslateError(false);
     if (newLang === "fr") {
       setTranslatedData(null);
       return;
@@ -248,8 +251,8 @@ export default function FicheDetailPage() {
       setTranslatedData(res.translation);
     } catch (err: any) {
       console.error("Translation error:", err);
-      setTranslatedData(null);
-      setTranslateLang("fr");
+      setTranslateError(true);
+      // Keep selected language visible so user sees the error
     } finally {
       setTranslateLoading(false);
     }
@@ -1596,32 +1599,48 @@ export default function FicheDetailPage() {
                 </div>
               )}
               {/* Language selector */}
-              <div className="flex items-center gap-2 mb-2">
-                <select
-                  value={translateLang}
-                  onChange={(e) => handleTranslateChange(e.target.value)}
-                  disabled={translateLoading}
-                  className="text-xs border border-gray-300 rounded-lg px-2 py-1.5 bg-white text-gray-700 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 disabled:opacity-50"
-                >
-                  <option value="fr">🇫🇷 FR</option>
-                  <option value="en">🇬🇧 EN</option>
-                  <option value="es">🇪🇸 ES</option>
-                  <option value="de">🇩🇪 DE</option>
-                  <option value="it">🇮🇹 IT</option>
-                  <option value="pt">🇵🇹 PT</option>
-                  <option value="ar">🇸🇦 AR</option>
-                  <option value="ja">🇯🇵 JA</option>
-                  <option value="zh">🇨🇳 ZH</option>
-                </select>
+              <div className="flex items-center gap-3 mb-3 p-3 bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl">
+                <span className="text-sm font-semibold text-indigo-800">🌐 Langue</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { code: "fr", flag: "🇫🇷", label: "FR" },
+                    { code: "en", flag: "🇬🇧", label: "EN" },
+                    { code: "es", flag: "🇪🇸", label: "ES" },
+                    { code: "de", flag: "🇩🇪", label: "DE" },
+                    { code: "it", flag: "🇮🇹", label: "IT" },
+                    { code: "pt", flag: "🇵🇹", label: "PT" },
+                    { code: "ar", flag: "🇸🇦", label: "AR" },
+                    { code: "ja", flag: "🇯🇵", label: "JA" },
+                    { code: "zh", flag: "🇨🇳", label: "ZH" },
+                  ].map((l) => (
+                    <button
+                      key={l.code}
+                      onClick={() => handleTranslateChange(l.code)}
+                      disabled={translateLoading}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                        translateLang === l.code
+                          ? "bg-indigo-600 text-white shadow-md"
+                          : "bg-white text-gray-700 border border-gray-200 hover:border-indigo-400 hover:bg-indigo-50"
+                      } disabled:opacity-50 disabled:cursor-wait`}
+                    >
+                      {l.flag} {l.label}
+                    </button>
+                  ))}
+                </div>
                 {translateLoading && (
-                  <div className="flex items-center gap-1.5 text-xs text-indigo-600">
-                    <div className="w-3.5 h-3.5 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
-                    Translating...
+                  <div className="flex items-center gap-1.5 text-sm text-indigo-600 font-medium">
+                    <div className="w-4 h-4 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+                    Traduction en cours...
                   </div>
                 )}
                 {translatedData && translateLang !== "fr" && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-700 border border-amber-200">
-                    🤖 Translated by AI
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 border border-amber-200">
+                    🤖 Traduit par IA
+                  </span>
+                )}
+                {translateError && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700 border border-red-200">
+                    Erreur de traduction
                   </span>
                 )}
               </div>
