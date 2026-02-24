@@ -139,8 +139,7 @@ def _compute_score(fiche) -> int:
     return min(score, 100)
 
 
-def _fiche_to_response(fiche) -> FicheMetierResponse:
-    nb_variantes = repo.count_variantes(fiche.code_rome)
+def _fiche_to_response(fiche, nb_variantes: int = 0) -> FicheMetierResponse:
     return FicheMetierResponse(
         code_rome=fiche.code_rome,
         nom_masculin=fiche.nom_masculin,
@@ -159,6 +158,13 @@ def _fiche_to_response(fiche) -> FicheMetierResponse:
         nb_variantes=nb_variantes,
         score_completude=_compute_score(fiche)
     )
+
+
+def _build_responses(fiches_list) -> list:
+    """Build responses with batch variante counts (fixes N+1 query)."""
+    codes = [f.code_rome for f in fiches_list]
+    counts = repo.count_variantes_batch(codes) if codes else {}
+    return [_fiche_to_response(f, counts.get(f.code_rome, 0)) for f in fiches_list]
 
 
 # ==================== ROUTES ====================
@@ -246,12 +252,12 @@ async def get_fiches(
 
             total = len(fiches)
             fiches_page = fiches[offset:offset + limit]
-            results = [_fiche_to_response(f) for f in fiches_page]
+            results = _build_responses(fiches_page)
         else:
             # Pas de recherche : pagination SQL directe (performant)
             total = repo.count_fiches(statut_enum)
             fiches = repo.get_all_fiches(statut=statut_enum, limit=limit, offset=offset)
-            results = [_fiche_to_response(f) for f in fiches]
+            results = _build_responses(fiches)
 
         return {"total": total, "limit": limit, "offset": offset, "results": results}
     except HTTPException:

@@ -617,6 +617,29 @@ class Repository:
                 )
             ).scalar()
 
+    def count_variantes_batch(self, codes_rome: list) -> dict:
+        """
+        Compte les variantes pour plusieurs fiches en une seule requête.
+        Résout le problème N+1 queries sur la liste des fiches.
+
+        Args:
+            codes_rome: Liste de codes ROME
+
+        Returns:
+            Dict {code_rome: count}
+        """
+        if not codes_rome:
+            return {}
+        with self.session() as session:
+            results = session.execute(
+                select(VarianteFicheDB.code_rome, func.count(VarianteFicheDB.id))
+                .where(VarianteFicheDB.code_rome.in_(codes_rome))
+                .group_by(VarianteFicheDB.code_rome)
+            ).all()
+            counts = {code_rome: count for code_rome, count in results}
+            # Retourner 0 pour les fiches sans variantes
+            return {code: counts.get(code, 0) for code in codes_rome}
+
     def get_all_variantes(self, code_rome: str) -> List[VarianteFiche]:
         """
         Récupère toutes les variantes d'une fiche.

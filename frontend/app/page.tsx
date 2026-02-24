@@ -102,7 +102,7 @@ export default function Home() {
 
   useEffect(() => {
     if (query.length < 2) { setSuggestions([]); setShowDropdown(false); return; }
-    clearTimeout(debounceRef.current);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
       try {
         const res = await api.autocomplete(query, 6);
@@ -110,6 +110,7 @@ export default function Home() {
         setShowDropdown(res.length > 0);
       } catch { setSuggestions([]); }
     }, 250);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [query]);
 
   // Close dropdown on outside click
