@@ -688,10 +688,10 @@ Notes IMPORTANTES :
                     validation_errors.append("salaires doit être un dictionnaire")
 
                 if validation_errors:
-                    self.logger.error(f"Validation échouée pour {nom_masculin}: {'; '.join(validation_errors)}")
-                    return None
+                    self.logger.warning(f"Validation partielle pour {nom_masculin}: {'; '.join(validation_errors)}")
+                    # Continue with partial data instead of rejecting entirely
 
-                self.logger.info(f"Contenu généré pour {nom_masculin}")
+                self.logger.info(f"Contenu généré pour {nom_masculin} ({len(data)} clés)")
                 return data
             else:
                 self.logger.error(f"Pas de JSON dans la réponse pour {nom_masculin}")
