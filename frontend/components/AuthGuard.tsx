@@ -4,13 +4,21 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { isAuthenticated } from "@/lib/auth";
 
+// Pages publiques (consultation) - pas besoin d'auth
+const PUBLIC_PATHS = ["/", "/login", "/fiches", "/dashboard", "/guide"];
+
+function isPublicPath(pathname: string): boolean {
+  // Exact match or starts with /fiches/ (fiche detail pages)
+  return PUBLIC_PATHS.includes(pathname) || pathname.startsWith("/fiches/");
+}
+
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [checked, setChecked] = useState(false);
 
   useEffect(() => {
-    if (pathname === "/login") {
+    if (isPublicPath(pathname)) {
       setChecked(true);
       return;
     }
@@ -22,7 +30,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     }
   }, [pathname, router]);
 
-  if (pathname === "/login") {
+  if (isPublicPath(pathname)) {
     return <>{children}</>;
   }
 
