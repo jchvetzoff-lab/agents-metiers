@@ -14,6 +14,8 @@ router = APIRouter(prefix="/api", tags=["stats"])
 class StatsResponse(BaseModel):
     total: int
     brouillons: int
+    enrichis: int
+    valides: int
     en_validation: int
     publiees: int
     archivees: int
@@ -26,6 +28,8 @@ async def get_stats():
         return StatsResponse(
             total=repo.count_fiches(),
             brouillons=repo.count_fiches(StatutFiche.BROUILLON),
+            enrichis=repo.count_fiches(StatutFiche.ENRICHI),
+            valides=repo.count_fiches(StatutFiche.VALIDE),
             en_validation=repo.count_fiches(StatutFiche.EN_VALIDATION),
             publiees=repo.count_fiches(StatutFiche.PUBLIEE),
             archivees=repo.count_fiches(StatutFiche.ARCHIVEE),

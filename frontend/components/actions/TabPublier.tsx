@@ -153,10 +153,10 @@ export default function TabPublier() {
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { label: "Total", value: stats.total, color: "#4F46E5" },
-            { label: "Enrichis", value: stats.enrichis, color: "#EAB308" },
-            { label: "En validation", value: stats.en_validation, color: "#F97316" },
-            { label: "Publiées", value: stats.publiees, color: "#16A34A" },
+            { label: "Total", value: stats.total ?? 0, color: "#4F46E5" },
+            { label: "Enrichis", value: stats.enrichis ?? 0, color: "#EAB308" },
+            { label: "Valides", value: (stats.valides ?? 0) + (stats.en_validation ?? 0), color: "#F97316" },
+            { label: "Publiees", value: stats.publiees ?? 0, color: "#16A34A" },
           ].map((s) => (
             <div key={s.label} className="bg-[#0c0c1a] rounded-xl border border-white/[0.08] p-4 text-center">
               <div className="text-2xl font-bold" style={{ color: s.color }}>
