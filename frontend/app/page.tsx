@@ -154,7 +154,7 @@ export default function Home() {
           {/* ── BARRE DE RECHERCHE ── */}
           <FadeInView delay={0.4}>
             <div ref={searchRef} className="relative max-w-xl mx-auto">
-              <div className="flex items-center bg-white rounded-2xl shadow-xl overflow-hidden">
+              <div className="flex items-center bg-white rounded-2xl shadow-xl ring-0">
                 <svg className="w-5 h-5 text-gray-400 ml-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
@@ -163,22 +163,23 @@ export default function Home() {
                   value={query}
                   onChange={e => setQuery(e.target.value)}
                   onFocus={() => suggestions.length > 0 && setShowDropdown(true)}
+                  onKeyDown={e => { if (e.key === 'Enter' && query.trim()) { setShowDropdown(false); router.push(`/fiches?search=${encodeURIComponent(query.trim())}`); } }}
                   placeholder="Rechercher un métier…"
-                  className="w-full px-4 py-4 text-gray-800 text-base placeholder:text-gray-400 focus:outline-none"
+                  className="w-full px-4 py-4 text-gray-800 text-base placeholder:text-gray-400 focus:outline-none border-none bg-transparent"
                 />
               </div>
               {showDropdown && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-50">
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-2xl border border-gray-100 z-50 max-h-[360px] overflow-y-auto">
                   {suggestions.map(s => (
                     <button
                       key={s.code_rome}
                       onClick={() => { setShowDropdown(false); router.push(`/fiches/${s.code_rome}`); }}
-                      className="w-full text-left px-5 py-3 hover:bg-indigo-50 transition flex items-center gap-3"
+                      className="w-full text-left px-5 py-3.5 hover:bg-indigo-50 transition flex items-center gap-3 border-b border-gray-50 last:border-b-0"
                     >
-                      <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded shrink-0">{s.code_rome}</span>
+                      <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-md shrink-0">{s.code_rome}</span>
                       <div className="min-w-0">
                         <div className="text-sm font-medium text-gray-800 truncate">{s.nom_masculin}</div>
-                        {s.description_courte && <div className="text-xs text-gray-400 truncate">{s.description_courte}</div>}
+                        {s.description_courte && <div className="text-xs text-gray-400 truncate mt-0.5">{s.description_courte}</div>}
                       </div>
                     </button>
                   ))}
@@ -195,40 +196,22 @@ export default function Home() {
           <FadeInView>
             <h2 className="text-3xl md:text-4xl font-bold text-center text-white mb-12">Chiffres clés</h2>
           </FadeInView>
-          <StaggerContainer stagger={0.1} className="grid grid-cols-2 md:grid-cols-5 gap-4 md:gap-6">
-            <div className="bg-white/5 rounded-2xl border border-white/[0.06] p-6 text-center hover:bg-white/[0.08] transition-colors">
-              <div className="text-2xl md:text-3xl font-bold text-indigo-400 mb-1">
-                <CountUp value={stats?.total || 0} />
+          <StaggerContainer stagger={0.1} className="grid grid-cols-2 md:grid-cols-5 gap-4 md:gap-6 items-stretch">
+            {[
+              { value: stats?.total || 0, label: "Fiches ROME", sub: null },
+              { value: 13, label: "Sections par fiche", sub: null },
+              { value: 3, label: "APIs connectées", sub: "France Travail, INSEE, ROME" },
+              { value: 13, label: "Régions couvertes", sub: "INSEE metropolitaines" },
+              { value: 4, label: "Agents IA", sub: "Rédacteur, Correcteur, Veille, Salaires" },
+            ].map((item, i) => (
+              <div key={i} className="bg-white/5 rounded-2xl border border-white/[0.06] p-6 text-center hover:bg-white/[0.08] transition-colors flex flex-col items-center justify-center">
+                <div className="text-2xl md:text-3xl font-bold text-indigo-400 mb-1">
+                  <CountUp value={item.value} />
+                </div>
+                <div className="text-sm text-gray-400">{item.label}</div>
+                {item.sub && <div className="text-[10px] text-gray-500 mt-1">{item.sub}</div>}
               </div>
-              <div className="text-sm text-gray-400">Fiches ROME</div>
-            </div>
-            <div className="bg-white/5 rounded-2xl border border-white/[0.06] p-6 text-center hover:bg-white/[0.08] transition-colors">
-              <div className="text-2xl md:text-3xl font-bold text-indigo-400 mb-1">
-                <CountUp value={13} />
-              </div>
-              <div className="text-sm text-gray-400">Sections par fiche</div>
-            </div>
-            <div className="bg-white/5 rounded-2xl border border-white/[0.06] p-6 text-center hover:bg-white/[0.08] transition-colors">
-              <div className="text-2xl md:text-3xl font-bold text-indigo-400 mb-1">
-                <CountUp value={3} />
-              </div>
-              <div className="text-sm text-gray-400">APIs connectées</div>
-              <div className="text-[10px] text-gray-500 mt-1">France Travail, INSEE, ROME</div>
-            </div>
-            <div className="bg-white/5 rounded-2xl border border-white/[0.06] p-6 text-center hover:bg-white/[0.08] transition-colors">
-              <div className="text-2xl md:text-3xl font-bold text-indigo-400 mb-1">
-                <CountUp value={13} />
-              </div>
-              <div className="text-sm text-gray-400">Régions couvertes</div>
-              <div className="text-[10px] text-gray-500 mt-1">INSEE metropolitaines</div>
-            </div>
-            <div className="bg-white/5 rounded-2xl border border-white/[0.06] p-6 text-center hover:bg-white/[0.08] transition-colors">
-              <div className="text-2xl md:text-3xl font-bold text-indigo-400 mb-1">
-                <CountUp value={4} />
-              </div>
-              <div className="text-sm text-gray-400">Agents IA</div>
-              <div className="text-[10px] text-gray-500 mt-1">Rédacteur, Correcteur, Veille, Salaires</div>
-            </div>
+            ))}
           </StaggerContainer>
         </div>
       </section>
