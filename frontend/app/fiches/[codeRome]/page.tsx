@@ -21,6 +21,39 @@ import {
   AreaChart, Area, CartesianGrid,
 } from "recharts";
 
+// ── Helpers ──
+function toStringItem(item: any): string {
+  if (typeof item === 'string') return item;
+  return item?.nom || String(item);
+}
+
+function toStringArray(items: any[]): string[] {
+  if (!items?.length) return [];
+  return items.map(toStringItem);
+}
+
+function getItemLevel(item: any): string | null {
+  if (typeof item !== 'object' || !item) return null;
+  return item.niveau || item.importance || null;
+}
+
+function LevelBadge({ level }: { level: string | null }) {
+  if (!level) return null;
+  const colors: Record<string, string> = {
+    avance: "bg-indigo-100 text-indigo-700",
+    avancé: "bg-indigo-100 text-indigo-700",
+    intermediaire: "bg-amber-100 text-amber-700",
+    intermédiaire: "bg-amber-100 text-amber-700",
+    debutant: "bg-gray-100 text-gray-600",
+    débutant: "bg-gray-100 text-gray-600",
+    haute: "bg-red-100 text-red-700",
+    moyenne: "bg-amber-100 text-amber-700",
+    basse: "bg-gray-100 text-gray-600",
+  };
+  const cls = colors[level.toLowerCase()] || "bg-gray-100 text-gray-600";
+  return <span className={`ml-2 text-[11px] font-semibold px-2 py-0.5 rounded-full ${cls}`}>{level}</span>;
+}
+
 // ── Couleurs ──
 const PURPLE = "#4F46E5";
 const PINK = "#EC4899";
@@ -101,20 +134,20 @@ function ChartTooltip({ active, payload, label, locale = "fr-FR" }: any) {
   );
 }
 
-function BulletList({ items, color = PURPLE }: { items: string[]; color?: string }) {
+function BulletList({ items, color = PURPLE }: { items: any[]; color?: string }) {
   return (
     <ul className="space-y-2.5">
       {items.map((item, i) => (
         <li key={i} className="flex items-start gap-3">
           <span className="w-2 h-2 rounded-full shrink-0 mt-2" style={{ backgroundColor: color }} />
-          <span className="text-[15px] text-gray-700 leading-relaxed">{item}</span>
+          <span className="text-[15px] text-gray-700 leading-relaxed">{toStringItem(item)}</span>
         </li>
       ))}
     </ul>
   );
 }
 
-function NumberedList({ items, color = PURPLE }: { items: string[]; color?: string }) {
+function NumberedList({ items, color = PURPLE }: { items: any[]; color?: string }) {
   return (
     <div className="space-y-3">
       {items.map((item, i) => (
@@ -122,7 +155,10 @@ function NumberedList({ items, color = PURPLE }: { items: string[]; color?: stri
           <span className="flex items-center justify-center w-7 h-7 rounded-lg text-white text-xs font-bold shrink-0 mt-0.5" style={{ backgroundColor: color }}>
             {i + 1}
           </span>
-          <span className="text-[15px] text-gray-700 leading-relaxed pt-0.5">{item}</span>
+          <span className="text-[15px] text-gray-700 leading-relaxed pt-0.5">
+            {toStringItem(item)}
+            <LevelBadge level={getItemLevel(item)} />
+          </span>
         </div>
       ))}
     </div>
@@ -1321,20 +1357,26 @@ export default function FicheDetailPage() {
                 {activeTab === "sf" && dCompetences && <NumberedList items={dCompetences} color={PURPLE} />}
                 {activeTab === "se" && dCompetencesTransversales && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {dCompetencesTransversales.map((c, i) => (
+                    {dCompetencesTransversales.map((c: any, i: number) => (
                       <div key={i} className="flex items-center gap-3 p-3.5 rounded-xl bg-[#FFF5F7] border border-[#FFE0E6]/60">
                         <span className="w-8 h-8 rounded-full bg-pink-500 text-white flex items-center justify-center text-xs font-bold shrink-0">✓</span>
-                        <span className="text-[15px] text-gray-700">{c}</span>
+                        <span className="text-[15px] text-gray-700">
+                          {toStringItem(c)}
+                          <LevelBadge level={getItemLevel(c)} />
+                        </span>
                       </div>
                     ))}
                   </div>
                 )}
                 {activeTab === "sa" && dSavoirs && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {dSavoirs.map((s, i) => (
+                    {dSavoirs.map((s: any, i: number) => (
                       <div key={i} className="flex items-center gap-3 p-3.5 rounded-xl bg-[#F0FDFA] border border-[#CCFBF1]/60">
                         <span className="w-8 h-8 rounded-full bg-[#00C8C8] text-white flex items-center justify-center text-xs font-bold shrink-0">◆</span>
-                        <span className="text-[15px] text-gray-700">{s}</span>
+                        <span className="text-[15px] text-gray-700">
+                          {toStringItem(s)}
+                          <LevelBadge level={getItemLevel(s)} />
+                        </span>
                       </div>
                     ))}
                   </div>
