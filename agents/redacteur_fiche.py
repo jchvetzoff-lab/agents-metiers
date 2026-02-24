@@ -699,9 +699,11 @@ Notes IMPORTANTES :
 
         except json.JSONDecodeError as e:
             self.logger.error(f"JSON invalide pour {nom_masculin}: {e}")
+            import traceback; self.logger.error(traceback.format_exc())
             return None
         except Exception as e:
             self.logger.error(f"Erreur API Claude pour {nom_masculin}: {e}")
+            import traceback; self.logger.error(traceback.format_exc())
             return None
 
     def _generer_contenu_simulation(self, nom_metier: str) -> Dict[str, Any]:

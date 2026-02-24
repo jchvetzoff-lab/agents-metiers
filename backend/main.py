@@ -95,7 +95,14 @@ async def debug_enrich(code_rome: str):
         
         # Now try the actual enrichment
         from agents.redacteur_fiche import AgentRedacteurFiche
+        import io, logging as _lg
+        buf = io.StringIO()
+        handler = _lg.StreamHandler(buf)
+        handler.setLevel(_lg.DEBUG)
+        handler.setFormatter(_lg.Formatter('%(levelname)s: %(message)s'))
         agent = AgentRedacteurFiche(repository=repo, claude_client=client)
+        agent.logger.addHandler(handler)
+        agent.logger.setLevel(_lg.DEBUG)
         contenu = await agent._generer_contenu(
             nom_masculin=fiche.nom_masculin,
             nom_feminin=fiche.nom_feminin,
@@ -108,16 +115,11 @@ async def debug_enrich(code_rome: str):
             results["nb_keys"] = len(contenu.keys())
         else:
             results["contenu"] = "None - generation failed"
-            # Check agent logs
-            import io, logging as _lg
-            buf = io.StringIO()
-            h = _lg.StreamHandler(buf)
-            h.setLevel(_lg.DEBUG)
-            agent.logger.addHandler(h)
-            results["hint"] = "Check traceback or agent logs"
+            results["agent_logs"] = buf.getvalue()[-2000:] if buf else "no buffer"
     except Exception as e:
         results["enrich_error"] = f"{type(e).__name__}: {e}"
         results["traceback"] = traceback.format_exc()[-1500:]
+        results["agent_logs"] = buf.getvalue()[-2000:] if 'buf' in dir() else "no buffer"
     
     return results
 
