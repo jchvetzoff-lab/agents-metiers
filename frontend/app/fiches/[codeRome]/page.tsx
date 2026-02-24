@@ -119,13 +119,13 @@ export default function FicheDetailPage() {
 
   async function reloadFiche() {
     try {
-      const [ficheData, variantesData] = await Promise.all([
-        api.getFicheDetail(codeRome),
-        api.getVariantes(codeRome),
-      ]);
+      const ficheData = await api.getFicheDetail(codeRome);
       setFiche(ficheData);
-      setVariantes(variantesData.variantes);
     } catch (e) { console.error("Erreur rechargement fiche:", e); }
+    try {
+      const variantesData = await api.getVariantes(codeRome);
+      setVariantes(variantesData.variantes);
+    } catch (e) { console.error("Erreur rechargement variantes:", e); }
   }
 
   const actionMsgTimer = useRef<ReturnType<typeof setTimeout>>(null);

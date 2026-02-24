@@ -375,6 +375,11 @@ async def get_fiche_detail(code_rome: str):
                 "metiers_proches": [{"nom": m, "contexte": ""} for m in (fiche.metiers_proches or [])],
                 "evolutions": []
             } if fiche.metiers_proches else None,
+
+            # Validation IA
+            "validation_ia_score": fiche.validation_ia_score,
+            "validation_ia_date": fiche.validation_ia_date.isoformat() if fiche.validation_ia_date else None,
+            "validation_ia_details": fiche.validation_ia_details,
         }
     except HTTPException:
         raise

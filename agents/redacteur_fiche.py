@@ -520,9 +520,9 @@ Réponds UNIQUEMENT avec un objet JSON valide (sans texte avant ou après) conte
     "competences": ["6 à 10 compétences techniques clés du métier"],
     "competences_transversales": ["3 à 5 compétences transversales (soft skills)"],
     "savoirs": ["5 à 8 savoirs théoriques ou domaines de connaissances nécessaires"],
-    "formations": ["3 à 5 formations ou diplômes typiques pour accéder au métier en France"],
-    "certifications": ["1 à 3 certifications professionnelles pertinentes, ou liste vide si aucune"],
-    "acces_metier": "Texte décrivant les voies d'accès au métier (diplômes, expérience, VAE, reconversion). 3-5 phrases.",
+    "formations": ["Liste EXHAUSTIVE et PRÉCISE des diplômes/titres qui permettent d'exercer ce métier. Voir règles formations ci-dessous."],
+    "certifications": ["Certifications professionnelles RÉELLES inscrites au RNCP ou RS, avec leur intitulé exact. Liste vide si aucune."],
+    "acces_metier": "Texte DÉTAILLÉ décrivant les voies d'accès : diplôme(s) obligatoire(s) avec nom exact, durée, parcours scolaire préalable (ex: après la 3e, après un Bac...). Mentionner si le diplôme est obligatoire légalement ou juste recommandé. Mentionner la VAE si applicable, la reconversion, et l'expérience requise. 3-6 phrases.",
     "autres_appellations": ["2 à 5 autres noms ou appellations courantes pour ce métier"],
     "conditions_travail": ["3 à 5 conditions de travail caractéristiques"],
     "environnements": ["2 à 4 types de structures où s'exerce le métier"],
@@ -615,7 +615,15 @@ Notes IMPORTANTES :
 - Sois factuel et précis. Pas de formulations vagues.
 - Tous les textes en français avec accents corrects.
 - Si le code ROME est fourni, ne le modifie pas. Sinon, suggère-le dans "code_rome_suggere".
-- TOUS les champs ci-dessus sont OBLIGATOIRES. Ne saute aucun champ. Le JSON doit contenir chaque clé listée."""
+- TOUS les champs ci-dessus sont OBLIGATOIRES. Ne saute aucun champ. Le JSON doit contenir chaque clé listée.
+
+RÈGLES FORMATIONS — TRÈS IMPORTANT, suis ces règles scrupuleusement :
+1. PRÉCISION : Donne le NOM EXACT OFFICIEL de chaque diplôme/titre (ex: "Titre d'assistant dentaire (CNQAOS, 18 mois en alternance)" et PAS "formation en dentaire").
+2. EXHAUSTIVITÉ STRICTE : Liste UNIQUEMENT les diplômes qui permettent RÉELLEMENT d'exercer ce métier. Si un seul diplôme existe (ex: assistant dentaire = titre RNCP obligatoire), n'en liste qu'un seul. N'invente PAS de diplômes alternatifs qui n'existent pas.
+3. PARCOURS COMPLET : Si le métier nécessite un Bac+5, décris le parcours typique du début à la fin. Exemple pour ingénieur : "Bac scientifique → Classe préparatoire (2 ans) ou DUT/BUT → École d'ingénieurs (3 ans)" OU "Licence (3 ans) → Master (2 ans)".
+4. OBLIGATION LÉGALE : Indique clairement si le diplôme est OBLIGATOIRE légalement (professions réglementées : médecin, avocat, assistant dentaire...) ou RECOMMANDÉ (la plupart des métiers).
+5. DURÉE ET MODALITÉS : Pour chaque formation, indique la durée et si possible : formation initiale, alternance, formation continue, privé/public.
+6. NE PAS LISTER de diplômes génériques non pertinents. Par exemple, pour assistant dentaire, NE PAS lister "BTS hygiène-propreté" ou "Licence sciences de la vie" qui ne permettent pas d'exercer."""
 
         try:
             response = await self._call_claude(

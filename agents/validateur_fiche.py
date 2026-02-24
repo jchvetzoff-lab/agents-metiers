@@ -155,6 +155,16 @@ CONSIGNES STRICTES :
 - Chaque suggestion doit être ACTIONNABLE (pas "améliorer la description" mais "ajouter les horaires typiques dans conditions_travail_detaillees").
 - Score 90+ = EXCEPTIONNEL, réservé aux fiches quasi-parfaites.
 
+VÉRIFICATION FORMATIONS — PRIORITÉ ABSOLUE :
+Tu DOIS vérifier en profondeur la section formations. C'est le critère le plus important. Vérifie :
+1. Les diplômes listés existent-ils RÉELLEMENT en France ? (RNCP, diplômes d'État, titres professionnels)
+2. Ces diplômes mènent-ils EFFECTIVEMENT à ce métier ? (ex: un BTS NRC ne permet pas de devenir assistant dentaire)
+3. Pour les professions réglementées (santé, droit, expertise comptable, etc.), le diplôme obligatoire est-il listé et identifié comme tel ?
+4. Si le métier n'a qu'UN SEUL diplôme possible, la fiche ne doit pas en inventer d'autres.
+5. Les parcours sont-ils complets ? Pour un Bac+5, le chemin depuis le Bac est-il décrit ?
+6. Les durées et modalités sont-elles correctes ?
+Un diplôme inventé ou un parcours incorrect est une ERREUR GRAVE qui doit faire baisser fortement le score d'exactitude (-25 pts par formation inventée).
+
 Retourne UNIQUEMENT un objet JSON valide :
 
 {{
@@ -175,7 +185,7 @@ Retourne UNIQUEMENT un objet JSON valide :
         }},
         "exactitude": {{
             "score": <0-100>,
-            "commentaire": "Données factuellement vérifiables : fourchettes salariales plausibles ? Sites web existants (pas de liens inventés) ? Appellations réellement utilisées ? Certifications qui existent ?"
+            "commentaire": "VÉRIFICATION APPROFONDIE : 1) Chaque formation listée existe-t-elle au RNCP/RS ? 2) Mène-t-elle réellement à ce métier ? 3) Si profession réglementée, le diplôme obligatoire est-il mentionné ? 4) Fourchettes salariales plausibles ? 5) Sites web existants ? 6) Appellations réellement utilisées ?"
         }}
     }},
     "problemes": [
@@ -192,7 +202,7 @@ BARÈME DE RÉFÉRENCE :
 - Complétude : -8 pts par champ manquant parmi les 13. Un champ avec 1-2 éléments génériques = -4 pts.
 - Qualité : -10 pts si contenu générique (phrases passe-partout applicables à n'importe quel métier). -5 pts par erreur de français.
 - Cohérence : -15 pts si salaires incohérents avec le marché. -10 pts si formations ne correspondent pas au métier.
-- Exactitude : -20 pts par site web inventé. -10 pts par donnée manifestement fausse."""
+- Exactitude : -25 pts par formation/diplôme inventé ou inexistant. -25 pts par formation listée qui ne mène pas réellement au métier. -20 pts si profession réglementée et diplôme obligatoire non mentionné. -20 pts par site web inventé. -10 pts par donnée manifestement fausse."""
 
         try:
             response = await self._call_claude(

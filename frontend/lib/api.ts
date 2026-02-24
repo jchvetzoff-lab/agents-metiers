@@ -456,7 +456,7 @@ class ApiClient {
   async enrichFiche(codeRome: string, instructions?: string): Promise<{ message: string; code_rome: string; nom: string; version: number }> {
     return this.request<{ message: string; code_rome: string; nom: string; version: number }>(
       `/api/fiches/${codeRome}/enrich`,
-      { method: "POST", body: instructions ? JSON.stringify({ instructions }) : undefined }
+      { method: "POST", body: JSON.stringify(instructions ? { instructions } : {}) }
     );
   }
 
@@ -487,6 +487,7 @@ class ApiClient {
     message: string;
     code_rome: string;
     nom: string;
+    nouveau_statut: string;
     rapport: {
       score: number;
       verdict: string;
@@ -496,7 +497,7 @@ class ApiClient {
       suggestions: string[];
     };
   }> {
-    return this.request(`/api/fiches/${codeRome}/validate`, { method: "POST" });
+    return this.request(`/api/fiches/${codeRome}/validate`, { method: "POST", body: '{}' });
   }
 
   async reviewFiche(codeRome: string, decision: string, commentaire?: string): Promise<{
