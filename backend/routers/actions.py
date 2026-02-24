@@ -114,14 +114,17 @@ async def validate_fiche(code_rome: str, user: dict = Depends(get_current_user))
         repo.update_fiche(updated_fiche)
 
         # Log audit de la validation
-        from database.models import TypeEvenement
-        repo.log_audit(
-            type_evenement=TypeEvenement.VALIDATION,
-            code_rome=code_rome,
-            agent="AgentValidateurFiche",
-            description=f"Validation IA terminée - Score: {rapport['score']}/100, Verdict: {rapport['verdict']}",
-            donnees_apres=f"Score: {rapport['score']}, Statut: {updated_fiche.metadata.statut.value}"
-        )
+        try:
+            from database.models import TypeEvenement, AuditLog
+            audit = AuditLog(
+                type_evenement=TypeEvenement.VALIDATION,
+                code_rome=code_rome,
+                agent="AgentValidateurFiche",
+                description=f"Validation IA terminée - Score: {rapport['score']}/100, Verdict: {rapport['verdict']}",
+            )
+            repo.add_audit_log(audit)
+        except Exception as e:
+            logger.warning(f"Audit log failed: {e}")
 
         return {
             "message": "Validation terminée",
