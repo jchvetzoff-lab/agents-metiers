@@ -17,6 +17,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://frontend-seven-neon-32.vercel.app",
+        "https://agents-metiersjae.fr",
+        "https://www.agents-metiersjae.fr",
         *([  "http://localhost:3000"] if os.getenv("ENVIRONMENT", "production") != "production" else []),
     ],
     allow_credentials=True,
@@ -53,6 +55,18 @@ async def health():
         return {"status": "ok", "db": "connected"}
     except Exception as e:
         return {"status": "degraded", "db": str(e)}
+
+
+@app.get("/api/git-version")
+async def git_version():
+    """Shows deployed git commit for debugging."""
+    import subprocess
+    try:
+        sha = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], text=True, timeout=5).strip()
+        msg = subprocess.check_output(["git", "log", "-1", "--format=%s"], text=True, timeout=5).strip()
+        return {"commit": sha, "message": msg}
+    except Exception:
+        return {"commit": "unknown", "message": "git not available"}
 
 
 @app.get("/")
