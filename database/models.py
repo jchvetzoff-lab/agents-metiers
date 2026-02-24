@@ -485,6 +485,17 @@ def _to_string_list(items):
     return result
 
 
+# Mapping des anciens statuts vers les nouveaux (post-simplification)
+_STATUT_MIGRATION = {
+    "en_validation": "valide",
+    "archivee": "publiee",
+}
+
+def _migrate_statut(statut: str) -> str:
+    """Convertit un ancien statut vers le nouveau si nécessaire."""
+    return _STATUT_MIGRATION.get(statut, statut)
+
+
 class FicheMetierDB(Base):
     """Table des fiches métiers."""
     __tablename__ = "fiches_metiers"
@@ -601,7 +612,7 @@ class FicheMetierDB(Base):
                 version=self.version,
                 source=self.source,
                 auteur=self.auteur,
-                statut=StatutFiche(self.statut),
+                statut=StatutFiche(_migrate_statut(self.statut)),
                 tags=self.tags or []
             )
         )

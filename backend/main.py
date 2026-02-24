@@ -90,6 +90,18 @@ async def startup_event():
                     logger.info("Migrating audit_log table: adding validateur column")
                     conn.execute(text("ALTER TABLE audit_log ADD COLUMN validateur VARCHAR(100)"))
 
+        # Migrate legacy statut values in fiches
+        with repo.engine.begin() as conn:
+            for old_val, new_val in [("en_validation", "valide"), ("archivee", "publiee")]:
+                try:
+                    result = conn.execute(text(
+                        f"UPDATE fiches SET statut = '{new_val}' WHERE statut = '{old_val}'"
+                    ))
+                    if result.rowcount > 0:
+                        logger.info(f"Migrated {result.rowcount} fiches from '{old_val}' to '{new_val}'")
+                except Exception:
+                    pass
+
         logger.info("Database migration check completed")
     except Exception as e:
         logger.error(f"Failed to init/migrate DB at startup: {e}")
