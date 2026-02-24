@@ -2,6 +2,7 @@
 Agent de rédaction et enrichissement des fiches métiers.
 Utilise Claude API pour générer le contenu complet d'une fiche à partir du nom de métier.
 """
+import asyncio
 import json
 import re
 from typing import Any, Dict, List, Optional
@@ -39,6 +40,23 @@ class AgentRedacteurFiche(BaseAgent):
         super().__init__("AgentRedacteurFiche", repository)
         self.claude_client = claude_client
         self.config = get_config()
+
+    async def _call_claude(self, **kwargs):
+        """Call Claude API with automatic retry on overload (529)."""
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                return await self._call_claude(**kwargs)
+            except Exception as e:
+                error_str = str(e)
+                if "529" in error_str or "overloaded" in error_str.lower():
+                    wait = 10 * (attempt + 1)
+                    self.logger.warning(f"Claude overloaded, retry {attempt+1}/{max_retries} in {wait}s...")
+                    await asyncio.sleep(wait)
+                    continue
+                raise
+        # Last attempt without catch
+        return await self._call_claude(**kwargs)
 
     def get_description(self) -> str:
         return (
@@ -405,7 +423,7 @@ IMPORTANT :
 - JSON valide uniquement, pas de texte autour"""
 
         try:
-            response = await self.claude_client.messages.create(
+            response = await self._call_claude(
                 model=self.config.api.claude_model,
                 max_tokens=8192,
                 messages=[{"role": "user", "content": prompt}]
@@ -589,7 +607,7 @@ Notes IMPORTANTES :
 - TOUS les champs ci-dessus sont OBLIGATOIRES. Ne saute aucun champ. Le JSON doit contenir chaque clé listée."""
 
         try:
-            response = await self.claude_client.messages.create(
+            response = await self._call_claude(
                 model=self.config.api.claude_model,
                 max_tokens=32768,
                 messages=[{"role": "user", "content": prompt}]
@@ -801,7 +819,7 @@ Notes IMPORTANTES :
         prompt = self._construire_prompt_variantes(fiche, langues, tranches_age, formats, genres, nb_variantes)
 
         try:
-            response = await self.claude_client.messages.create(
+            response = await self._call_claude(
                 model=self.config.api.claude_model,
                 max_tokens=16000,  # Suffisant pour 90 variantes
                 messages=[{"role": "user", "content": prompt}]

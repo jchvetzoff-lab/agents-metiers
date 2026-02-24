@@ -2,6 +2,7 @@
 Agent de validation IA des fiches métiers.
 Utilise Claude API pour analyser et scorer la qualité des fiches métiers.
 """
+import asyncio
 import json
 import re
 from typing import Any, Dict, List, Optional
@@ -33,6 +34,22 @@ class AgentValidateurFiche(BaseAgent):
         super().__init__("AgentValidateurFiche", repository)
         self.claude_client = claude_client
         self.config = get_config()
+
+    async def _call_claude(self, **kwargs):
+        """Call Claude API with automatic retry on overload (529)."""
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                return await self.claude_client.messages.create(**kwargs)
+            except Exception as e:
+                error_str = str(e)
+                if "529" in error_str or "overloaded" in error_str.lower():
+                    wait = 10 * (attempt + 1)
+                    self.logger.warning(f"Claude overloaded, retry {attempt+1}/{max_retries} in {wait}s...")
+                    await asyncio.sleep(wait)
+                    continue
+                raise
+        return await self.claude_client.messages.create(**kwargs)
 
     def get_description(self) -> str:
         return (
@@ -166,7 +183,7 @@ BARÈME STRICT :
 Sois critique et exigeant. Une fiche moyenne mérite 60-70, pas 90+."""
 
         try:
-            response = await self.claude_client.messages.create(
+            response = await self._call_claude(
                 model=self.config.api.claude_model,
                 max_tokens=8192,
                 messages=[{"role": "user", "content": prompt}]
