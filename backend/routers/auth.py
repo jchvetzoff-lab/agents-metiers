@@ -56,65 +56,77 @@ class RegisterRequest(BaseModel):
 @router.post("/login")
 async def login(req: LoginRequest):
     """Login and return JWT token."""
-    user = repo.get_user_by_email(req.email)
-    if user is None:
-        raise HTTPException(status_code=401, detail="Email ou mot de passe incorrect")
+    try:
+        user = repo.get_user_by_email(req.email)
+        if user is None:
+            raise HTTPException(status_code=401, detail="Email ou mot de passe incorrect")
 
-    if not _verify_password(req.password, user["password_hash"]):
-        raise HTTPException(status_code=401, detail="Email ou mot de passe incorrect")
+        if not _verify_password(req.password, user["password_hash"]):
+            raise HTTPException(status_code=401, detail="Email ou mot de passe incorrect")
 
-    # Si l'ancien hash est SHA-256 et bcrypt est dispo, migrer le hash
-    if _HAS_BCRYPT and not user["password_hash"].startswith("$2"):
-        try:
-            new_hash = _hash_password(req.password)
-            from database.models import UserDB
-            from sqlalchemy import update
-            with repo.session() as session:
-                session.execute(
-                    update(UserDB)
-                    .where(UserDB.id == user["id"])
-                    .values(password_hash=new_hash)
-                )
-            logger.info(f"Password hash migrated to bcrypt for user {user['email']}")
-        except Exception as e:
-            logger.warning(f"Failed to migrate password hash: {e}")
+        # Si l'ancien hash est SHA-256 et bcrypt est dispo, migrer le hash
+        if _HAS_BCRYPT and not user["password_hash"].startswith("$2"):
+            try:
+                new_hash = _hash_password(req.password)
+                from database.models import UserDB
+                from sqlalchemy import update
+                with repo.session() as session:
+                    session.execute(
+                        update(UserDB)
+                        .where(UserDB.id == user["id"])
+                        .values(password_hash=new_hash)
+                    )
+                logger.info(f"Password hash migrated to bcrypt for user {user['email']}")
+            except Exception as e:
+                logger.warning(f"Failed to migrate password hash: {e}")
 
-    token = create_jwt({
-        "sub": user["id"],
-        "email": user["email"],
-        "name": user["name"],
-        "iat": int(time.time()),
-        "exp": int(time.time()) + 86400 * 7,  # 7 days
-    })
+        token = create_jwt({
+            "sub": user["id"],
+            "email": user["email"],
+            "name": user["name"],
+            "iat": int(time.time()),
+            "exp": int(time.time()) + 86400 * 7,  # 7 days
+        })
 
-    return {
-        "token": token,
-        "user": {"id": user["id"], "email": user["email"], "name": user["name"]}
-    }
+        return {
+            "token": token,
+            "user": {"id": user["id"], "email": user["email"], "name": user["name"]}
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Login error: {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur connexion: {str(e)}")
 
 
 @router.post("/register")
 async def register(req: RegisterRequest):
     """Register a new user and return JWT token."""
-    existing = repo.get_user_by_email(req.email)
-    if existing:
-        raise HTTPException(status_code=400, detail="Cet email est deja utilise")
+    try:
+        existing = repo.get_user_by_email(req.email)
+        if existing:
+            raise HTTPException(status_code=400, detail="Cet email est deja utilise")
 
-    password_hash = _hash_password(req.password)
-    user = repo.create_user(email=req.email, name=req.name, password_hash=password_hash)
+        password_hash = _hash_password(req.password)
+        user = repo.create_user(email=req.email, name=req.name, password_hash=password_hash)
 
-    token = create_jwt({
-        "sub": user["id"],
-        "email": user["email"],
-        "name": user["name"],
-        "iat": int(time.time()),
-        "exp": int(time.time()) + 86400 * 7,
-    })
+        token = create_jwt({
+            "sub": user["id"],
+            "email": user["email"],
+            "name": user["name"],
+            "iat": int(time.time()),
+            "exp": int(time.time()) + 86400 * 7,
+        })
 
-    return {
-        "token": token,
-        "user": {"id": user["id"], "email": user["email"], "name": user["name"]}
-    }
+        return {
+            "token": token,
+            "user": {"id": user["id"], "email": user["email"], "name": user["name"]}
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Register error: {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur inscription: {str(e)}")
 
 
 @router.get("/me")

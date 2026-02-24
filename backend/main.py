@@ -3,7 +3,10 @@ Backend FastAPI pour Agents Métiers Web.
 App setup, CORS, and router registration.
 """
 import os
+import logging
 from fastapi import FastAPI
+
+logger = logging.getLogger(__name__)
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
@@ -43,6 +46,17 @@ app.include_router(actions_router)
 app.include_router(fiches_router)
 app.include_router(veille_router)
 app.include_router(regional_router)
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Ensure all DB tables exist at startup."""
+    from .deps import repo
+    try:
+        repo.init_db()
+        logger.info("Database tables verified/created at startup")
+    except Exception as e:
+        logger.error(f"Failed to init DB tables at startup: {e}")
 
 
 @app.get("/health")
