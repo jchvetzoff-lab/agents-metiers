@@ -168,23 +168,44 @@ async def get_fiches(
                     score = 0
                     search_n = _normalize_text(search)
 
+                    # Helper: check if token starts a word in text
+                    def _word_start(text: str, token: str) -> bool:
+                        idx = text.find(token)
+                        return idx == 0 or (idx > 0 and not text[idx - 1].isalnum())
+
                     if search_n == code_n:
                         score += 1000
                     elif search_n in code_n:
                         score += 500
                     if search_n == nom_m_n:
                         score += 800
+                    elif _word_start(nom_m_n, search_n):
+                        score += 600
                     elif search_n in nom_m_n:
-                        score += 300
-                    if search_n in nom_e_n:
                         score += 200
-                    if search_n in desc_c_n:
+                    if search_n == nom_f_n:
+                        score += 800
+                    elif _word_start(nom_f_n, search_n):
+                        score += 600
+                    elif search_n in nom_f_n:
+                        score += 200
+                    if _word_start(nom_e_n, search_n):
+                        score += 400
+                    elif search_n in nom_e_n:
+                        score += 150
+                    if _word_start(desc_c_n, search_n):
                         score += 100
-                    if search_n in desc_n:
+                    elif search_n in desc_c_n:
                         score += 50
+                    if search_n in desc_n:
+                        score += 20
                     for token in tokens:
                         if nom_m_n.startswith(token):
                             score += 150
+                        # Bonus for word-start match in any name field
+                        for name_field in [nom_m_n, nom_f_n, nom_e_n]:
+                            if _word_start(name_field, token):
+                                score += 100
 
                     scored_fiches.append((score, f))
 
