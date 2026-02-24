@@ -238,15 +238,17 @@ export default function DashboardPage() {
         <div className="grid md:grid-cols-2 gap-8 mb-16">
           <div className="sojai-card">
             <h3 className="text-xl font-serif font-bold mb-4 text-center">
-              Repartition par statut
+              Répartition par statut
             </h3>
             <div className="h-56 md:h-72">
               {stats && stats.total > 0 ? (() => {
                 const pieData = [
-                  { name: "Brouillons", value: stats.brouillons, color: "#4F46E5" },
-                  { name: "En validation", value: stats.en_validation, color: "#06B6D4" },
-                  { name: "Publiees", value: stats.publiees, color: "#F97316" },
-                  { name: "Archivees", value: stats.archivees, color: "#78716C" },
+                  { name: "Brouillons", value: stats.brouillons, color: "#6B7280" },
+                  { name: "Enrichis", value: stats.enrichis, color: "#3B82F6" },
+                  { name: "Validés", value: stats.valides, color: "#06B6D4" },
+                  { name: "En validation", value: stats.en_validation, color: "#F97316" },
+                  { name: "Publiées", value: stats.publiees, color: "#10B981" },
+                  { name: "Archivées", value: stats.archivees, color: "#78716C" },
                 ].filter(d => d.value > 0);
                 return (
                 <ResponsiveContainer width="100%" height="100%">
@@ -273,7 +275,7 @@ export default function DashboardPage() {
                 );
               })() : (
                 <div className="h-full flex items-center justify-center text-gray-400">
-                  Aucune donnee
+                  Aucune donnée
                 </div>
               )}
             </div>
@@ -288,22 +290,24 @@ export default function DashboardPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={[
-                      { etape: "Brouillons", count: stats.brouillons, fill: "#4F46E5" },
-                      { etape: "En validation", count: stats.en_validation, fill: "#06B6D4" },
-                      { etape: "Publiees", count: stats.publiees, fill: "#F97316" },
-                      { etape: "Archivees", count: stats.archivees, fill: "#78716C" },
+                      { etape: "Brouillons", count: stats.brouillons, fill: "#6B7280" },
+                      { etape: "Enrichis", count: stats.enrichis, fill: "#3B82F6" },
+                      { etape: "Validés", count: stats.valides, fill: "#06B6D4" },
+                      { etape: "En validation", count: stats.en_validation, fill: "#F97316" },
+                      { etape: "Publiées", count: stats.publiees, fill: "#10B981" },
+                      { etape: "Archivées", count: stats.archivees, fill: "#78716C" },
                     ]}
                     margin={{ top: 10, right: 10, left: -10, bottom: 5 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
                     <XAxis
                       dataKey="etape"
-                      tick={{ fontSize: 12, fill: "#6B7280" }}
+                      tick={{ fontSize: 12, fill: "#9CA3AF" }}
                       axisLine={false}
                       tickLine={false}
                     />
                     <YAxis
-                      tick={{ fontSize: 11, fill: "#6B7280" }}
+                      tick={{ fontSize: 11, fill: "#9CA3AF" }}
                       axisLine={false}
                       tickLine={false}
                     />
@@ -313,9 +317,11 @@ export default function DashboardPage() {
                     />
                     <Bar dataKey="count" radius={[6, 6, 0, 0]} barSize={50}>
                       {[
-                        { fill: "#4F46E5" },
+                        { fill: "#6B7280" },
+                        { fill: "#3B82F6" },
                         { fill: "#06B6D4" },
                         { fill: "#F97316" },
+                        { fill: "#10B981" },
                         { fill: "#78716C" },
                       ].map((entry, i) => (
                         <Cell key={i} fill={entry.fill} />
@@ -325,7 +331,7 @@ export default function DashboardPage() {
                 </ResponsiveContainer>
               ) : (
                 <div className="h-full flex items-center justify-center text-gray-400">
-                  Aucune donnee
+                  Aucune donnée
                 </div>
               )}
             </div>
@@ -436,8 +442,25 @@ export default function DashboardPage() {
         </StaggerContainer>
 
         {/* Footer */}
-        <div className="mt-12 text-center text-sm text-gray-400">
-          Donnees chargees au chargement de la page
+        <div className="mt-12 pt-8 border-t border-white/[0.06] text-center">
+          <div className="flex items-center justify-center gap-2 text-sm text-gray-400">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>Dernière mise à jour :</span>
+            <span className="text-white font-medium">
+              {lastUpdate ? lastUpdate.toLocaleDateString('fr-FR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              }) : 'N/A'}
+            </span>
+          </div>
+          <div className="mt-2 text-xs text-gray-500">
+            Données synchronisées avec l'API agents-métiers
+          </div>
         </div>
       </div>
     </main>
