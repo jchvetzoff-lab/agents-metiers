@@ -58,15 +58,18 @@ export default function ActionsPage() {
   const [activeStep, setActiveStep] = useState<WorkflowStep>("enrichir");
   const [activeTool, setActiveTool] = useState<ToolTab | null>(null);
 
-  // Clicking a workflow step deselects tools, and vice versa
   function handleWorkflowChange(step: WorkflowStep) {
     setActiveStep(step);
     setActiveTool(null);
   }
 
   function handleToolChange(tool: ToolTab) {
-    setActiveTool(tool);
-    // Don't clear activeStep so the workflow bar keeps its state visually
+    if (activeTool === tool) {
+      // Toggle off — go back to pipeline
+      setActiveTool(null);
+    } else {
+      setActiveTool(tool);
+    }
   }
 
   const showingTool = activeTool !== null;
@@ -77,7 +80,7 @@ export default function ActionsPage() {
       <div className="bg-[#0c0c1a]/80 border-b border-white/[0.06]">
         <div className="max-w-5xl mx-auto px-4 md:px-8 py-8">
           <FadeInView>
-            <div className="flex items-center gap-4 mb-2">
+            <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-600 to-cyan-500 flex items-center justify-center shadow-lg">
                 <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -92,56 +95,88 @@ export default function ActionsPage() {
         </div>
       </div>
 
-      {/* Pipeline fiches — workflow bar */}
-      <div className="bg-[#0c0c1a]/60 border-b border-white/[0.06]">
-        <div className="max-w-5xl mx-auto px-4 md:px-8 pt-6 pb-2">
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Pipeline fiches</span>
-            <div className="flex-1 h-px bg-white/[0.06]" />
-          </div>
-          <WorkflowBar active={showingTool ? undefined : activeStep} onChange={handleWorkflowChange} />
-        </div>
-      </div>
+      <div className="max-w-5xl mx-auto px-4 md:px-8 py-6 space-y-8">
 
-      {/* Outils — tab bar */}
-      <div className="border-b border-white/[0.06]">
-        <div className="max-w-5xl mx-auto px-4 md:px-8 pt-4 pb-0">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Outils</span>
+        {/* ═══ SECTION 1 : Pipeline fiches ═══ */}
+        <section>
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-8 h-8 rounded-lg bg-indigo-500/15 flex items-center justify-center">
+              <svg className="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-white uppercase tracking-wider">Pipeline fiches</h2>
+              <p className="text-xs text-gray-500">Enrichissement, validation et publication des fiches metiers</p>
+            </div>
             <div className="flex-1 h-px bg-white/[0.06]" />
           </div>
-          <div className="flex gap-1">
+
+          <div className={`rounded-2xl border p-6 transition-all duration-300 ${
+            !showingTool 
+              ? "border-indigo-500/20 bg-[#0c0c1a]/80" 
+              : "border-white/[0.06] bg-[#0c0c1a]/40 opacity-60 hover:opacity-100"
+          }`}>
+            <WorkflowBar active={showingTool ? undefined : activeStep} onChange={handleWorkflowChange} />
+          </div>
+
+          {/* Pipeline content */}
+          {!showingTool && (
+            <div className="mt-6">
+              {activeStep === "enrichir" && <TabEnrichir />}
+              {activeStep === "valider" && <TabValider />}
+              {activeStep === "publier" && <TabPublier />}
+              {activeStep === "variantes" && <TabVariantesExport />}
+            </div>
+          )}
+        </section>
+
+        {/* ═══ SECTION 2 : Outils ═══ */}
+        <section>
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-8 h-8 rounded-lg bg-cyan-500/15 flex items-center justify-center">
+              <svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-white uppercase tracking-wider">Outils</h2>
+              <p className="text-xs text-gray-500">Synchronisation, veille, export et historique</p>
+            </div>
+            <div className="flex-1 h-px bg-white/[0.06]" />
+          </div>
+
+          <div className={`grid grid-cols-2 md:grid-cols-4 gap-3 ${showingTool ? "" : "mb-0"}`}>
             {TOOL_TABS.map((tab) => {
               const isActive = activeTool === tab.id;
               return (
                 <button
                   key={tab.id}
                   onClick={() => handleToolChange(tab.id)}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-t-lg text-sm font-medium transition-all border-b-2 ${
+                  className={`flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200 border ${
                     isActive
-                      ? "text-indigo-400 border-indigo-500 bg-white/[0.04]"
-                      : "text-gray-500 border-transparent hover:text-gray-300 hover:bg-white/[0.02]"
+                      ? "text-cyan-400 border-cyan-500/30 bg-cyan-500/10 shadow-lg shadow-cyan-500/5"
+                      : "text-gray-400 border-white/[0.06] bg-[#0c0c1a]/60 hover:text-white hover:border-white/[0.12] hover:bg-white/[0.04]"
                   }`}
                 >
                   {tab.icon}
-                  <span className="hidden sm:inline">{tab.label}</span>
+                  {tab.label}
                 </button>
               );
             })}
           </div>
-        </div>
-      </div>
 
-      {/* Content */}
-      <div className="max-w-5xl mx-auto px-4 md:px-8 py-8">
-        {!showingTool && activeStep === "enrichir" && <TabEnrichir />}
-        {!showingTool && activeStep === "valider" && <TabValider />}
-        {!showingTool && activeStep === "publier" && <TabPublier />}
-        {!showingTool && activeStep === "variantes" && <TabVariantesExport />}
-        {activeTool === "sync" && <TabSynchronisation />}
-        {activeTool === "veille" && <TabVeilleRome />}
-        {activeTool === "exporter" && <TabExporter />}
-        {activeTool === "historique" && <TabHistorique />}
+          {/* Tool content */}
+          {showingTool && (
+            <div className="mt-6">
+              {activeTool === "sync" && <TabSynchronisation />}
+              {activeTool === "veille" && <TabVeilleRome />}
+              {activeTool === "exporter" && <TabExporter />}
+              {activeTool === "historique" && <TabHistorique />}
+            </div>
+          )}
+        </section>
       </div>
     </main>
   );
