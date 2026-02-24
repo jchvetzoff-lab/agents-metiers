@@ -119,12 +119,12 @@ export default function WorkflowBar({ active, onChange }: WorkflowBarProps) {
             >
               {/* Circle */}
               <div
-                className={`relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
+                className={`relative z-20 w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
                   isActive
                     ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 scale-110"
                     : isPast
-                      ? "bg-indigo-600/20 text-indigo-400 border-2 border-indigo-500/40"
-                      : "bg-white/[0.04] text-gray-500 border border-white/[0.08] group-hover:border-indigo-500/30 group-hover:text-gray-300"
+                      ? "bg-[#0c0c1a] text-indigo-400 border-2 border-indigo-500/40"
+                      : "bg-[#0c0c1a] text-gray-500 border border-white/[0.08] group-hover:border-indigo-500/30 group-hover:text-gray-300"
                 }`}
               >
                 {isPast ? (
