@@ -103,8 +103,11 @@ def _compute_score(fiche) -> int:
     # Section Conditions de travail
     if fiche.conditions_travail:
         score += 4
-    if hasattr(fiche, 'conditions_travail_detaillees') and fiche.conditions_travail_detaillees and getattr(fiche.conditions_travail_detaillees, 'horaires', None):
-        score += 3
+    ctd = getattr(fiche, 'conditions_travail_detaillees', None)
+    if ctd:
+        horaires = ctd.get('horaires') if isinstance(ctd, dict) else getattr(ctd, 'horaires', None)
+        if horaires:
+            score += 3
     # Section Mobilité (le modèle utilise metiers_proches: List[str])
     if fiche.metiers_proches and len(fiche.metiers_proches) > 0:
         score += 8

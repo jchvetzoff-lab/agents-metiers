@@ -36,20 +36,22 @@ class AgentValidateurFiche(BaseAgent):
         self.config = get_config()
 
     async def _call_claude(self, **kwargs):
-        """Call Claude API with automatic retry on overload (529)."""
+        """Call Claude API with streaming + automatic retry on overload (529)."""
         max_retries = 3
-        for attempt in range(max_retries):
+        for attempt in range(max_retries + 1):
             try:
-                return await self.claude_client.messages.create(**kwargs)
+                # Use streaming to avoid SDK 10-min timeout restriction
+                async with self.claude_client.messages.stream(**kwargs) as stream:
+                    response = await stream.get_final_message()
+                return response
             except Exception as e:
                 error_str = str(e)
-                if "529" in error_str or "overloaded" in error_str.lower():
+                if ("529" in error_str or "overloaded" in error_str.lower()) and attempt < max_retries:
                     wait = 10 * (attempt + 1)
                     self.logger.warning(f"Claude overloaded, retry {attempt+1}/{max_retries} in {wait}s...")
                     await asyncio.sleep(wait)
                     continue
                 raise
-        return await self.claude_client.messages.create(**kwargs)
 
     def get_description(self) -> str:
         return (
@@ -140,47 +142,55 @@ class AgentValidateurFiche(BaseAgent):
         # Construire le contenu complet de la fiche pour l'analyse
         contenu_fiche = self._construire_contenu_complet(fiche)
 
-        prompt = f"""Tu es un expert en validation de fiches métiers. Analyse cette fiche complète et évalue-la selon 4 critères précis.
+        prompt = f"""Tu es un auditeur qualité spécialisé en fiches métiers ROME. Tu dois produire un rapport de validation CONCRET et ACTIONNABLE.
 
-FICHE À ANALYSER :
+FICHE À AUDITER :
 {contenu_fiche}
 
-Évalue selon ces 4 critères et retourne UNIQUEMENT un objet JSON valide :
+CONSIGNES STRICTES :
+- Sois SÉVÈRE mais JUSTE. Une fiche "correcte" = 55-65, pas 80+.
+- Chaque problème doit citer le CHAMP EXACT concerné et expliquer POURQUOI c'est un problème.
+- Chaque suggestion doit être ACTIONNABLE (pas "améliorer la description" mais "ajouter les horaires typiques dans conditions_travail_detaillees").
+- Score 90+ = EXCEPTIONNEL, réservé aux fiches quasi-parfaites.
+
+Retourne UNIQUEMENT un objet JSON valide :
 
 {{
     "criteres": {{
         "completude": {{
             "score": <0-100>,
-            "commentaire": "Analyse de la complétude - tous les 13 champs clés sont-ils remplis ? (description, missions, compétences, compétences_transversales, savoirs, formations, salaires, perspectives, conditions_travail, mobilite, profil_riasec/traits/aptitudes, domaine_professionnel, sites_utiles)"
+            "champs_presents": <nombre de champs remplis parmi les 13>,
+            "champs_manquants": ["liste des champs vides ou insuffisants"],
+            "commentaire": "Verdict complétude. 13 champs attendus : description, missions_principales, competences, competences_transversales, savoirs, formations, salaires, perspectives, conditions_travail, metiers_proches, profil_riasec+traits+aptitudes, domaine_professionnel, sites_utiles"
         }},
         "qualite": {{
             "score": <0-100>,
-            "commentaire": "Analyse de la qualité rédactionnelle - français correct, phrases claires, pas de répétitions, pas de contenu générique/vide de sens ?"
+            "commentaire": "Analyse : français correct ? Phrases claires et non génériques ? Pas de répétitions ? Contenu spécifique au métier (pas du copier-coller générique) ? Verbes d'action dans les missions ?"
         }},
         "coherence": {{
             "score": <0-100>,
-            "commentaire": "Analyse de la cohérence - les compétences correspondent au métier, salaires réalistes France 2025, formations mènent au métier, profil RIASEC cohérent ?"
+            "commentaire": "Les compétences correspondent-elles VRAIMENT au métier ? Les formations mènent-elles logiquement au poste ? Les salaires sont-ils réalistes France 2025 ? Le profil RIASEC est-il cohérent avec le type de métier ?"
         }},
         "exactitude": {{
             "score": <0-100>,
-            "commentaire": "Analyse de l'exactitude factuelle - infos factuellement correctes (salaires bonne fourchette, sites web réels, appellations existantes) ?"
+            "commentaire": "Données factuellement vérifiables : fourchettes salariales plausibles ? Sites web existants (pas de liens inventés) ? Appellations réellement utilisées ? Certifications qui existent ?"
         }}
     }},
     "problemes": [
-        "Liste des vrais problèmes détectés dans la fiche"
+        "Champ 'X' : description du problème concret",
+        "... (lister TOUS les vrais problèmes, minimum 2 même pour une bonne fiche)"
     ],
     "suggestions": [
-        "Liste des suggestions d'amélioration concrètes"
+        "Action concrète et spécifique pour améliorer un point précis",
+        "... (minimum 3 suggestions actionnables)"
     ]
 }}
 
-BARÈME STRICT :
-- Complétude : 100 = tous les 13 champs remplis substantiellement, 50 = moitié remplie, 0 = quasiment vide
-- Qualité : 100 = français parfait, style professionnel, 50 = quelques erreurs, 0 = beaucoup d'erreurs
-- Cohérence : 100 = tout cohérent avec le métier, 50 = quelques incohérences, 0 = incohérences majeures  
-- Exactitude : 100 = données factuellement correctes, 50 = quelques erreurs, 0 = erreurs importantes
-
-Sois critique et exigeant. Une fiche moyenne mérite 60-70, pas 90+."""
+BARÈME DE RÉFÉRENCE :
+- Complétude : -8 pts par champ manquant parmi les 13. Un champ avec 1-2 éléments génériques = -4 pts.
+- Qualité : -10 pts si contenu générique (phrases passe-partout applicables à n'importe quel métier). -5 pts par erreur de français.
+- Cohérence : -15 pts si salaires incohérents avec le marché. -10 pts si formations ne correspondent pas au métier.
+- Exactitude : -20 pts par site web inventé. -10 pts par donnée manifestement fausse."""
 
         try:
             response = await self._call_claude(
@@ -296,8 +306,8 @@ Tendance: {fiche.perspectives.tendance.value}
 === CONDITIONS DE TRAVAIL ===
 {chr(10).join(f"- {condition}" for condition in fiche.conditions_travail) or '[VIDE]'}
 
-=== MOBILITÉ ===
-Métiers proches: {', '.join(getattr(fiche, 'mobilite', {}).get('metiers_proches', [])) if hasattr(fiche, 'mobilite') and fiche.mobilite else '[VIDE]'}
+=== MOBILITÉ (métiers proches) ===
+{', '.join(fiche.metiers_proches) if fiche.metiers_proches else '[VIDE]'}
 
 === PROFIL RIASEC ===
 {json.dumps(fiche.profil_riasec, indent=2) if fiche.profil_riasec else '[VIDE]'}
@@ -315,7 +325,22 @@ Métiers proches: {', '.join(getattr(fiche, 'mobilite', {}).get('metiers_proches
 {chr(10).join(f"- {site.get('nom', 'N/A')}: {site.get('url', 'N/A')}" for site in fiche.sites_utiles) if fiche.sites_utiles else '[VIDE]'}
 
 === AUTRES APPELLATIONS ===
-{chr(10).join(f"- {appellation}" for appellation in fiche.autres_appellations) or '[VIDE]'}"""
+{chr(10).join(f"- {appellation}" for appellation in fiche.autres_appellations) or '[VIDE]'}
+
+=== COMPÉTENCES DIMENSIONS ===
+{json.dumps(fiche.competences_dimensions, indent=2) if fiche.competences_dimensions else '[VIDE]'}
+
+=== TYPES DE CONTRATS ===
+{json.dumps(fiche.types_contrats, indent=2) if fiche.types_contrats else '[VIDE]'}
+
+=== CONDITIONS TRAVAIL DÉTAILLÉES ===
+{json.dumps(fiche.conditions_travail_detaillees, indent=2) if fiche.conditions_travail_detaillees else '[VIDE]'}
+
+=== NIVEAU FORMATION ===
+{fiche.niveau_formation or '[VIDE]'}
+
+=== STATUTS PROFESSIONNELS ===
+{', '.join(fiche.statuts_professionnels) if fiche.statuts_professionnels else '[VIDE]'}"""
 
         return contenu
 
