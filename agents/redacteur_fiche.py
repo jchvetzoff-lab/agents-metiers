@@ -448,16 +448,44 @@ Notes IMPORTANTES :
         try:
             response = await self.claude_client.messages.create(
                 model=self.config.api.claude_model,
-                max_tokens=8192,
+                max_tokens=16384,
                 messages=[{"role": "user", "content": prompt}]
             )
 
             content = response.content[0].text.strip()
 
+            # Check for truncation
+            if response.stop_reason == "max_tokens":
+                self.logger.warning(f"Reponse tronquee pour {nom_masculin} (max_tokens atteint). Reparation JSON...")
+                repair = content.rstrip()
+                open_braces = repair.count('{') - repair.count('}')
+                open_brackets = repair.count('[') - repair.count(']')
+                # Remove trailing incomplete value after last comma
+                if repair and repair[-1] not in ']}",0123456789':
+                    last_comma = repair.rfind(',')
+                    if last_comma > 0:
+                        repair = repair[:last_comma]
+                repair += ']' * max(0, open_brackets) + '}' * max(0, open_braces)
+                content = repair
+
             # Extraire le JSON de la réponse
             json_match = re.search(r'\{[\s\S]*\}', content)
             if json_match:
-                data = json.loads(json_match.group())
+                raw_json = json_match.group()
+                try:
+                    data = json.loads(raw_json)
+                except json.JSONDecodeError:
+                    self.logger.warning(f"JSON invalide pour {nom_masculin}, nettoyage...")
+                    raw_json = re.sub(r',\s*([}\]])', r'\1', raw_json)
+                    data = json.loads(raw_json)
+
+                # Log missing fields
+                expected = ["traits_personnalite", "aptitudes", "profil_riasec", "sites_utiles",
+                            "mobilite", "domaine_professionnel", "autres_appellations"]
+                missing = [f for f in expected if not data.get(f)]
+                if missing:
+                    self.logger.warning(f"Champs manquants pour {nom_masculin}: {', '.join(missing)}")
+
                 # Validate required fields and types
                 validation_errors = []
                 for field in ("description", "competences", "formations", "salaires"):
