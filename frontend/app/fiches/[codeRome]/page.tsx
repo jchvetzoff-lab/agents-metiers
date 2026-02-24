@@ -563,16 +563,16 @@ export default function FicheDetailPage() {
   const dDescriptionCourte = v?.description_courte || fiche.description_courte;
   const dCompetences = v?.competences?.length ? v.competences : fiche.competences;
   const dCompetencesTransversales = v?.competences_transversales?.length ? v.competences_transversales : fiche.competences_transversales;
-  const dMissions = v?.missions_principales?.length ? v.missions_principales : fiche.missions_principales;
+  const dMissions = toStringArray(v?.missions_principales?.length ? v.missions_principales : fiche.missions_principales);
   const dAcces = v?.acces_metier || fiche.acces_metier;
-  const dSavoirs = v?.savoirs?.length ? v.savoirs : fiche.savoirs;
-  const dFormations = v?.formations?.length ? v.formations : fiche.formations;
-  const dCertifications = v?.certifications?.length ? v.certifications : fiche.certifications;
-  const dConditions = v?.conditions_travail?.length ? v.conditions_travail : fiche.conditions_travail;
-  const dEnvironnements = v?.environnements?.length ? v.environnements : fiche.environnements;
-  const dAutresAppellations = v?.autres_appellations?.length ? v.autres_appellations : fiche.autres_appellations;
-  const dTraitsPersonnalite = v?.traits_personnalite?.length ? v.traits_personnalite : fiche.traits_personnalite;
-  const dSecteurs = v?.secteurs_activite?.length ? v.secteurs_activite : fiche.secteurs_activite;
+  const dSavoirs = toStringArray(v?.savoirs?.length ? v.savoirs : fiche.savoirs);
+  const dFormations = toStringArray(v?.formations?.length ? v.formations : fiche.formations);
+  const dCertifications = toStringArray(v?.certifications?.length ? v.certifications : fiche.certifications);
+  const dConditions = toStringArray(v?.conditions_travail?.length ? v.conditions_travail : fiche.conditions_travail);
+  const dEnvironnements = toStringArray(v?.environnements?.length ? v.environnements : fiche.environnements);
+  const dAutresAppellations = toStringArray(v?.autres_appellations?.length ? v.autres_appellations : fiche.autres_appellations);
+  const dTraitsPersonnalite = toStringArray(v?.traits_personnalite?.length ? v.traits_personnalite : fiche.traits_personnalite);
+  const dSecteurs = toStringArray(v?.secteurs_activite?.length ? v.secteurs_activite : fiche.secteurs_activite);
   const dEvolution5ans = v?.evolution_5ans || fiche.perspectives?.evolution_5ans;
   const effectiveAge = appliedVariante?.tranche_age || "18+";
 
