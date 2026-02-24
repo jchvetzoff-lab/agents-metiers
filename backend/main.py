@@ -108,9 +108,16 @@ async def debug_enrich(code_rome: str):
             results["nb_keys"] = len(contenu.keys())
         else:
             results["contenu"] = "None - generation failed"
+            # Check agent logs
+            import io, logging as _lg
+            buf = io.StringIO()
+            h = _lg.StreamHandler(buf)
+            h.setLevel(_lg.DEBUG)
+            agent.logger.addHandler(h)
+            results["hint"] = "Check traceback or agent logs"
     except Exception as e:
         results["enrich_error"] = f"{type(e).__name__}: {e}"
-        results["traceback"] = traceback.format_exc()[-800:]
+        results["traceback"] = traceback.format_exc()[-1500:]
     
     return results
 
@@ -146,6 +153,10 @@ async def debug_env():
         "jwt_secret_set": bool(os.getenv("JWT_SECRET", "")),
     }
 
+
+@app.get("/api/build-id")
+async def build_id():
+    return {"build": "2026-02-24-v2-fix-recursion"}
 
 @app.get("/api/git-version")
 async def git_version():
