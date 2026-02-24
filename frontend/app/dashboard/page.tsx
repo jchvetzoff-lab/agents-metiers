@@ -23,7 +23,7 @@ export default function DashboardPage() {
       try {
         const [statsData, logsData] = await Promise.all([
           api.getStats(),
-          api.getAuditLogs(15),
+          api.getAuditLogs({ limit: 15 }),
         ]);
         setStats(statsData);
         setLogs(logsData.logs);

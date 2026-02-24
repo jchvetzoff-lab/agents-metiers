@@ -35,10 +35,29 @@ async def get_stats():
 
 
 @router.get("/audit-logs")
-async def get_audit_logs(limit: int = Query(15, ge=1, le=100)):
-    """Récupère les logs d'audit."""
+async def get_audit_logs(
+    limit: int = Query(15, ge=1, le=200),
+    search: Optional[str] = Query(None),
+    type_evenement: Optional[str] = Query(None),
+    agent: Optional[str] = Query(None),
+    since: Optional[str] = Query(None),
+):
+    """Récupère les logs d'audit avec filtres."""
     try:
-        logs = repo.get_audit_logs(limit=limit)
+        from database.models import TypeEvenement as TE
+        te = None
+        if type_evenement:
+            try:
+                te = TE(type_evenement)
+            except ValueError:
+                pass
+        logs = repo.get_audit_logs(
+            limit=limit,
+            type_evenement=te,
+            search=search,
+            agent=agent,
+            since=since,
+        )
         return {
             "total": len(logs),
             "logs": [
@@ -47,7 +66,9 @@ async def get_audit_logs(limit: int = Query(15, ge=1, le=100)):
                     "type_evenement": log.type_evenement.value,
                     "description": log.description,
                     "code_rome": log.code_rome,
-                    "timestamp": log.timestamp
+                    "agent": log.agent,
+                    "validateur": log.validateur,
+                    "timestamp": log.timestamp,
                 }
                 for log in logs
             ]

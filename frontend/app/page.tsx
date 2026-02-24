@@ -195,30 +195,39 @@ export default function Home() {
           <FadeInView>
             <h2 className="text-3xl md:text-4xl font-bold text-center text-white mb-12">Chiffres clés</h2>
           </FadeInView>
-          <StaggerContainer stagger={0.1} className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+          <StaggerContainer stagger={0.1} className="grid grid-cols-2 md:grid-cols-5 gap-4 md:gap-6">
             <div className="bg-white/5 rounded-2xl border border-white/[0.06] p-6 text-center hover:bg-white/[0.08] transition-colors">
               <div className="text-2xl md:text-3xl font-bold text-indigo-400 mb-1">
                 <CountUp value={stats?.total || 0} />
               </div>
-              <div className="text-sm text-gray-400">Fiches métiers</div>
-            </div>
-            <div className="bg-white/5 rounded-2xl border border-white/[0.06] p-6 text-center hover:bg-white/[0.08] transition-colors">
-              <div className="text-2xl md:text-3xl font-bold text-indigo-400 mb-1">
-                <CountUp value={stats?.enrichis || 0} />
-              </div>
-              <div className="text-sm text-gray-400">Fiches enrichies</div>
-            </div>
-            <div className="bg-white/5 rounded-2xl border border-white/[0.06] p-6 text-center hover:bg-white/[0.08] transition-colors">
-              <div className="text-2xl md:text-3xl font-bold text-indigo-400 mb-1">
-                <CountUp value={stats?.publiees || 0} />
-              </div>
-              <div className="text-sm text-gray-400">Fiches publiées</div>
+              <div className="text-sm text-gray-400">Fiches ROME</div>
             </div>
             <div className="bg-white/5 rounded-2xl border border-white/[0.06] p-6 text-center hover:bg-white/[0.08] transition-colors">
               <div className="text-2xl md:text-3xl font-bold text-indigo-400 mb-1">
                 <CountUp value={13} />
               </div>
-              <div className="text-sm text-gray-400">Régions couvertes</div>
+              <div className="text-sm text-gray-400">Sections par fiche</div>
+            </div>
+            <div className="bg-white/5 rounded-2xl border border-white/[0.06] p-6 text-center hover:bg-white/[0.08] transition-colors">
+              <div className="text-2xl md:text-3xl font-bold text-indigo-400 mb-1">
+                <CountUp value={3} />
+              </div>
+              <div className="text-sm text-gray-400">APIs connectees</div>
+              <div className="text-[10px] text-gray-500 mt-1">France Travail, INSEE, ROME</div>
+            </div>
+            <div className="bg-white/5 rounded-2xl border border-white/[0.06] p-6 text-center hover:bg-white/[0.08] transition-colors">
+              <div className="text-2xl md:text-3xl font-bold text-indigo-400 mb-1">
+                <CountUp value={13} />
+              </div>
+              <div className="text-sm text-gray-400">Regions couvertes</div>
+              <div className="text-[10px] text-gray-500 mt-1">INSEE metropolitaines</div>
+            </div>
+            <div className="bg-white/5 rounded-2xl border border-white/[0.06] p-6 text-center hover:bg-white/[0.08] transition-colors">
+              <div className="text-2xl md:text-3xl font-bold text-indigo-400 mb-1">
+                <CountUp value={4} />
+              </div>
+              <div className="text-sm text-gray-400">Agents IA</div>
+              <div className="text-[10px] text-gray-500 mt-1">Redacteur, Correcteur, Veille, Salaires</div>
             </div>
           </StaggerContainer>
         </div>
