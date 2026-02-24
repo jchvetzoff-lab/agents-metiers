@@ -14,12 +14,12 @@ export interface FormationLevelConfig {
 }
 
 export const FORMATION_LEVELS: Record<FormationLevel, FormationLevelConfig> = {
-  bac5: { id: "bac5", order: 5, color: "#7C3AED", bgColor: "#F5F3FF", borderColor: "#DDD6FE" },
-  bac3: { id: "bac3", order: 4, color: "#4F46E5", bgColor: "#EEF2FF", borderColor: "#C7D2FE" },
-  bac2: { id: "bac2", order: 3, color: "#06B6D4", bgColor: "#ECFEFF", borderColor: "#A5F3FC" },
-  bac:  { id: "bac",  order: 2, color: "#F97316", bgColor: "#FFF7ED", borderColor: "#FED7AA" },
-  cap:  { id: "cap",  order: 1, color: "#EAB308", bgColor: "#FEFCE8", borderColor: "#FDE68A" },
-  autre:{ id: "autre", order: 0, color: "#6B7280", bgColor: "#F9FAFB", borderColor: "#E5E7EB" },
+  bac5: { id: "bac5", order: 5, color: "#a78bfa", bgColor: "rgba(139,92,246,0.10)", borderColor: "rgba(139,92,246,0.25)" },
+  bac3: { id: "bac3", order: 4, color: "#818cf8", bgColor: "rgba(99,102,241,0.10)", borderColor: "rgba(99,102,241,0.25)" },
+  bac2: { id: "bac2", order: 3, color: "#22d3ee", bgColor: "rgba(34,211,238,0.10)", borderColor: "rgba(34,211,238,0.25)" },
+  bac:  { id: "bac",  order: 2, color: "#fb923c", bgColor: "rgba(251,146,60,0.10)", borderColor: "rgba(251,146,60,0.25)" },
+  cap:  { id: "cap",  order: 1, color: "#facc15", bgColor: "rgba(250,204,21,0.10)", borderColor: "rgba(250,204,21,0.25)" },
+  autre:{ id: "autre", order: 0, color: "#9ca3af", bgColor: "rgba(156,163,175,0.08)", borderColor: "rgba(156,163,175,0.20)" },
 };
 
 const LEVEL_PATTERNS: { level: FormationLevel; pattern: RegExp }[] = [

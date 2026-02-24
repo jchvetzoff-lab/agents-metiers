@@ -119,7 +119,7 @@ class AgentRedacteurFiche(BaseAgent):
             "details": resultats
         }
 
-    async def enrichir_fiche(self, fiche: FicheMetier) -> FicheMetier:
+    async def enrichir_fiche(self, fiche: FicheMetier, instructions: Optional[str] = None) -> FicheMetier:
         """
         Enrichit une fiche existante avec du contenu généré par Claude.
         Si des champs critiques manquent après le premier appel, fait un
@@ -136,7 +136,8 @@ class AgentRedacteurFiche(BaseAgent):
             nom_feminin=fiche.nom_feminin,
             code_rome=fiche.code_rome,
             domaine=fiche.secteurs_activite[0] if fiche.secteurs_activite else "",
-            description_existante=fiche.description if fiche.description else ""
+            description_existante=fiche.description if fiche.description else "",
+            instructions=instructions
         )
 
         if not contenu:
@@ -432,7 +433,8 @@ IMPORTANT :
         nom_feminin: str,
         code_rome: str,
         domaine: str,
-        description_existante: str
+        description_existante: str,
+        instructions: Optional[str] = None
     ) -> Optional[Dict[str, Any]]:
         """
         Génère le contenu complet d'une fiche via Claude API.
@@ -456,7 +458,25 @@ IMPORTANT :
 
         contexte = "\n".join(contexte_parts) if contexte_parts else "Aucun contexte supplémentaire."
 
-        prompt = f"""Tu es un expert en ressources humaines et en rédaction de fiches métiers en France.
+        # Déterminer si c'est un ré-enrichissement
+        est_re_enrichissement = description_existante and len(description_existante.strip()) > 100
+
+        prompt_intro = """Tu es un expert en ressources humaines et en rédaction de fiches métiers en France."""
+        
+        if instructions:
+            prompt_intro += f"""
+
+INSTRUCTIONS PRIORITAIRES DE L'UTILISATEUR :
+{instructions}
+
+Tu DOIS suivre ces instructions en priorité absolue."""
+
+        if est_re_enrichissement:
+            prompt_intro += """
+
+IMPORTANT : Cette fiche a déjà été enrichie. Améliore-la : ajoute des détails, précise les informations vagues, complète les champs manquants. Ne supprime pas d'information existante correcte, enrichis-la."""
+
+        prompt = f"""{prompt_intro}
 Génère le contenu COMPLET pour la fiche métier suivante. Toutes les données doivent être réalistes, vérifiables et basées sur le marché français 2025.
 
 Métier : {nom_masculin}

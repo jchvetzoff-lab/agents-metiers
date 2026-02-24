@@ -48,17 +48,18 @@ export default function FormationPathway({
               {!isLast && (
                 <div
                   className="absolute left-[17px] top-[36px] w-[2px] bottom-0"
-                  style={{ backgroundColor: isEmpty ? "#E5E7EB" : lvl.config.borderColor }}
+                  style={{ backgroundColor: isEmpty ? "rgba(255,255,255,0.08)" : lvl.config.borderColor }}
                 />
               )}
 
               {/* Node */}
               <div className="relative flex-shrink-0 flex flex-col items-center" style={{ width: 36 }}>
                 <div
-                  className="w-[36px] h-[36px] rounded-full flex items-center justify-center text-white text-xs font-bold shadow-sm"
+                  className="w-[36px] h-[36px] rounded-full flex items-center justify-center text-white text-xs font-bold"
                   style={{
-                    backgroundColor: isEmpty ? "#D1D5DB" : lvl.config.color,
-                    boxShadow: isRecommended ? `0 0 0 4px ${lvl.config.borderColor}` : undefined,
+                    backgroundColor: isEmpty ? "rgba(255,255,255,0.08)" : lvl.config.color,
+                    color: isEmpty ? "rgba(255,255,255,0.3)" : "#fff",
+                    boxShadow: isRecommended ? `0 0 0 3px ${lvl.config.borderColor}` : undefined,
                   }}
                 >
                   {lvl.config.order || "?"}
@@ -70,7 +71,7 @@ export default function FormationPathway({
                 <div className="flex items-center gap-2 mb-1">
                   <span
                     className="text-sm font-bold"
-                    style={{ color: isEmpty ? "#9CA3AF" : lvl.config.color }}
+                    style={{ color: isEmpty ? "rgba(255,255,255,0.25)" : lvl.config.color }}
                   >
                     {label}
                   </span>
@@ -83,13 +84,13 @@ export default function FormationPathway({
                         border: `1px solid ${lvl.config.borderColor}`,
                       }}
                     >
-                      <span>&#10024;</span> {t.recommendedLevel}
+                      {t.recommendedLevel}
                     </span>
                   )}
                 </div>
 
                 {isEmpty ? (
-                  <p className="text-xs text-gray-400 italic">{t.noFormationAtLevel}</p>
+                  <p className="text-xs text-gray-600 italic">{t.noFormationAtLevel}</p>
                 ) : (
                   <div className="space-y-1.5">
                     {lvl.formations.map((f, i) => (
@@ -97,9 +98,9 @@ export default function FormationPathway({
                         key={i}
                         className="px-3 py-2 rounded-lg text-sm"
                         style={{
-                          backgroundColor: isRecommended ? lvl.config.bgColor : "#F9FAFB",
-                          border: `1px solid ${isRecommended ? lvl.config.borderColor : "#E5E7EB"}`,
-                          color: "#374151",
+                          backgroundColor: isRecommended ? lvl.config.bgColor : "rgba(255,255,255,0.04)",
+                          border: `1px solid ${isRecommended ? lvl.config.borderColor : "rgba(255,255,255,0.06)"}`,
+                          color: "#e5e7eb",
                         }}
                       >
                         {f}
@@ -115,19 +116,19 @@ export default function FormationPathway({
 
       {/* Access conditions */}
       {accesMetier && (
-        <div className="mt-4 p-4 bg-emerald-50/60 rounded-xl border border-emerald-200/60">
-          <h4 className="text-xs font-bold text-emerald-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+        <div className="mt-4 p-4 rounded-xl" style={{ backgroundColor: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.20)" }}>
+          <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
             <span className="w-1 h-3 rounded-full bg-emerald-500" />
             {t.accessConditions}
           </h4>
-          <p className="text-sm text-gray-600 leading-relaxed">{accesMetier}</p>
+          <p className="text-sm text-gray-400 leading-relaxed">{accesMetier}</p>
         </div>
       )}
 
       {/* Certifications */}
       {certifications.length > 0 && (
         <div className="mt-4">
-          <h4 className="text-xs font-bold text-pink-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+          <h4 className="text-xs font-bold text-pink-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
             <span className="w-1 h-3 rounded-full bg-pink-500" />
             {t.certifications}
           </h4>
@@ -135,7 +136,12 @@ export default function FormationPathway({
             {certifications.map((c, i) => (
               <span
                 key={i}
-                className="px-3 py-1.5 rounded-full text-xs font-medium bg-pink-50 text-pink-700 border border-pink-200"
+                className="px-3 py-1.5 rounded-full text-xs font-medium"
+                style={{
+                  backgroundColor: "rgba(236,72,153,0.10)",
+                  color: "#f472b6",
+                  border: "1px solid rgba(236,72,153,0.25)",
+                }}
               >
                 {c}
               </span>

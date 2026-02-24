@@ -38,10 +38,14 @@ class PublishBatchRequest(BaseModel):
     codes_rome: List[str]
 
 
+class EnrichRequest(BaseModel):
+    instructions: Optional[str] = None
+
+
 # ==================== ENRICH ====================
 
 @router.post("/{code_rome}/enrich")
-async def enrich_fiche(code_rome: str, user: dict = Depends(get_current_user)):
+async def enrich_fiche(code_rome: str, req: Optional[EnrichRequest] = None, user: dict = Depends(get_current_user)):
     """Enrichit une fiche via Claude API."""
     rate_limiter.check(f"enrich:{code_rome}", max_requests=10)
 
@@ -50,17 +54,21 @@ async def enrich_fiche(code_rome: str, user: dict = Depends(get_current_user)):
         if not fiche:
             raise HTTPException(status_code=404, detail=f"Fiche {code_rome} non trouvée")
 
+        # Extraire les instructions optionnelles
+        instructions = req.instructions if req else None
+
         claude_client = get_claude_client()
         from agents.redacteur_fiche import AgentRedacteurFiche
         agent = AgentRedacteurFiche(repository=repo, claude_client=claude_client)
-        fiche_enrichie = await agent.enrichir_fiche(fiche)
+        fiche_enrichie = await agent.enrichir_fiche(fiche, instructions=instructions)
         repo.update_fiche(fiche_enrichie)
 
         return {
             "message": "Fiche enrichie avec succès",
             "code_rome": code_rome,
             "nom": fiche_enrichie.nom_masculin,
-            "version": fiche_enrichie.metadata.version
+            "version": fiche_enrichie.metadata.version,
+            "instructions_utilisees": instructions is not None
         }
     except HTTPException:
         raise
@@ -83,23 +91,44 @@ async def validate_fiche(code_rome: str, user: dict = Depends(get_current_user))
 
         claude_client = get_claude_client()
 
-        # Try using correcteur agent for validation
-        from agents.correcteur_langue import AgentCorrecteurLangue
-        agent = AgentCorrecteurLangue(repository=repo, claude_client=claude_client)
-        rapport = await agent.corriger_fiche(fiche)
+        # Utiliser le nouvel agent validateur
+        from agents.validateur_fiche import AgentValidateurFiche
+        agent = AgentValidateurFiche(repository=repo, claude_client=claude_client)
+        rapport = await agent.valider_fiche(fiche)
+
+        # Mettre à jour la fiche avec les résultats de validation
+        fiche_dict = fiche.model_dump()
+        fiche_dict["validation_ia_score"] = rapport["score"]
+        fiche_dict["validation_ia_date"] = datetime.now()
+        fiche_dict["validation_ia_details"] = rapport
+
+        # Changer le statut selon le score
+        if rapport["score"] >= 70:
+            fiche_dict["metadata"]["statut"] = StatutFiche.EN_VALIDATION.value
+        elif rapport["score"] < 50:
+            fiche_dict["metadata"]["statut"] = StatutFiche.BROUILLON.value
+        # Score entre 50-69 : garder le statut actuel
+
+        fiche_dict["metadata"]["date_maj"] = datetime.now()
+        updated_fiche = FicheMetier(**fiche_dict)
+        repo.update_fiche(updated_fiche)
+
+        # Log audit de la validation
+        from database.models import TypeEvenement
+        repo.log_audit(
+            type_evenement=TypeEvenement.VALIDATION,
+            code_rome=code_rome,
+            agent="AgentValidateurFiche",
+            description=f"Validation IA terminée - Score: {rapport['score']}/100, Verdict: {rapport['verdict']}",
+            donnees_apres=f"Score: {rapport['score']}, Statut: {updated_fiche.metadata.statut.value}"
+        )
 
         return {
             "message": "Validation terminée",
             "code_rome": code_rome,
             "nom": fiche.nom_masculin,
-            "rapport": {
-                "score": rapport.score if hasattr(rapport, 'score') else 75,
-                "verdict": rapport.verdict if hasattr(rapport, 'verdict') else "acceptable",
-                "resume": rapport.resume if hasattr(rapport, 'resume') else "Validation effectuée",
-                "criteres": rapport.criteres if hasattr(rapport, 'criteres') else {},
-                "problemes": rapport.problemes if hasattr(rapport, 'problemes') else [],
-                "suggestions": rapport.suggestions if hasattr(rapport, 'suggestions') else [],
-            }
+            "nouveau_statut": updated_fiche.metadata.statut.value,
+            "rapport": rapport
         }
     except HTTPException:
         raise
