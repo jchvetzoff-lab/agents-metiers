@@ -28,7 +28,7 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <body
-        className={`${inter.variable} ${playfair.variable} font-sans antialiased bg-white text-text-dark relative`}
+        className={`${inter.variable} ${playfair.variable} font-sans antialiased bg-gray-950 text-white relative`}
       >
         <AuthGuard>
           <LayoutShell>

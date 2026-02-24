@@ -18,7 +18,7 @@ export default function GuidePage() {
               </div>
               <h1 className="text-5xl font-serif font-bold gradient-text">Guide</h1>
             </div>
-            <p className="text-xl text-text-muted">
+            <p className="text-xl text-gray-400">
               Guide complet étape par étape pour comprendre et utiliser la plateforme facilement
             </p>
           </div>
@@ -26,30 +26,30 @@ export default function GuidePage() {
 
         {/* Introduction */}
         <FadeInView delay={0.1}>
-          <div className="sojai-card mb-12 bg-indigo-50 border-indigo-200">
+          <div className="sojai-card mb-12 bg-indigo-500/10 border-indigo-500/20">
             <div className="flex items-center gap-3 mb-6">
               <div className="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center shadow-md">
                 <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <h2 className="text-2xl font-bold text-indigo-600">Qu'est-ce qu'Agents Métiers ?</h2>
+              <h2 className="text-2xl font-bold text-indigo-400">Qu'est-ce qu'Agents Métiers ?</h2>
             </div>
-            <p className="text-lg text-gray-700 leading-relaxed mb-4">
+            <p className="text-lg text-gray-300 leading-relaxed mb-4">
               <strong>Agents Métiers</strong> est un outil automatique qui crée et gère les fiches de métiers.
             </p>
             <div className="space-y-3">
               <div className="flex items-start gap-3">
                 <span className="text-2xl">✓</span>
-                <p className="text-lg text-gray-700"><strong>1 584 fiches</strong> de métiers français (référentiel ROME)</p>
+                <p className="text-lg text-gray-300"><strong>1 584 fiches</strong> de métiers français (référentiel ROME)</p>
               </div>
               <div className="flex items-start gap-3">
                 <span className="text-2xl">✓</span>
-                <p className="text-lg text-gray-700"><strong>5 agents intelligents</strong> qui travaillent automatiquement</p>
+                <p className="text-lg text-gray-300"><strong>5 agents intelligents</strong> qui travaillent automatiquement</p>
               </div>
               <div className="flex items-start gap-3">
                 <span className="text-2xl">✓</span>
-                <p className="text-lg text-gray-700"><strong>90 versions</strong> de chaque fiche (langues, formats, âges)</p>
+                <p className="text-lg text-gray-300"><strong>90 versions</strong> de chaque fiche (langues, formats, âges)</p>
               </div>
             </div>
           </div>
@@ -63,16 +63,16 @@ export default function GuidePage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
             </div>
-            <h2 className="text-3xl font-bold text-gray-900">Comprendre les 5 Agents</h2>
+            <h2 className="text-3xl font-bold text-white">Comprendre les 5 Agents</h2>
           </div>
 
-          <p className="text-lg text-gray-600 mb-10 leading-relaxed">
+          <p className="text-lg text-gray-400 mb-10 leading-relaxed">
             Un <strong>"agent"</strong> est un programme automatique qui fait une tâche précise.
             Voici les 5 agents qui travaillent ensemble :
           </p>
 
           {/* Schéma des agents */}
-          <div className="sojai-card mb-10 bg-gray-50">
+          <div className="sojai-card mb-10 bg-white/[0.03]">
             <StaggerContainer className="space-y-8">
               {[
                 {
@@ -117,20 +117,20 @@ export default function GuidePage() {
                 },
               ].map((agent) => (
                 <StaggerItem key={agent.num}>
-                  <div className="bg-white rounded-xl p-8 border-2 border-gray-200">
+                  <div className="bg-[#0c0c1a] rounded-xl p-8 border-2 border-white/[0.08]">
                     <div className="flex items-start gap-6 mb-6">
                       <div className="w-16 h-16 flex-shrink-0 rounded-xl bg-gradient-to-br from-indigo-600 to-cyan-500 text-white flex items-center justify-center text-3xl shadow-lg">
                         {agent.icon}
                       </div>
                       <div className="flex-1">
-                        <div className="text-sm font-bold text-indigo-600 mb-2">AGENT {agent.num}</div>
-                        <h3 className="text-2xl font-bold mb-3 text-gray-900">{agent.name}</h3>
-                        <div className="inline-block bg-indigo-100 text-indigo-600 px-3 py-1 rounded-lg text-sm font-bold mb-3">
+                        <div className="text-sm font-bold text-indigo-400 mb-2">AGENT {agent.num}</div>
+                        <h3 className="text-2xl font-bold mb-3 text-white">{agent.name}</h3>
+                        <div className="inline-block bg-indigo-500/100/20 text-indigo-400 px-3 py-1 rounded-lg text-sm font-bold mb-3">
                           {agent.role}
                         </div>
-                        <p className="text-lg text-gray-700 leading-relaxed mb-4">{agent.desc}</p>
-                        <div className="bg-gray-50 rounded-lg p-4 border-l-4 border-indigo-600">
-                          <p className="text-base text-gray-600 italic">{agent.example}</p>
+                        <p className="text-lg text-gray-300 leading-relaxed mb-4">{agent.desc}</p>
+                        <div className="bg-white/[0.03] rounded-lg p-4 border-l-4 border-indigo-500">
+                          <p className="text-base text-gray-400 italic">{agent.example}</p>
                         </div>
                       </div>
                     </div>
@@ -141,9 +141,9 @@ export default function GuidePage() {
           </div>
 
           {/* Comment ils travaillent ensemble */}
-          <div className="sojai-card bg-indigo-50 border-indigo-200">
-            <h3 className="text-xl font-bold mb-4 text-indigo-600">🔄 Comment ils travaillent ensemble ?</h3>
-            <div className="space-y-3 text-lg text-gray-700 leading-relaxed">
+          <div className="sojai-card bg-indigo-500/10 border-indigo-500/20">
+            <h3 className="text-xl font-bold mb-4 text-indigo-400">🔄 Comment ils travaillent ensemble ?</h3>
+            <div className="space-y-3 text-lg text-gray-300 leading-relaxed">
               <p><strong>1.</strong> Le <strong>Rédacteur</strong> écrit la fiche</p>
               <p className="ml-6">↓</p>
               <p><strong>2.</strong> Le <strong>Correcteur</strong> corrige les fautes</p>
@@ -154,55 +154,55 @@ export default function GuidePage() {
               <p className="ml-6">↓</p>
               <p><strong>5.</strong> L'agent <strong>Tendances</strong> ajoute les informations du marché</p>
               <p className="ml-6">↓</p>
-              <p className="text-indigo-600 font-bold">✅ Fiche complète et prête !</p>
+              <p className="text-indigo-400 font-bold">✅ Fiche complète et prête !</p>
             </div>
           </div>
         </div>
 
         {/* Section 2 : Guide étape par étape */}
         <div className="mb-20">
-          <h2 className="text-3xl font-bold mb-8 text-gray-900">📖 Guide d'utilisation pas à pas</h2>
+          <h2 className="text-3xl font-bold mb-8 text-white">📖 Guide d'utilisation pas à pas</h2>
 
           <div className="space-y-10">
             {/* Étape 1 : Dashboard */}
             <FadeInView delay={0.1}>
-              <div className="sojai-card border-2 border-indigo-600">
+              <div className="sojai-card border-2 border-indigo-500/50">
                 <div className="flex gap-6 mb-6">
                   <div className="w-20 h-20 flex-shrink-0 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-3xl font-bold shadow-lg">
                     1
                   </div>
                   <div>
-                    <h3 className="text-2xl font-bold mb-2 text-indigo-600">📊 Consulter le Dashboard</h3>
-                    <p className="text-lg text-gray-600">Vue d'ensemble de toutes vos fiches</p>
+                    <h3 className="text-2xl font-bold mb-2 text-indigo-400">📊 Consulter le Dashboard</h3>
+                    <p className="text-lg text-gray-400">Vue d'ensemble de toutes vos fiches</p>
                   </div>
                 </div>
 
                 <div className="space-y-4 mb-6">
-                  <p className="text-lg text-gray-700 leading-relaxed">
-                    <strong>Où aller ?</strong> Cliquez sur <span className="bg-indigo-100 text-indigo-600 px-2 py-1 rounded font-bold">Dashboard</span> dans le menu en haut
+                  <p className="text-lg text-gray-300 leading-relaxed">
+                    <strong>Où aller ?</strong> Cliquez sur <span className="bg-indigo-500/100/20 text-indigo-400 px-2 py-1 rounded font-bold">Dashboard</span> dans le menu en haut
                   </p>
 
-                  <div className="bg-gray-50 rounded-xl p-6">
-                    <p className="text-base font-bold text-gray-900 mb-3">Ce que vous allez voir :</p>
-                    <ul className="space-y-2 text-base text-gray-700">
+                  <div className="bg-white/[0.03] rounded-xl p-6">
+                    <p className="text-base font-bold text-white mb-3">Ce que vous allez voir :</p>
+                    <ul className="space-y-2 text-base text-gray-300">
                       <li className="flex items-start gap-2">
-                        <span className="text-indigo-600 font-bold">•</span>
+                        <span className="text-indigo-400 font-bold">•</span>
                         <span><strong>Total des fiches :</strong> Combien de fiches existent au total (1 584)</span>
                       </li>
                       <li className="flex items-start gap-2">
-                        <span className="text-indigo-600 font-bold">•</span>
+                        <span className="text-indigo-400 font-bold">•</span>
                         <span><strong>Brouillons :</strong> Fiches pas encore terminées</span>
                       </li>
                       <li className="flex items-start gap-2">
-                        <span className="text-indigo-600 font-bold">•</span>
+                        <span className="text-indigo-400 font-bold">•</span>
                         <span><strong>En validation :</strong> Fiches en cours de vérification</span>
                       </li>
                       <li className="flex items-start gap-2">
-                        <span className="text-indigo-600 font-bold">•</span>
+                        <span className="text-indigo-400 font-bold">•</span>
                         <span><strong>Publiées :</strong> Fiches complètes et validées</span>
                       </li>
                       <li className="flex items-start gap-2">
-                        <span className="text-indigo-600 font-bold">•</span>
+                        <span className="text-indigo-400 font-bold">•</span>
                         <span><strong>Graphiques :</strong> Diagrammes pour visualiser les données</span>
                       </li>
                     </ul>
@@ -217,46 +217,46 @@ export default function GuidePage() {
 
             {/* Étape 2 : Fiches */}
             <FadeInView delay={0.2}>
-              <div className="sojai-card border-2 border-indigo-600">
+              <div className="sojai-card border-2 border-indigo-500/50">
                 <div className="flex gap-6 mb-6">
                   <div className="w-20 h-20 flex-shrink-0 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-3xl font-bold shadow-lg">
                     2
                   </div>
                   <div>
-                    <h3 className="text-2xl font-bold mb-2 text-indigo-600">📋 Rechercher une Fiche</h3>
-                    <p className="text-lg text-gray-600">Trouver un métier précis</p>
+                    <h3 className="text-2xl font-bold mb-2 text-indigo-400">📋 Rechercher une Fiche</h3>
+                    <p className="text-lg text-gray-400">Trouver un métier précis</p>
                   </div>
                 </div>
 
                 <div className="space-y-4 mb-6">
-                  <p className="text-lg text-gray-700 leading-relaxed">
-                    <strong>Où aller ?</strong> Cliquez sur <span className="bg-indigo-100 text-indigo-600 px-2 py-1 rounded font-bold">Fiches</span> dans le menu en haut
+                  <p className="text-lg text-gray-300 leading-relaxed">
+                    <strong>Où aller ?</strong> Cliquez sur <span className="bg-indigo-500/100/20 text-indigo-400 px-2 py-1 rounded font-bold">Fiches</span> dans le menu en haut
                   </p>
 
-                  <div className="bg-gray-50 rounded-xl p-6">
-                    <p className="text-base font-bold text-gray-900 mb-4">Comment chercher une fiche :</p>
+                  <div className="bg-white/[0.03] rounded-xl p-6">
+                    <p className="text-base font-bold text-white mb-4">Comment chercher une fiche :</p>
                     <div className="space-y-4">
-                      <div className="bg-white rounded-lg p-4 border border-gray-200">
-                        <p className="font-bold text-indigo-600 mb-2">Méthode 1 : Par nom de métier</p>
-                        <p className="text-gray-700">Tapez le nom du métier dans la barre de recherche</p>
-                        <p className="text-sm text-gray-600 italic mt-1">Exemple : "Boulanger", "Infirmier", "Comptable"</p>
+                      <div className="bg-[#0c0c1a] rounded-lg p-4 border border-white/[0.08]">
+                        <p className="font-bold text-indigo-400 mb-2">Méthode 1 : Par nom de métier</p>
+                        <p className="text-gray-300">Tapez le nom du métier dans la barre de recherche</p>
+                        <p className="text-sm text-gray-400 italic mt-1">Exemple : "Boulanger", "Infirmier", "Comptable"</p>
                       </div>
-                      <div className="bg-white rounded-lg p-4 border border-gray-200">
-                        <p className="font-bold text-indigo-600 mb-2">Méthode 2 : Par code ROME</p>
-                        <p className="text-gray-700">Si vous connaissez le code (5 caractères)</p>
-                        <p className="text-sm text-gray-600 italic mt-1">Exemple : "D1102", "M1805"</p>
+                      <div className="bg-[#0c0c1a] rounded-lg p-4 border border-white/[0.08]">
+                        <p className="font-bold text-indigo-400 mb-2">Méthode 2 : Par code ROME</p>
+                        <p className="text-gray-300">Si vous connaissez le code (5 caractères)</p>
+                        <p className="text-sm text-gray-400 italic mt-1">Exemple : "D1102", "M1805"</p>
                       </div>
-                      <div className="bg-white rounded-lg p-4 border border-gray-200">
-                        <p className="font-bold text-indigo-600 mb-2">Méthode 3 : Par statut</p>
-                        <p className="text-gray-700">Utilisez le menu déroulant "Statut" pour filtrer</p>
-                        <p className="text-sm text-gray-600 italic mt-1">Voir seulement les fiches "Publiées" ou "Brouillon"</p>
+                      <div className="bg-[#0c0c1a] rounded-lg p-4 border border-white/[0.08]">
+                        <p className="font-bold text-indigo-400 mb-2">Méthode 3 : Par statut</p>
+                        <p className="text-gray-300">Utilisez le menu déroulant "Statut" pour filtrer</p>
+                        <p className="text-sm text-gray-400 italic mt-1">Voir seulement les fiches "Publiées" ou "Brouillon"</p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-indigo-50 rounded-xl p-6 border-l-4 border-indigo-600">
-                    <p className="font-bold text-indigo-600 mb-2">💡 Conseil</p>
-                    <p className="text-gray-700">Cliquez sur le bouton <strong>"👁️ Voir"</strong> à droite de chaque fiche pour voir tous les détails</p>
+                  <div className="bg-indigo-500/10 rounded-xl p-6 border-l-4 border-indigo-500">
+                    <p className="font-bold text-indigo-400 mb-2">💡 Conseil</p>
+                    <p className="text-gray-300">Cliquez sur le bouton <strong>"👁️ Voir"</strong> à droite de chaque fiche pour voir tous les détails</p>
                   </div>
                 </div>
 
@@ -268,45 +268,45 @@ export default function GuidePage() {
 
             {/* Étape 3 : Actions */}
             <FadeInView delay={0.3}>
-              <div className="sojai-card border-2 border-indigo-600">
+              <div className="sojai-card border-2 border-indigo-500/50">
                 <div className="flex gap-6 mb-6">
                   <div className="w-20 h-20 flex-shrink-0 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-3xl font-bold shadow-lg">
                     3
                   </div>
                   <div>
-                    <h3 className="text-2xl font-bold mb-2 text-indigo-600">🔧 Lancer des Actions</h3>
-                    <p className="text-lg text-gray-600">Enrichir ou corriger les fiches automatiquement</p>
+                    <h3 className="text-2xl font-bold mb-2 text-indigo-400">🔧 Lancer des Actions</h3>
+                    <p className="text-lg text-gray-400">Enrichir ou corriger les fiches automatiquement</p>
                   </div>
                 </div>
 
                 <div className="space-y-4 mb-6">
-                  <p className="text-lg text-gray-700 leading-relaxed">
-                    <strong>Où aller ?</strong> Cliquez sur <span className="bg-indigo-100 text-indigo-600 px-2 py-1 rounded font-bold">Actions</span> dans le menu en haut
+                  <p className="text-lg text-gray-300 leading-relaxed">
+                    <strong>Où aller ?</strong> Cliquez sur <span className="bg-indigo-500/100/20 text-indigo-400 px-2 py-1 rounded font-bold">Actions</span> dans le menu en haut
                   </p>
 
-                  <div className="bg-yellow-50 rounded-xl p-6 border-l-4 border-yellow-500">
-                    <p className="font-bold text-yellow-800 mb-2">⚠️ Attention</p>
-                    <p className="text-yellow-700">Les actions lancent les agents automatiquement. Ne les utilisez que si nécessaire.</p>
+                  <div className="bg-yellow-500/10 rounded-xl p-6 border-l-4 border-yellow-500/50">
+                    <p className="font-bold text-yellow-300 mb-2">⚠️ Attention</p>
+                    <p className="text-yellow-400">Les actions lancent les agents automatiquement. Ne les utilisez que si nécessaire.</p>
                   </div>
 
-                  <div className="bg-gray-50 rounded-xl p-6">
-                    <p className="text-base font-bold text-gray-900 mb-4">Actions disponibles :</p>
+                  <div className="bg-white/[0.03] rounded-xl p-6">
+                    <p className="text-base font-bold text-white mb-4">Actions disponibles :</p>
                     <div className="space-y-3">
-                      <div className="bg-white rounded-lg p-4 border border-gray-200">
-                        <p className="font-bold text-indigo-600 mb-1">📝 Enrichissement</p>
-                        <p className="text-gray-700">L'Agent Rédacteur complète les fiches vides</p>
+                      <div className="bg-[#0c0c1a] rounded-lg p-4 border border-white/[0.08]">
+                        <p className="font-bold text-indigo-400 mb-1">📝 Enrichissement</p>
+                        <p className="text-gray-300">L'Agent Rédacteur complète les fiches vides</p>
                       </div>
-                      <div className="bg-white rounded-lg p-4 border border-gray-200">
-                        <p className="font-bold text-indigo-600 mb-1">🔧 Correction</p>
-                        <p className="text-gray-700">L'Agent Correcteur vérifie l'orthographe</p>
+                      <div className="bg-[#0c0c1a] rounded-lg p-4 border border-white/[0.08]">
+                        <p className="font-bold text-indigo-400 mb-1">🔧 Correction</p>
+                        <p className="text-gray-300">L'Agent Correcteur vérifie l'orthographe</p>
                       </div>
-                      <div className="bg-white rounded-lg p-4 border border-gray-200">
-                        <p className="font-bold text-indigo-600 mb-1">🌐 Variantes</p>
-                        <p className="text-gray-700">Génère les 90 versions (langues, âges, formats)</p>
+                      <div className="bg-[#0c0c1a] rounded-lg p-4 border border-white/[0.08]">
+                        <p className="font-bold text-indigo-400 mb-1">🌐 Variantes</p>
+                        <p className="text-gray-300">Génère les 90 versions (langues, âges, formats)</p>
                       </div>
-                      <div className="bg-white rounded-lg p-4 border border-gray-200">
-                        <p className="font-bold text-indigo-600 mb-1">📢 Publication</p>
-                        <p className="text-gray-700">Marque les fiches comme "Publiées"</p>
+                      <div className="bg-[#0c0c1a] rounded-lg p-4 border border-white/[0.08]">
+                        <p className="font-bold text-indigo-400 mb-1">📢 Publication</p>
+                        <p className="text-gray-300">Marque les fiches comme "Publiées"</p>
                       </div>
                     </div>
                   </div>
@@ -322,7 +322,7 @@ export default function GuidePage() {
 
         {/* FAQ */}
         <div className="mb-20">
-          <h2 className="text-3xl font-bold mb-8 text-gray-900">❓ Questions Fréquentes</h2>
+          <h2 className="text-3xl font-bold mb-8 text-white">❓ Questions Fréquentes</h2>
 
           <StaggerContainer className="space-y-4">
             {[
@@ -348,9 +348,9 @@ export default function GuidePage() {
               },
             ].map((faq, i) => (
               <StaggerItem key={i}>
-                <div className="sojai-card bg-gray-50">
-                  <h3 className="text-lg font-bold text-indigo-600 mb-3">{faq.q}</h3>
-                  <p className="text-base text-gray-700 leading-relaxed">{faq.a}</p>
+                <div className="sojai-card bg-white/[0.03]">
+                  <h3 className="text-lg font-bold text-indigo-400 mb-3">{faq.q}</h3>
+                  <p className="text-base text-gray-300 leading-relaxed">{faq.a}</p>
                 </div>
               </StaggerItem>
             ))}
@@ -364,7 +364,7 @@ export default function GuidePage() {
             Si quelque chose n'est pas clair, n'hésitez pas à demander de l'aide
           </p>
           <div className="flex gap-4 justify-center">
-            <Link href="/dashboard" className="btn bg-white text-indigo-600 hover:bg-gray-100">
+            <Link href="/dashboard" className="btn bg-white text-indigo-400 hover:bg-gray-100">
               Retour au Dashboard
             </Link>
           </div>

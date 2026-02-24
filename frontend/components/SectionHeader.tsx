@@ -19,11 +19,11 @@ export default function SectionHeader({ badge, title, description }: SectionHead
         </FadeInView>
       )}
       <FadeInView delay={0.1}>
-        <h2 className="section-title">{title}</h2>
+        <h2 className="section-title text-white">{title}</h2>
       </FadeInView>
       {description && (
         <FadeInView delay={0.2}>
-          <p className="section-description">{description}</p>
+          <p className="section-description text-gray-400">{description}</p>
         </FadeInView>
       )}
     </div>

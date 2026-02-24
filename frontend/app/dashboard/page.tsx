@@ -28,7 +28,7 @@ export default function DashboardPage() {
         setLogs(logsData.logs);
       } catch (err) {
         console.error("Erreur chargement données:", err);
-        setError("Impossible de charger les donnees. Le serveur est peut-etre en cours de demarrage.");
+        setError("Impossible de charger les données. Le serveur est peut-être en cours de démarrage.");
       } finally {
         setLoading(false);
       }
@@ -52,7 +52,7 @@ export default function DashboardPage() {
       <div className="max-w-7xl mx-auto">
         {/* Error state */}
         {error && (
-          <div className="mb-8 p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm text-center">
+          <div className="mb-8 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm text-center">
             {error}
           </div>
         )}
@@ -68,7 +68,7 @@ export default function DashboardPage() {
               </div>
               <h1 className="text-3xl md:text-5xl font-serif font-bold gradient-text">Dashboard</h1>
             </div>
-            <p className="text-xl text-text-muted">
+            <p className="text-xl text-gray-400">
               Vue d'ensemble de vos fiches métiers et statistiques en temps réel
             </p>
           </div>
@@ -144,19 +144,19 @@ export default function DashboardPage() {
                       paddingAngle={3}
                       dataKey="value"
                       label={({ name, value }) => `${name} (${value})`}
-                      labelLine={{ stroke: "#d1d5db" }}
+                      labelLine={{ stroke: "#6B7280" }}
                     >
                       {pieData.map((entry, i) => (
                         <Cell key={i} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value: number) => [value, "Fiches"]} />
-                    <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 13 }} />
+                    <Tooltip formatter={(value: number) => [value, "Fiches"]} contentStyle={{ backgroundColor: "#0c0c1a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px", color: "#e5e7eb" }} />
+                    <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 13, color: "#9CA3AF" }} />
                   </PieChart>
                 </ResponsiveContainer>
                 );
               })() : (
-                <div className="h-full flex items-center justify-center text-text-muted">
+                <div className="h-full flex items-center justify-center text-gray-400">
                   Aucune donnee
                 </div>
               )}
@@ -179,7 +179,7 @@ export default function DashboardPage() {
                     ]}
                     margin={{ top: 10, right: 10, left: -10, bottom: 5 }}
                   >
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
                     <XAxis
                       dataKey="etape"
                       tick={{ fontSize: 12, fill: "#6B7280" }}
@@ -187,13 +187,13 @@ export default function DashboardPage() {
                       tickLine={false}
                     />
                     <YAxis
-                      tick={{ fontSize: 11, fill: "#9CA3AF" }}
+                      tick={{ fontSize: 11, fill: "#6B7280" }}
                       axisLine={false}
                       tickLine={false}
                     />
                     <Tooltip
                       formatter={(value: number) => [value, "Fiches"]}
-                      contentStyle={{ borderRadius: "16px", border: "1px solid #E5E7EB", fontSize: 13 }}
+                      contentStyle={{ borderRadius: "16px", border: "1px solid rgba(255,255,255,0.1)", backgroundColor: "#0c0c1a", fontSize: 13, color: "#e5e7eb" }}
                     />
                     <Bar dataKey="count" radius={[6, 6, 0, 0]} barSize={50}>
                       {[
@@ -208,7 +208,7 @@ export default function DashboardPage() {
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="h-full flex items-center justify-center text-text-muted">
+                <div className="h-full flex items-center justify-center text-gray-400">
                   Aucune donnee
                 </div>
               )}
@@ -256,7 +256,7 @@ export default function DashboardPage() {
                       <div className="text-3xl mt-0.5">{icon}</div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold text-text-dark">
+                          <span className="font-semibold text-white">
                             {typeLabels[log.type_evenement] || log.type_evenement.replace("_", " ").toUpperCase()}
                           </span>
                           {log.code_rome && (
@@ -267,24 +267,24 @@ export default function DashboardPage() {
                           {log.agent && (
                             <span className={`text-xs px-2 py-0.5 rounded-full ${
                               log.agent === "Claude IA"
-                                ? "bg-blue-100 text-blue-700"
-                                : "bg-gray-100 text-gray-600"
+                                ? "bg-blue-500/20 text-blue-300"
+                                : "bg-white/[0.06] text-gray-400"
                             }`}>
                               {log.agent}
                             </span>
                           )}
                         </div>
-                        <div className="text-sm text-text-muted mt-1">
+                        <div className="text-sm text-gray-400 mt-1">
                           {log.description}
                         </div>
                         {log.validateur && (
-                          <div className="text-xs text-green-600 mt-1">
+                          <div className="text-xs text-emerald-400 mt-1">
                             Validateur : {log.validateur}
                           </div>
                         )}
                       </div>
                     </div>
-                    <div className="text-xs text-text-muted text-right shrink-0 ml-4">
+                    <div className="text-xs text-gray-400 text-right shrink-0 ml-4">
                       {new Date(log.timestamp).toLocaleDateString("fr-FR")}
                       <br />
                       {new Date(log.timestamp).toLocaleTimeString("fr-FR", {
@@ -312,7 +312,7 @@ export default function DashboardPage() {
             <div className="sojai-card text-center py-12">
               <div className="text-5xl mb-4">📋</div>
               <h4 className="text-xl font-semibold mb-2">Aucune activité</h4>
-              <p className="text-text-muted">
+              <p className="text-gray-400">
                 Les actions effectuées s'afficheront ici
               </p>
             </div>
@@ -320,7 +320,7 @@ export default function DashboardPage() {
         </StaggerContainer>
 
         {/* Footer */}
-        <div className="mt-12 text-center text-sm text-text-muted">
+        <div className="mt-12 text-center text-sm text-gray-400">
           Donnees chargees au chargement de la page
         </div>
       </div>

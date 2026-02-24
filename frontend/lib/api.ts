@@ -352,6 +352,11 @@ class ApiClient {
     return this.request<{ total: number; results: FicheMetier[] }>(`/api/fiches${query}`);
   }
 
+  async autocomplete(query: string, limit: number = 8): Promise<{code_rome: string; nom_masculin: string; nom_feminin: string; statut: string; description_courte?: string}[]> {
+    const params = new URLSearchParams({ q: query, limit: limit.toString() });
+    return this.request(`/api/fiches/autocomplete?${params.toString()}`);
+  }
+
   async getFicheDetail(codeRome: string): Promise<FicheDetail> {
     return this.request<FicheDetail>(`/api/fiches/${codeRome}`);
   }

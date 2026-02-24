@@ -9,23 +9,23 @@ interface StatusBadgeProps {
 const STATUS_CONFIG: Record<string, { label: string; className: string; icon: string; pulse?: boolean }> = {
   brouillon: {
     label: "Brouillon",
-    className: "bg-stone-100 text-stone-600",
+    className: "bg-white/[0.06] text-gray-400 border border-white/[0.1]",
     icon: "📝",
   },
   en_validation: {
     label: "En validation",
-    className: "bg-indigo-100 text-indigo-700",
+    className: "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30",
     icon: "🔍",
     pulse: true,
   },
   publiee: {
     label: "Publiée",
-    className: "badge-success",
+    className: "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30",
     icon: "✅",
   },
   archivee: {
     label: "Archivée",
-    className: "bg-gray-100 text-gray-600",
+    className: "bg-white/[0.06] text-gray-500 border border-white/[0.1]",
     icon: "📦",
   },
 };

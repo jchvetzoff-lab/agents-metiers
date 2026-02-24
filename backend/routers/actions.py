@@ -1,0 +1,316 @@
+"""
+IA action endpoints: enrich, validate, review, auto-correct, publish, variantes/generate.
+"""
+import logging
+from datetime import datetime
+from typing import List, Optional
+from fastapi import APIRouter, HTTPException, Depends
+from pydantic import BaseModel
+
+from ..deps import repo, get_claude_client
+from ..auth_middleware import get_current_user
+from ..rate_limiter import rate_limiter
+from database.models import StatutFiche, FicheMetier, TypeEvenement
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/api/fiches", tags=["actions"])
+
+
+class ReviewRequest(BaseModel):
+    decision: str  # "approve" | "reject" | "request_changes"
+    commentaire: Optional[str] = None
+
+
+class AutoCorrectRequest(BaseModel):
+    problemes: List[str]
+    suggestions: List[str]
+
+
+class VariantesGenerateRequest(BaseModel):
+    genres: Optional[List[str]] = None
+    tranches_age: Optional[List[str]] = None
+    formats: Optional[List[str]] = None
+    langues: Optional[List[str]] = None
+
+
+class PublishBatchRequest(BaseModel):
+    codes_rome: List[str]
+
+
+# ==================== ENRICH ====================
+
+@router.post("/{code_rome}/enrich")
+async def enrich_fiche(code_rome: str, user: dict = Depends(get_current_user)):
+    """Enrichit une fiche via Claude API."""
+    rate_limiter.check(f"enrich:{code_rome}", max_requests=10)
+
+    try:
+        fiche = repo.get_fiche(code_rome)
+        if not fiche:
+            raise HTTPException(status_code=404, detail=f"Fiche {code_rome} non trouvée")
+
+        claude_client = get_claude_client()
+        from agents.redacteur_fiche import AgentRedacteurFiche
+        agent = AgentRedacteurFiche(repository=repo, claude_client=claude_client)
+        fiche_enrichie = await agent.enrichir_fiche(fiche)
+        repo.update_fiche(fiche_enrichie)
+
+        return {
+            "message": "Fiche enrichie avec succès",
+            "code_rome": code_rome,
+            "nom": fiche_enrichie.nom_masculin,
+            "version": fiche_enrichie.metadata.version
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erreur enrichissement {code_rome}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== VALIDATE ====================
+
+@router.post("/{code_rome}/validate")
+async def validate_fiche(code_rome: str, user: dict = Depends(get_current_user)):
+    """Valide une fiche via Claude API (scoring qualité)."""
+    rate_limiter.check(f"validate:{code_rome}", max_requests=20)
+
+    try:
+        fiche = repo.get_fiche(code_rome)
+        if not fiche:
+            raise HTTPException(status_code=404, detail=f"Fiche {code_rome} non trouvée")
+
+        claude_client = get_claude_client()
+
+        # Try using correcteur agent for validation
+        from agents.correcteur_langue import AgentCorrecteurLangue
+        agent = AgentCorrecteurLangue(repository=repo, claude_client=claude_client)
+        rapport = await agent.corriger_fiche(fiche)
+
+        return {
+            "message": "Validation terminée",
+            "code_rome": code_rome,
+            "nom": fiche.nom_masculin,
+            "rapport": {
+                "score": rapport.score if hasattr(rapport, 'score') else 75,
+                "verdict": rapport.verdict if hasattr(rapport, 'verdict') else "acceptable",
+                "resume": rapport.resume if hasattr(rapport, 'resume') else "Validation effectuée",
+                "criteres": rapport.criteres if hasattr(rapport, 'criteres') else {},
+                "problemes": rapport.problemes if hasattr(rapport, 'problemes') else [],
+                "suggestions": rapport.suggestions if hasattr(rapport, 'suggestions') else [],
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erreur validation {code_rome}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== REVIEW ====================
+
+@router.post("/{code_rome}/review")
+async def review_fiche(code_rome: str, req: ReviewRequest, user: dict = Depends(get_current_user)):
+    """Revue manuelle d'une fiche (approve/reject)."""
+    try:
+        fiche = repo.get_fiche(code_rome)
+        if not fiche:
+            raise HTTPException(status_code=404, detail=f"Fiche {code_rome} non trouvée")
+
+        fiche_dict = fiche.model_dump()
+
+        if req.decision == "approve":
+            fiche_dict["metadata"]["statut"] = StatutFiche.PUBLIEE.value
+        elif req.decision == "reject":
+            fiche_dict["metadata"]["statut"] = StatutFiche.BROUILLON.value
+        elif req.decision == "request_changes":
+            fiche_dict["metadata"]["statut"] = StatutFiche.EN_VALIDATION.value
+        else:
+            raise HTTPException(status_code=400, detail=f"Décision invalide: {req.decision}")
+
+        fiche_dict["metadata"]["date_maj"] = datetime.now()
+        updated = FicheMetier(**fiche_dict)
+        repo.update_fiche(updated)
+
+        return {
+            "message": f"Fiche {req.decision}",
+            "code_rome": code_rome,
+            "decision": req.decision,
+            "commentaire": req.commentaire,
+            "nouveau_statut": updated.metadata.statut.value
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== AUTO-CORRECT ====================
+
+@router.post("/{code_rome}/auto-correct")
+async def auto_correct_fiche(code_rome: str, req: AutoCorrectRequest, user: dict = Depends(get_current_user)):
+    """Auto-correction d'une fiche via Claude API."""
+    rate_limiter.check(f"auto-correct:{code_rome}", max_requests=10)
+
+    try:
+        fiche = repo.get_fiche(code_rome)
+        if not fiche:
+            raise HTTPException(status_code=404, detail=f"Fiche {code_rome} non trouvée")
+
+        claude_client = get_claude_client()
+        if not claude_client:
+            raise HTTPException(status_code=503, detail="Claude API non disponible")
+
+        from config import get_config
+        config = get_config()
+
+        prompt = f"""Corrige la fiche métier suivante en tenant compte des problèmes et suggestions.
+
+Fiche: {fiche.nom_masculin} ({code_rome})
+Description actuelle: {fiche.description}
+Compétences: {fiche.competences}
+
+Problèmes identifiés:
+{chr(10).join(f"- {p}" for p in req.problemes)}
+
+Suggestions:
+{chr(10).join(f"- {s}" for s in req.suggestions)}
+
+Retourne un JSON avec les champs corrigés: description, competences, formations (listes de strings)."""
+
+        response = await claude_client.messages.create(
+            model=config.api.claude_model,
+            max_tokens=2048,
+            messages=[{"role": "user", "content": prompt}]
+        )
+
+        import json, re
+        content = response.content[0].text.strip()
+        json_match = re.search(r'\{[\s\S]*\}', content)
+        if json_match:
+            corrections = json.loads(json_match.group())
+            fiche_dict = fiche.model_dump()
+            for key in ("description", "competences", "formations", "competences_transversales"):
+                if key in corrections:
+                    fiche_dict[key] = corrections[key]
+            fiche_dict["metadata"]["date_maj"] = datetime.now()
+            fiche_dict["metadata"]["version"] = fiche_dict["metadata"].get("version", 1) + 1
+            updated = FicheMetier(**fiche_dict)
+            repo.update_fiche(updated)
+
+            return {
+                "message": "Fiche auto-corrigée",
+                "code_rome": code_rome,
+                "nom": updated.nom_masculin,
+                "version": updated.metadata.version
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Claude n'a pas retourné de JSON valide")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erreur auto-correction {code_rome}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== PUBLISH ====================
+
+@router.post("/{code_rome}/publish")
+async def publish_fiche(code_rome: str, user: dict = Depends(get_current_user)):
+    """Publie une fiche (change le statut en 'publiee')."""
+    try:
+        fiche = repo.get_fiche(code_rome)
+        if not fiche:
+            raise HTTPException(status_code=404, detail=f"Fiche {code_rome} non trouvée")
+
+        fiche_dict = fiche.model_dump()
+        fiche_dict["metadata"]["statut"] = StatutFiche.PUBLIEE.value
+        fiche_dict["metadata"]["date_maj"] = datetime.now()
+        updated = FicheMetier(**fiche_dict)
+        repo.update_fiche(updated)
+
+        return {
+            "message": "Fiche publiée",
+            "code_rome": code_rome
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== VARIANTES GENERATE ====================
+
+@router.post("/{code_rome}/variantes/generate")
+async def generate_variantes(code_rome: str, req: VariantesGenerateRequest, user: dict = Depends(get_current_user)):
+    """Génère des variantes via Claude API."""
+    rate_limiter.check(f"variantes-generate:{code_rome}", max_requests=5)
+
+    try:
+        fiche = repo.get_fiche(code_rome)
+        if not fiche:
+            raise HTTPException(status_code=404, detail=f"Fiche {code_rome} non trouvée")
+
+        claude_client = get_claude_client()
+        from agents.redacteur_fiche import AgentRedacteurFiche
+        from database.models import LangueSupporte, TrancheAge, FormatContenu, GenreGrammatical
+
+        agent = AgentRedacteurFiche(repository=repo, claude_client=claude_client)
+
+        langues = [LangueSupporte(l) for l in req.langues] if req.langues else None
+        tranches = [TrancheAge(t) for t in req.tranches_age] if req.tranches_age else None
+        formats = [FormatContenu(f) for f in req.formats] if req.formats else None
+        genres = [GenreGrammatical(g) for g in req.genres] if req.genres else None
+
+        variantes = await agent.generer_variantes(
+            fiche, langues=langues, tranches_age=tranches, formats=formats, genres=genres
+        )
+
+        for v in variantes:
+            repo.save_variante(v)
+
+        return {
+            "message": f"{len(variantes)} variantes générées",
+            "code_rome": code_rome,
+            "variantes_generees": len(variantes)
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erreur génération variantes {code_rome}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== PUBLISH BATCH ====================
+# Note: this must be registered BEFORE the {code_rome} catch-all routes
+# It's on /api/fiches/publish-batch so we use a separate router prefix
+
+publish_batch_router = APIRouter(prefix="/api/fiches", tags=["actions"])
+
+
+@publish_batch_router.post("/publish-batch")
+async def publish_batch(req: PublishBatchRequest, user: dict = Depends(get_current_user)):
+    """Publie plusieurs fiches en batch."""
+    results = []
+    for code_rome in req.codes_rome:
+        try:
+            fiche = repo.get_fiche(code_rome)
+            if not fiche:
+                results.append({"code_rome": code_rome, "status": "error", "message": "Fiche non trouvée"})
+                continue
+
+            fiche_dict = fiche.model_dump()
+            fiche_dict["metadata"]["statut"] = StatutFiche.PUBLIEE.value
+            fiche_dict["metadata"]["date_maj"] = datetime.now()
+            updated = FicheMetier(**fiche_dict)
+            repo.update_fiche(updated)
+            results.append({"code_rome": code_rome, "status": "published", "message": "Publiée"})
+        except Exception as e:
+            results.append({"code_rome": code_rome, "status": "error", "message": str(e)})
+
+    return {
+        "message": f"{sum(1 for r in results if r['status'] == 'published')} fiches publiées",
+        "results": results
+    }

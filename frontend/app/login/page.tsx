@@ -12,7 +12,6 @@ export default function LoginPage() {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>("intro");
   const [introStep, setIntroStep] = useState(0);
-  // introStep: 0=nothing, 1=line1, 2=line2, 3=pause, 4=fade out, 5=JAE, 6=done
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -21,14 +20,12 @@ export default function LoginPage() {
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Si deja connecte, rediriger
   useEffect(() => {
     if (isAuthenticated()) {
       router.replace("/");
     }
   }, [router]);
 
-  // Animation intro - rejouee a chaque chargement
   useEffect(() => {
     setPhase("intro");
     const timers: NodeJS.Timeout[] = [];
@@ -55,9 +52,8 @@ export default function LoginPage() {
     try {
       if (phase === "signup") {
         await api.register(email, password, name);
-        // Compte cree, basculer vers login
         setPhase("login");
-        setSuccess("Compte cree avec succes. Connectez-vous.");
+        setSuccess("Compte créé avec succès. Connectez-vous.");
         setPassword("");
       } else {
         const result = await api.login(email, password);
@@ -72,8 +68,6 @@ export default function LoginPage() {
     }
   };
 
-  // ==================== PHASE INTRO ====================
-  // Helper : split text into individual letter spans with staggered delay
   const letterSpans = (text: string, baseDelay: number, className: string) =>
     text.split("").map((char, i) => (
       <span
@@ -87,13 +81,11 @@ export default function LoginPage() {
 
   if (phase === "intro") {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-white overflow-hidden px-4">
-
-        {/* Phrase principale - espace reserve pour les 2 lignes */}
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-950 overflow-hidden px-4">
         {introStep >= 1 && introStep <= 4 && (
           <div className={`flex flex-col items-center ${introStep === 4 ? "intro-text-out" : ""}`}>
-            <p className="text-2xl md:text-4xl font-light text-gray-400 tracking-widest leading-relaxed text-center">
-              {letterSpans("Comprendre les metiers.", 0, "")}
+            <p className="text-2xl md:text-4xl font-light text-gray-500 tracking-widest leading-relaxed text-center">
+              {letterSpans("Comprendre les métiers.", 0, "")}
             </p>
             <p className="text-2xl md:text-4xl font-light tracking-widest leading-relaxed text-center mt-3" style={{ minHeight: "1em" }}>
               {introStep >= 2
@@ -103,12 +95,11 @@ export default function LoginPage() {
           </div>
         )}
 
-        {/* "By JAE Fondation" */}
         {introStep === 5 && (
           <div className="intro-jae">
-            <span className="text-2xl md:text-3xl font-light text-gray-400 tracking-widest">
+            <span className="text-2xl md:text-3xl font-light text-gray-500 tracking-widest">
               By{" "}
-              <span className="font-bold bg-gradient-to-r from-indigo-600 to-pink-500 bg-clip-text text-transparent">
+              <span className="font-bold bg-gradient-to-r from-indigo-400 to-pink-400 bg-clip-text text-transparent">
                 JAE Fondation
               </span>
             </span>
@@ -118,12 +109,11 @@ export default function LoginPage() {
     );
   }
 
-  // ==================== PHASE LOGIN / SIGNUP ====================
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gray-950 px-4">
       <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
-        <div className="absolute top-1/4 -left-32 w-96 h-96 bg-indigo-200/20 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-cyan-200/20 rounded-full blur-3xl" />
+        <div className="absolute top-1/4 -left-32 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-cyan-600/10 rounded-full blur-3xl" />
       </div>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="intro-form w-full max-w-sm">
         {/* Logo compact */}
@@ -131,24 +121,24 @@ export default function LoginPage() {
           <motion.div whileHover={{ rotate: 6, scale: 1.05 }} transition={{ type: "spring", stiffness: 300, damping: 20 }} className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-600 to-cyan-500 flex items-center justify-center text-white text-lg font-bold mx-auto shadow-md mb-2">
             AM
           </motion.div>
-          <h1 className="text-lg font-bold text-gray-900">Agents Metiers</h1>
-          <p className="text-xs text-gray-400 mt-0.5">By JAE Fondation</p>
+          <h1 className="text-lg font-bold text-white">Agents Métiers</h1>
+          <p className="text-xs text-gray-500 mt-0.5">By JAE Fondation</p>
         </div>
 
         {/* Form Card */}
-        <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-white/40 shadow-float px-6 py-5">
-          <h2 className="text-base font-semibold text-gray-900 mb-4 text-center">
-            {phase === "login" ? "Connexion" : "Creer un compte"}
+        <div className="bg-[#0c0c1a]/80 backdrop-blur-xl rounded-2xl border border-white/[0.06] shadow-2xl px-6 py-5">
+          <h2 className="text-base font-semibold text-white mb-4 text-center">
+            {phase === "login" ? "Connexion" : "Créer un compte"}
           </h2>
 
           {success && (
-            <div className="mb-3 p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs">
+            <div className="mb-3 p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs">
               {success}
             </div>
           )}
 
           {error && (
-            <div className="mb-3 p-2.5 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs">
+            <div className="mb-3 p-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
               {error}
             </div>
           )}
@@ -156,7 +146,7 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-3">
             {phase === "signup" && (
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
+                <label className="block text-xs font-medium text-gray-400 mb-1">
                   Nom
                 </label>
                 <input
@@ -171,7 +161,7 @@ export default function LoginPage() {
             )}
 
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
+              <label className="block text-xs font-medium text-gray-400 mb-1">
                 Email
               </label>
               <input
@@ -185,7 +175,7 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
+              <label className="block text-xs font-medium text-gray-400 mb-1">
                 Mot de passe
               </label>
               <input
@@ -207,12 +197,12 @@ export default function LoginPage() {
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
                   <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  {phase === "login" ? "Connexion..." : "Creation..."}
+                  {phase === "login" ? "Connexion..." : "Création..."}
                 </span>
               ) : phase === "login" ? (
                 "Se connecter"
               ) : (
-                "Creer mon compte"
+                "Créer mon compte"
               )}
             </button>
           </form>
@@ -224,17 +214,17 @@ export default function LoginPage() {
                 setError("");
                 setSuccess("");
               }}
-              className="text-xs text-gray-500 hover:text-indigo-600 transition-colors"
+              className="text-xs text-gray-500 hover:text-indigo-400 transition-colors"
             >
               {phase === "login" ? (
                 <>
                   Pas encore de compte ?{" "}
-                  <span className="font-semibold text-indigo-600">S&apos;inscrire</span>
+                  <span className="font-semibold text-indigo-400">S&apos;inscrire</span>
                 </>
               ) : (
                 <>
-                  Deja un compte ?{" "}
-                  <span className="font-semibold text-indigo-600">Se connecter</span>
+                  Déjà un compte ?{" "}
+                  <span className="font-semibold text-indigo-400">Se connecter</span>
                 </>
               )}
             </button>

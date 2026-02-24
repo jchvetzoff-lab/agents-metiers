@@ -352,6 +352,31 @@ Notes :
             json_match = re.search(r'\{[\s\S]*\}', content)
             if json_match:
                 data = json.loads(json_match.group())
+                # Validate required fields and types
+                validation_errors = []
+                for field in ("description", "competences", "formations", "salaires"):
+                    if field not in data:
+                        validation_errors.append(f"Champ obligatoire manquant: {field}")
+                if "competences" in data and not isinstance(data["competences"], list):
+                    validation_errors.append("competences doit être une liste")
+                elif "competences" in data and not all(isinstance(c, str) for c in data["competences"]):
+                    validation_errors.append("competences doit contenir des strings")
+                if "formations" in data and not isinstance(data["formations"], list):
+                    validation_errors.append("formations doit être une liste")
+                if "salaires" in data and isinstance(data["salaires"], dict):
+                    for niveau in ("junior", "confirme", "senior"):
+                        if niveau in data["salaires"] and isinstance(data["salaires"][niveau], dict):
+                            for key in ("min", "max", "median"):
+                                val = data["salaires"][niveau].get(key)
+                                if val is not None and not isinstance(val, (int, float)):
+                                    validation_errors.append(f"salaires.{niveau}.{key} doit être un nombre")
+                elif "salaires" in data:
+                    validation_errors.append("salaires doit être un dictionnaire")
+
+                if validation_errors:
+                    self.logger.error(f"Validation échouée pour {nom_masculin}: {'; '.join(validation_errors)}")
+                    return None
+
                 self.logger.info(f"Contenu généré pour {nom_masculin}")
                 return data
             else:

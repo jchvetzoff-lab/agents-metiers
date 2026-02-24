@@ -12,8 +12,8 @@ interface MetricCardProps {
 
 export default function MetricCard({ label, value, icon, trend, trendValue }: MetricCardProps) {
   const trendColors = {
-    up: "text-emerald-600",
-    down: "text-red-600",
+    up: "text-emerald-400",
+    down: "text-red-400",
     neutral: "text-gray-500",
   };
 

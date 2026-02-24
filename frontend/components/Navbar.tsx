@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { removeToken } from "@/lib/auth";
-import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 const NAV_ITEMS = [
   {
@@ -27,10 +27,11 @@ const NAV_ITEMS = [
   },
   {
     href: "/actions",
-    label: "Actions",
+    label: "Centre de contrôle",
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
       </svg>
     )
   },
@@ -49,10 +50,6 @@ export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { scrollY } = useScroll();
-
-  const bgOpacity = useTransform(scrollY, [0, 100], [0.7, 0.95]);
-  const borderOpacity = useTransform(scrollY, [0, 100], [0, 0.08]);
 
   useEffect(() => {
     setMobileOpen(false);
@@ -64,142 +61,137 @@ export default function Navbar() {
   };
 
   return (
-    <motion.nav
+    <nav
       className="sticky top-0 z-[100]"
       style={{
+        background: "rgba(3, 7, 18, 0.80)",
         backdropFilter: "blur(24px) saturate(1.5)",
         WebkitBackdropFilter: "blur(24px) saturate(1.5)",
+        borderBottom: "1px solid rgba(255, 255, 255, 0.06)",
       }}
     >
-      <motion.div
-        className="absolute inset-0"
-        style={{
-          backgroundColor: `rgba(255, 255, 255, ${bgOpacity.get()})`,
-          borderBottom: `1px solid rgba(0, 0, 0, ${borderOpacity.get()})`,
-        }}
-      />
-      {/* Actual content must be above the absolute bg */}
-      <div className="relative" style={{ backdropFilter: "blur(24px) saturate(1.5)", background: "rgba(255,255,255,0.8)", borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
-        <div className="max-w-7xl mx-auto px-4 md:px-6">
-          <div className="flex items-center justify-between h-16 md:h-20">
-            {/* Logo */}
-            <Link href="/" className="flex items-center gap-3 group">
-              <motion.div
-                className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-xl font-bold shadow-md"
-                style={{ background: "linear-gradient(135deg, #4F46E5, #7C3AED, #EC4899)" }}
-                whileHover={{ rotate: 6, scale: 1.05 }}
-                transition={{ type: "spring", stiffness: 400, damping: 15 }}
-              >
-                AM
-              </motion.div>
-              <div>
-                <div className="font-bold text-lg text-gray-900 group-hover:text-indigo-600 transition-colors">
-                  Agents Metiers
-                </div>
-                <div className="text-xs text-gray-500 hidden sm:block">By JAE Fondation</div>
+      <div className="max-w-7xl mx-auto px-4 md:px-6">
+        <div className="flex items-center justify-between h-16 md:h-20">
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-3 group">
+            <motion.div
+              className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-xl font-bold shadow-md"
+              style={{ background: "linear-gradient(135deg, #4F46E5, #7C3AED, #EC4899)" }}
+              whileHover={{ rotate: 6, scale: 1.05 }}
+              transition={{ type: "spring", stiffness: 400, damping: 15 }}
+            >
+              AM
+            </motion.div>
+            <div>
+              <div className="font-bold text-lg text-white group-hover:text-indigo-400 transition-colors">
+                Agents Métiers
               </div>
-            </Link>
+              <div className="text-xs text-gray-500 hidden sm:block">By JAE Fondation</div>
+            </div>
+          </Link>
 
-            {/* Desktop nav */}
-            <div className="hidden md:flex items-center gap-1">
+          {/* Desktop nav */}
+          <div className="hidden md:flex items-center gap-1">
+            {NAV_ITEMS.map((item) => {
+              const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`relative flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                    isActive
+                      ? "text-indigo-400"
+                      : "text-gray-400 hover:text-indigo-400 hover:bg-white/[0.05]"
+                  }`}
+                >
+                  {item.icon}
+                  <span>{item.label}</span>
+                  {isActive && (
+                    <motion.div
+                      layoutId="navbar-active"
+                      className="absolute inset-0 rounded-lg"
+                      style={{
+                        background: "rgba(99, 102, 241, 0.1)",
+                        boxShadow: "inset 0 0 0 1px rgba(99, 102, 241, 0.2)",
+                      }}
+                      transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                    />
+                  )}
+                </Link>
+              );
+            })}
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all ml-2"
+              title="Déconnexion"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Mobile hamburger */}
+          <button
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="md:hidden p-2 rounded-lg text-gray-400 hover:bg-white/[0.05] transition"
+            aria-label="Menu"
+          >
+            {mobileOpen ? (
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            ) : (
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile menu dropdown */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
+            className="md:hidden border-t border-white/[0.06] overflow-hidden"
+            style={{ background: "rgba(3, 7, 18, 0.95)", backdropFilter: "blur(24px)" }}
+          >
+            <div className="px-4 py-3 space-y-1">
               {NAV_ITEMS.map((item) => {
-                const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+                const isActive = pathname === item.href;
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`relative flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                    className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all ${
                       isActive
-                        ? "text-indigo-600"
-                        : "text-gray-700 hover:text-indigo-600 hover:bg-indigo-50"
+                        ? "bg-indigo-600 text-white shadow-md"
+                        : "text-gray-400 hover:bg-white/[0.05]"
                     }`}
                   >
                     {item.icon}
                     <span>{item.label}</span>
-                    {isActive && (
-                      <motion.div
-                        layoutId="navbar-active"
-                        className="absolute bottom-0 left-2 right-2 h-0.5 rounded-full"
-                        style={{ background: "linear-gradient(90deg, #4F46E5, #EC4899)" }}
-                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                      />
-                    )}
                   </Link>
                 );
               })}
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-gray-500 hover:text-red-600 hover:bg-red-50 transition-all ml-2"
-                title="Deconnexion"
+                className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-red-400 hover:bg-red-500/10 transition-all w-full"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                 </svg>
+                <span>Déconnexion</span>
               </button>
             </div>
-
-            {/* Mobile hamburger */}
-            <button
-              onClick={() => setMobileOpen(!mobileOpen)}
-              className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition"
-              aria-label="Menu"
-            >
-              {mobileOpen ? (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              ) : (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile menu dropdown */}
-        <AnimatePresence>
-          {mobileOpen && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2 }}
-              className="md:hidden border-t border-gray-200/50 overflow-hidden"
-              style={{ background: "rgba(255,255,255,0.95)", backdropFilter: "blur(24px)" }}
-            >
-              <div className="px-4 py-3 space-y-1">
-                {NAV_ITEMS.map((item) => {
-                  const isActive = pathname === item.href;
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all ${
-                        isActive
-                          ? "bg-indigo-600 text-white shadow-md"
-                          : "text-gray-700 hover:bg-gray-50"
-                      }`}
-                    >
-                      {item.icon}
-                      <span>{item.label}</span>
-                    </Link>
-                  );
-                })}
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-all w-full"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                  </svg>
-                  <span>Deconnexion</span>
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    </motion.nav>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </nav>
   );
 }
