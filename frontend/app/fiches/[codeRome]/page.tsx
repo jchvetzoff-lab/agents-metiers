@@ -606,22 +606,9 @@ export default function FicheDetailPage() {
               <div className="flex items-center gap-3 mb-2">
                 <span className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-sm font-bold shadow-sm">{fiche.code_rome}</span>
                 <StatusBadge statut={fiche.statut} />
-                {/* Score de complétude */}
+                {/* Score de complétude (from backend) */}
                 {(() => {
-                  const fields = [
-                    { key: 'description', weight: 10, filled: !!fiche.description },
-                    { key: 'missions', weight: 15, filled: (fiche.missions_principales?.length ?? 0) > 0 },
-                    { key: 'competences', weight: 15, filled: (fiche.competences?.length ?? 0) > 0 },
-                    { key: 'competences_transversales', weight: 5, filled: (fiche.competences_transversales?.length ?? 0) > 0 },
-                    { key: 'formations', weight: 10, filled: (fiche.formations?.length ?? 0) > 0 },
-                    { key: 'salaires', weight: 10, filled: !!(fiche.salaires?.junior?.median || fiche.salaires?.confirme?.median) },
-                    { key: 'perspectives', weight: 10, filled: !!fiche.perspectives?.tendance },
-                    { key: 'conditions_travail', weight: 5, filled: (fiche.conditions_travail?.length ?? 0) > 0 },
-                    { key: 'mobilite', weight: 10, filled: !!fiche.mobilite?.metiers_proches?.length },
-                    { key: 'sites_utiles', weight: 5, filled: (fiche.sites_utiles?.length ?? 0) > 0 },
-                    { key: 'traits_personnalite', weight: 5, filled: (fiche.traits_personnalite?.length ?? 0) > 0 },
-                  ];
-                  const score = fields.reduce((sum, f) => sum + (f.filled ? f.weight : 0), 0);
+                  const score = fiche.score_completude ?? 0;
                   const color = score >= 80 ? '#16a34a' : score >= 50 ? '#f59e0b' : '#ef4444';
                   const r = 20; const c = 2 * Math.PI * r; const offset = c - (score / 100) * c;
                   return (
@@ -892,6 +879,79 @@ export default function FicheDetailPage() {
                           {actionLoading === 'enrich' ? 'Re-enrichissement…' : 'Re-enrichir'}
                         </button>
                       </div>
+
+                      {/* Résumé validation IA pour statut validé */}
+                      {fiche.validation_ia_details && (() => {
+                        const d = fiche.validation_ia_details;
+                        const criteres = d.criteres || {};
+                        const positifs = Object.entries(criteres).filter(([, c]) => (c as any).score >= 80);
+                        const moyens = Object.entries(criteres).filter(([, c]) => (c as any).score >= 50 && (c as any).score < 80);
+                        const negatifs = Object.entries(criteres).filter(([, c]) => (c as any).score < 50);
+                        const problemes = d.problemes || [];
+                        const suggestions = d.suggestions || [];
+                        return (
+                          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-3">
+                            <div className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                              <span>Résultat de la validation IA</span>
+                              {d.score != null && (
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${d.score > 80 ? 'bg-green-500/20 text-green-400 border-green-500/30' : d.score > 50 ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'}`}>
+                                  {d.score}/100
+                                </span>
+                              )}
+                            </div>
+                            {positifs.length > 0 && (
+                              <div>
+                                <div className="text-[11px] font-semibold text-green-400 mb-1">✅ Points forts</div>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {positifs.map(([nom, c]) => (
+                                    <span key={nom} className="px-2 py-0.5 bg-green-500/10 text-green-400 rounded-md text-[11px] capitalize">{nom} ({(c as any).score})</span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {moyens.length > 0 && (
+                              <div>
+                                <div className="text-[11px] font-semibold text-amber-400 mb-1">⚠️ À améliorer</div>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {moyens.map(([nom, c]) => (
+                                    <span key={nom} className="px-2 py-0.5 bg-amber-500/10 text-amber-400 rounded-md text-[11px] capitalize">{nom} ({(c as any).score})</span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {negatifs.length > 0 && (
+                              <div>
+                                <div className="text-[11px] font-semibold text-red-400 mb-1">❌ Points faibles</div>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {negatifs.map(([nom, c]) => (
+                                    <span key={nom} className="px-2 py-0.5 bg-red-500/10 text-red-400 rounded-md text-[11px] capitalize">{nom} ({(c as any).score})</span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {problemes.length > 0 && (
+                              <div>
+                                <div className="text-[11px] font-semibold text-red-400 mb-1">Problèmes détectés</div>
+                                <ul className="space-y-0.5">
+                                  {problemes.map((p: string, i: number) => (
+                                    <li key={i} className="text-[11px] text-red-400/80 flex items-start gap-1.5"><span className="shrink-0 mt-0.5">•</span>{p}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            {suggestions.length > 0 && (
+                              <div>
+                                <div className="text-[11px] font-semibold text-blue-400 mb-1">Suggestions</div>
+                                <ul className="space-y-0.5">
+                                  {suggestions.map((s: string, i: number) => (
+                                    <li key={i} className="text-[11px] text-blue-400/80 flex items-start gap-1.5"><span className="shrink-0 mt-0.5">•</span>{s}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                   ) : fiche.statut === 'enrichi' ? (
                     <div className="space-y-4">
@@ -911,6 +971,79 @@ export default function FicheDetailPage() {
                           {actionLoading === 'enrich' ? 'Re-enrichissement…' : 'Re-enrichir'}
                         </button>
                       </div>
+
+                      {/* Résumé validation IA si disponible */}
+                      {fiche.validation_ia_details && (() => {
+                        const d = fiche.validation_ia_details;
+                        const criteres = d.criteres || {};
+                        const positifs = Object.entries(criteres).filter(([, c]) => (c as any).score >= 80);
+                        const moyens = Object.entries(criteres).filter(([, c]) => (c as any).score >= 50 && (c as any).score < 80);
+                        const negatifs = Object.entries(criteres).filter(([, c]) => (c as any).score < 50);
+                        const problemes = d.problemes || [];
+                        const suggestions = d.suggestions || [];
+                        return (
+                          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-3">
+                            <div className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                              <span>Résultat de la validation IA</span>
+                              {d.score != null && (
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${d.score > 80 ? 'bg-green-500/20 text-green-400 border-green-500/30' : d.score > 50 ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'}`}>
+                                  {d.score}/100
+                                </span>
+                              )}
+                            </div>
+                            {positifs.length > 0 && (
+                              <div>
+                                <div className="text-[11px] font-semibold text-green-400 mb-1">✅ Points forts</div>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {positifs.map(([nom, c]) => (
+                                    <span key={nom} className="px-2 py-0.5 bg-green-500/10 text-green-400 rounded-md text-[11px] capitalize">{nom} ({(c as any).score})</span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {moyens.length > 0 && (
+                              <div>
+                                <div className="text-[11px] font-semibold text-amber-400 mb-1">⚠️ À améliorer</div>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {moyens.map(([nom, c]) => (
+                                    <span key={nom} className="px-2 py-0.5 bg-amber-500/10 text-amber-400 rounded-md text-[11px] capitalize">{nom} ({(c as any).score})</span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {negatifs.length > 0 && (
+                              <div>
+                                <div className="text-[11px] font-semibold text-red-400 mb-1">❌ Points faibles</div>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {negatifs.map(([nom, c]) => (
+                                    <span key={nom} className="px-2 py-0.5 bg-red-500/10 text-red-400 rounded-md text-[11px] capitalize">{nom} ({(c as any).score})</span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {problemes.length > 0 && (
+                              <div>
+                                <div className="text-[11px] font-semibold text-red-400 mb-1">Problèmes détectés</div>
+                                <ul className="space-y-0.5">
+                                  {problemes.map((p: string, i: number) => (
+                                    <li key={i} className="text-[11px] text-red-400/80 flex items-start gap-1.5"><span className="shrink-0 mt-0.5">•</span>{p}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            {suggestions.length > 0 && (
+                              <div>
+                                <div className="text-[11px] font-semibold text-blue-400 mb-1">Suggestions</div>
+                                <ul className="space-y-0.5">
+                                  {suggestions.map((s: string, i: number) => (
+                                    <li key={i} className="text-[11px] text-blue-400/80 flex items-start gap-1.5"><span className="shrink-0 mt-0.5">•</span>{s}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
 
                       {/* Re-enrichir avec commentaire */}
                       <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/[0.04] p-5">
@@ -1275,7 +1408,24 @@ export default function FicheDetailPage() {
                 )}
 
                 {/* ── Compétences par dimension (Donut) ── */}
-                {fiche.competences_dimensions && Object.values(fiche.competences_dimensions).some(v => v > 0) && (
+                {fiche.competences_dimensions && Object.values(fiche.competences_dimensions).some(v => (v ?? 0) > 0) && (() => {
+                  const dim = fiche.competences_dimensions;
+                  // Map DB keys to display labels — handles both old and new key names
+                  const dimData = [
+                    { label: "Technique", value: dim.technique ?? 0, color: PURPLE },
+                    { label: "Relationnel", value: dim.relationnel ?? 0, color: PINK },
+                    { label: "Analytique", value: dim.analytique ?? dim.intellectuel ?? 0, color: CYAN },
+                    { label: "Organisationnel", value: dim.organisationnel ?? dim.realisation ?? 0, color: "#F59E0B" },
+                    { label: "Leadership", value: dim.leadership ?? dim.management ?? 0, color: "#8B5CF6" },
+                    { label: "Num\u00e9rique", value: dim.numerique ?? 0, color: "#10B981" },
+                    { label: "Cr\u00e9atif", value: dim.creatif ?? dim.expression ?? 0, color: "#6366F1" },
+                    { label: "Communication", value: dim.communication ?? 0, color: "#EC4899" },
+                  ].filter(d => d.value > 0)
+                   .map(d => ({ ...d, value: d.value <= 1 ? Math.round(d.value * 100) : d.value }));
+
+                  if (dimData.length === 0) return null;
+
+                  return (
                   <div className="mb-8">
                     <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-1">{t.skillsDimensions}</h3>
                     <p className="text-xs text-gray-400 mb-4">{t.skillsDimensionsDesc}</p>
@@ -1284,26 +1434,19 @@ export default function FicheDetailPage() {
                         <ResponsiveContainer width="100%" height="100%">
                           <PieChart>
                             <Pie
-                              data={[
-                                { name: t.dimRelational, value: fiche.competences_dimensions.relationnel },
-                                { name: t.dimIntellectual, value: fiche.competences_dimensions.intellectuel },
-                                { name: t.dimCommunication, value: fiche.competences_dimensions.communication },
-                                { name: t.dimManagement, value: fiche.competences_dimensions.management },
-                                { name: t.dimRealization, value: fiche.competences_dimensions.realisation },
-                                { name: t.dimExpression, value: fiche.competences_dimensions.expression },
-                                { name: t.dimPhysical, value: fiche.competences_dimensions.physique_sensoriel },
-                              ].filter(d => d.value > 0)}
+                              data={dimData}
                               cx="50%" cy="50%"
                               innerRadius={50} outerRadius={90}
                               paddingAngle={3} dataKey="value"
-                              label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                              nameKey="label"
+                              label={false}
                             >
-                              {[PURPLE, PINK, CYAN, "#F59E0B", "#8B5CF6", "#10B981", "#6366F1"].map((color, idx) => (
-                                <Cell key={idx} fill={color} />
+                              {dimData.map((d, idx) => (
+                                <Cell key={idx} fill={d.color} />
                               ))}
                             </Pie>
                             <Tooltip
-                              formatter={(val: number) => `${val}%`}
+                              formatter={(val: number, name: string) => [`${val}%`, name]}
                               contentStyle={{ borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", backgroundColor: "#0c0c1a", fontSize: 13 }}
                               labelStyle={{ color: "#e5e7eb", fontWeight: 600, marginBottom: 4 }}
                               itemStyle={{ color: "#9ca3af" }}
@@ -1312,48 +1455,56 @@ export default function FicheDetailPage() {
                         </ResponsiveContainer>
                       </div>
                       <div className="w-full md:w-1/2 space-y-2">
-                        {[
-                          { label: t.dimRelational, value: fiche.competences_dimensions.relationnel, color: PURPLE },
-                          { label: t.dimIntellectual, value: fiche.competences_dimensions.intellectuel, color: PINK },
-                          { label: t.dimCommunication, value: fiche.competences_dimensions.communication, color: CYAN },
-                          { label: t.dimManagement, value: fiche.competences_dimensions.management, color: "#F59E0B" },
-                          { label: t.dimRealization, value: fiche.competences_dimensions.realisation, color: "#8B5CF6" },
-                          { label: t.dimExpression, value: fiche.competences_dimensions.expression, color: "#10B981" },
-                          { label: t.dimPhysical, value: fiche.competences_dimensions.physique_sensoriel, color: "#6366F1" },
-                        ].filter(d => d.value > 0).map((dim, i) => (
+                        {dimData.map((d, i) => (
                           <div key={i} className="flex items-center gap-3">
-                            <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: dim.color }} />
-                            <span className="text-sm text-gray-300 flex-1">{dim.label}</span>
-                            <span className="text-sm font-bold" style={{ color: dim.color }}>{dim.value}%</span>
+                            <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
+                            <span className="text-sm text-gray-300 flex-1">{d.label}</span>
+                            <span className="text-sm font-bold" style={{ color: d.color }}>{d.value}%</span>
                           </div>
                         ))}
                       </div>
                     </div>
                   </div>
-                )}
+                  );
+                })()}
 
                 {/* ── Profil RIASEC (Radar) ── */}
-                {fiche.profil_riasec && Object.values(fiche.profil_riasec).some(v => v > 0) && (
+                {fiche.profil_riasec && Object.values(fiche.profil_riasec).some(v => v > 0) && (() => {
+                  const r = fiche.profil_riasec;
+                  // Auto-detect scale: if all values <= 1, they're 0-1 scale -> multiply by 100
+                  const allSmall = Object.values(r).every((v: number) => v <= 1);
+                  const scale = (v: number) => allSmall ? Math.round(v * 100) : v;
+                  const riasecData = [
+                    { subject: t.riasecR, value: scale(r.realiste ?? 0), fullName: "R\u00e9aliste" },
+                    { subject: t.riasecI, value: scale(r.investigateur ?? 0), fullName: "Investigateur" },
+                    { subject: t.riasecA, value: scale(r.artistique ?? 0), fullName: "Artistique" },
+                    { subject: t.riasecS, value: scale(r.social ?? 0), fullName: "Social" },
+                    { subject: t.riasecE, value: scale(r.entreprenant ?? 0), fullName: "Entreprenant" },
+                    { subject: t.riasecC, value: scale(r.conventionnel ?? 0), fullName: "Conventionnel" },
+                  ];
+                  // Find top 3 types for summary
+                  const top3 = [...riasecData].sort((a, b) => b.value - a.value).slice(0, 3);
+                  const riasecCode = top3.map(d => d.subject).join("");
+
+                  return (
                   <div className="mb-8">
                     <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-1">{t.riasecProfile}</h3>
-                    <p className="text-xs text-gray-400 mb-4">{t.riasecDesc}</p>
+                    <p className="text-xs text-gray-400 mb-3">{t.riasecDesc}</p>
+                    {/* RIASEC code summary */}
+                    <div className="flex items-center justify-center gap-3 mb-4">
+                      <span className="text-xs text-gray-500">Code dominant :</span>
+                      <span className="px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-400 text-sm font-bold tracking-widest">{riasecCode}</span>
+                    </div>
                     <div className="flex justify-center">
                       <div className="w-full max-w-md h-[300px]">
                         <ResponsiveContainer width="100%" height="100%">
-                          <RadarChart data={[
-                            { subject: t.riasecR, value: fiche.profil_riasec.realiste },
-                            { subject: t.riasecI, value: fiche.profil_riasec.investigateur },
-                            { subject: t.riasecA, value: fiche.profil_riasec.artistique },
-                            { subject: t.riasecS, value: fiche.profil_riasec.social },
-                            { subject: t.riasecE, value: fiche.profil_riasec.entreprenant },
-                            { subject: t.riasecC, value: fiche.profil_riasec.conventionnel },
-                          ]}>
+                          <RadarChart data={riasecData}>
                             <PolarGrid stroke="rgba(99,102,241,0.3)" />
-                            <PolarAngleAxis dataKey="subject" tick={{ fontSize: 12, fill: "#4F46E5", fontWeight: 600 }} />
-                            <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 9, fill: "#9ca3af" }} />
-                            <Radar name="RIASEC" dataKey="value" stroke={PURPLE} fill={PURPLE} fillOpacity={0.25} strokeWidth={2} />
+                            <PolarAngleAxis dataKey="subject" tick={{ fontSize: 13, fill: "#818CF8", fontWeight: 700 }} />
+                            <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 9, fill: "#9ca3af" }} tickCount={5} />
+                            <Radar name="RIASEC" dataKey="value" stroke={PURPLE} fill={PURPLE} fillOpacity={0.3} strokeWidth={2} dot={{ r: 4, fill: PURPLE }} />
                             <Tooltip
-                              formatter={(val: number) => `${val}/100`}
+                              formatter={(val: number, _name: string, props: { payload?: { fullName?: string } }) => [`${val}/100`, props?.payload?.fullName || ""]}
                               contentStyle={{ borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", backgroundColor: "#0c0c1a", fontSize: 13 }}
                               labelStyle={{ color: "#e5e7eb", fontWeight: 600, marginBottom: 4 }}
                               itemStyle={{ color: "#9ca3af" }}
@@ -1362,8 +1513,22 @@ export default function FicheDetailPage() {
                         </ResponsiveContainer>
                       </div>
                     </div>
+                    {/* RIASEC legend bars */}
+                    <div className="mt-4 space-y-2 max-w-md mx-auto">
+                      {riasecData.map((d, i) => (
+                        <div key={i} className="flex items-center gap-3">
+                          <span className="text-xs font-bold text-indigo-400 w-4 text-center">{d.subject}</span>
+                          <span className="text-sm text-gray-400 w-28 shrink-0">{d.fullName}</span>
+                          <div className="flex-1 h-2 bg-white/[0.06] rounded-full overflow-hidden">
+                            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${d.value}%`, background: `linear-gradient(90deg, ${PURPLE}, ${LIGHT_PURPLE})` }} />
+                          </div>
+                          <span className="text-xs font-bold text-indigo-400 w-10 text-right">{d.value}%</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                )}
+                  );
+                })()}
 
                 {/* ── Préférences & Intérêts ── */}
                 {fiche.preferences_interets && fiche.preferences_interets.domaine_interet && (

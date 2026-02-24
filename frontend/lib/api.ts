@@ -135,6 +135,14 @@ export interface FicheDetail extends FicheMetier {
     realisation: number;
     expression: number;
     physique_sensoriel: number;
+    // DB keys from IA enrichment
+    technique?: number;
+    analytique?: number;
+    creatif?: number;
+    organisationnel?: number;
+    leadership?: number;
+    numerique?: number;
+    [key: string]: number | undefined;
   } | null;
   profil_riasec: {
     realiste: number;
