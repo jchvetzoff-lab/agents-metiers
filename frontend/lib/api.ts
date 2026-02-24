@@ -314,7 +314,10 @@ class ApiClient {
     }
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    // POST requests (enrich, validate, etc.) can take longer due to AI processing
+    const isPost = options?.method?.toUpperCase() === "POST";
+    const timeoutMs = isPost ? 120000 : 30000;
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     let response: Response;
     try {
@@ -326,7 +329,10 @@ class ApiClient {
     } catch (err: any) {
       clearTimeout(timeoutId);
       if (err?.name === "AbortError") {
-        throw new Error("La requête a expiré (timeout 30s). Le serveur est peut-être en cours de démarrage.");
+        throw new Error(isPost
+          ? "La requête a expiré (timeout 2min). L'enrichissement IA peut prendre du temps."
+          : "La requête a expiré (timeout 30s). Le serveur est peut-être en cours de démarrage."
+        );
       }
       throw err;
     }
