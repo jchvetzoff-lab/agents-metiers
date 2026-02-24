@@ -406,7 +406,7 @@ IMPORTANT :
         try:
             response = await self.claude_client.messages.create(
                 model=self.config.api.claude_model,
-                max_tokens=4096,
+                max_tokens=8192,
                 messages=[{"role": "user", "content": prompt}]
             )
 
@@ -571,7 +571,7 @@ Notes IMPORTANTES :
         try:
             response = await self.claude_client.messages.create(
                 model=self.config.api.claude_model,
-                max_tokens=16384,
+                max_tokens=32768,
                 messages=[{"role": "user", "content": prompt}]
             )
 
