@@ -9,17 +9,17 @@ import { FadeInView, StaggerContainer, StaggerItem } from "@/components/motion";
 function TensionBadge({ fiche }: { fiche: FicheMetier }) {
   // Heuristic: fiches with has_perspectives and has_salaires are more likely high-tension
   const hasFull = fiche.has_competences && fiche.has_formations && fiche.has_salaires && fiche.has_perspectives;
-  const color = hasFull ? "bg-green-100 text-green-700 border-green-200" : "bg-amber-100 text-amber-700 border-amber-200";
+  const color = hasFull ? "bg-green-500/20 text-green-400 border-green-500/30" : "bg-amber-500/20 text-amber-400 border-amber-500/30";
   const label = hasFull ? "Forte demande" : "Demande modérée";
   return <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${color}`}>{label}</span>;
 }
 
 function StatCard({ value, label, icon }: { value: string; label: string; icon: string }) {
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 text-center hover:shadow-md transition-shadow">
+    <div className="bg-white/5 rounded-2xl border border-white/[0.06] p-6 text-center hover:bg-white/[0.08] transition-colors">
       <div className="text-3xl mb-2">{icon}</div>
-      <div className="text-2xl md:text-3xl font-bold text-indigo-600 mb-1">{value}</div>
-      <div className="text-sm text-gray-500">{label}</div>
+      <div className="text-2xl md:text-3xl font-bold text-indigo-400 mb-1">{value}</div>
+      <div className="text-sm text-gray-400">{label}</div>
     </div>
   );
 }
@@ -35,7 +35,7 @@ export default function Home() {
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
-    api.getFiches({ limit: 6, statut: "publiee" }).then(r => setFiches(r.results)).catch(() => {});
+    api.getFiches({ limit: 6 }).then(r => setFiches(r.results)).catch(() => {});
     api.getStats().then(s => setStats(s)).catch(() => {});
   }, []);
 
@@ -130,30 +130,30 @@ export default function Home() {
 
       {/* ── MÉTIERS QUI RECRUTENT ── */}
       {fiches.length > 0 && (
-        <section className="py-20 px-6 bg-gray-50">
+        <section className="py-20 px-6 bg-white/[0.02]">
           <div className="max-w-7xl mx-auto">
             <div className="text-center mb-12">
               <FadeInView>
-                <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">Métiers qui recrutent</h2>
+                <h2 className="text-3xl md:text-4xl font-bold text-white mb-3">Métiers qui recrutent</h2>
               </FadeInView>
               <FadeInView delay={0.1}>
-                <p className="text-gray-500 text-lg">Les fiches les plus complètes, prêtes à consulter</p>
+                <p className="text-gray-400 text-lg">Les fiches les plus complètes, prêtes à consulter</p>
               </FadeInView>
             </div>
             <StaggerContainer stagger={0.08} className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {fiches.map(f => (
                 <StaggerItem key={f.code_rome}>
                   <Link href={`/fiches/${f.code_rome}`}
-                    className="block bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group">
+                    className="block bg-[#0c0c1a] rounded-2xl border border-white/[0.06] p-6 hover:border-indigo-500/30 hover:-translate-y-1 transition-all duration-300 group">
                     <div className="flex items-center gap-2 mb-3">
-                      <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg">{f.code_rome}</span>
+                      <span className="text-xs font-bold text-indigo-400 bg-indigo-500/10 px-2.5 py-1 rounded-lg">{f.code_rome}</span>
                       <TensionBadge fiche={f} />
                     </div>
-                    <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-indigo-600 transition-colors">{f.nom_masculin}</h3>
+                    <h3 className="text-lg font-bold text-white mb-2 group-hover:text-indigo-400 transition-colors">{f.nom_masculin}</h3>
                     {f.description_courte && (
-                      <p className="text-sm text-gray-500 line-clamp-2 leading-relaxed">{f.description_courte}</p>
+                      <p className="text-sm text-gray-400 line-clamp-2 leading-relaxed">{f.description_courte}</p>
                     )}
-                    <div className="mt-4 text-sm font-medium text-indigo-600 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="mt-4 text-sm font-medium text-indigo-400 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       Voir la fiche <span>→</span>
                     </div>
                   </Link>
@@ -161,7 +161,7 @@ export default function Home() {
               ))}
             </StaggerContainer>
             <div className="text-center mt-10">
-              <Link href="/fiches" className="inline-flex items-center gap-2 text-indigo-600 font-semibold hover:underline">
+              <Link href="/fiches" className="inline-flex items-center gap-2 text-indigo-400 font-semibold hover:underline">
                 Voir toutes les fiches →
               </Link>
             </div>
@@ -208,11 +208,11 @@ export default function Home() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-6">
             <div>
               <div className="font-bold text-lg gradient-text mb-1">Agents Métiers</div>
-              <p className="text-sm text-gray-500">Propulsé par Claude</p>
+              <p className="text-sm text-gray-500">Propulsé par IA</p>
             </div>
             <div className="flex gap-8 text-sm">
               <Link href="/fiches" className="text-gray-500 hover:text-indigo-400 transition-colors font-medium">Fiches</Link>
-              <Link href="/actions" className="text-gray-500 hover:text-indigo-400 transition-colors font-medium">Actions</Link>
+              <Link href="/actions" className="text-gray-500 hover:text-indigo-400 transition-colors font-medium">Centre de contrôle</Link>
               <Link href="/dashboard" className="text-gray-500 hover:text-indigo-400 transition-colors font-medium">Dashboard</Link>
               <Link href="/guide" className="text-gray-500 hover:text-indigo-400 transition-colors font-medium">Guide</Link>
             </div>

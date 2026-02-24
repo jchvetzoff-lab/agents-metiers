@@ -298,8 +298,15 @@ class ApiClient {
     };
 
     // Ajouter le token d'authentification si present
+    // Ne pas envoyer le token pour les requetes GET publiques (fiches, stats, regions)
+    const method = options?.method?.toUpperCase() || "GET";
+    const isPublicGet = method === "GET" && (
+      endpoint.startsWith("/api/fiches") ||
+      endpoint.startsWith("/api/stats") ||
+      endpoint.startsWith("/api/regions")
+    );
     const token = getToken();
-    if (token) {
+    if (token && !isPublicGet) {
       headers["Authorization"] = `Bearer ${token}`;
     }
 

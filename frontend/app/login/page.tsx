@@ -30,15 +30,15 @@ export default function LoginPage() {
     setPhase("intro");
     const timers: NodeJS.Timeout[] = [];
 
-    timers.push(setTimeout(() => setIntroStep(1), 300));
-    timers.push(setTimeout(() => setIntroStep(2), 1400));
-    timers.push(setTimeout(() => setIntroStep(3), 2800));
-    timers.push(setTimeout(() => setIntroStep(4), 3800));
-    timers.push(setTimeout(() => setIntroStep(5), 4400));
+    timers.push(setTimeout(() => setIntroStep(1), 100));
+    timers.push(setTimeout(() => setIntroStep(2), 400));
+    timers.push(setTimeout(() => setIntroStep(3), 800));
+    timers.push(setTimeout(() => setIntroStep(4), 1000));
+    timers.push(setTimeout(() => setIntroStep(5), 1200));
     timers.push(setTimeout(() => {
       setIntroStep(6);
       setPhase("login");
-    }, 5800));
+    }, 1500));
 
     return () => timers.forEach(clearTimeout);
   }, []);

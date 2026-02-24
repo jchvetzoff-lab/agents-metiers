@@ -224,6 +224,11 @@ export default function FichesPage() {
           <p className="text-xl text-gray-400">
             Explorez et gérez le référentiel ROME complet
           </p>
+          {!authed && (
+            <div className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-500/10 border border-indigo-500/20 rounded-full text-sm text-indigo-400">
+              🔒 <Link href="/login" className="font-semibold hover:underline">Connectez-vous</Link> pour gérer les fiches
+            </div>
+          )}
           {authed && (
             <button
               onClick={() => { setShowCreateModal(true); setCreateForm({ code_rome: "", nom_masculin: "", nom_feminin: "", nom_epicene: "", description: "" }); setCreateError(""); }}
@@ -403,7 +408,10 @@ export default function FichesPage() {
                             </div>
                           </td>
                           <td className="p-4 text-center">
-                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${scoreColor}`}>
+                            <span
+                              className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${scoreColor}`}
+                              title="Score de complétude : description (20%), compétences (25%), formations (20%), salaires (20%), perspectives (15%)"
+                            >
                               {score}%
                             </span>
                           </td>
@@ -427,14 +435,16 @@ export default function FichesPage() {
                               >
                                 Voir
                               </Link>
-                              <button
-                                onClick={() => { setDeleteTarget(fiche); setConfirmStep(1); }}
-                                className="hidden sm:inline-flex items-center px-4 py-2 rounded-full border border-red-300 text-red-400 text-xs sm:text-sm font-semibold
-                                         hover:bg-red-600 hover:text-white hover:scale-105 hover:shadow-md
-                                         transition-all duration-200 ease-out"
-                              >
-                                Supprimer
-                              </button>
+                              {authed && (
+                                <button
+                                  onClick={() => { setDeleteTarget(fiche); setConfirmStep(1); }}
+                                  className="hidden sm:inline-flex items-center px-4 py-2 rounded-full border border-red-300 text-red-400 text-xs sm:text-sm font-semibold
+                                           hover:bg-red-600 hover:text-white hover:scale-105 hover:shadow-md
+                                           transition-all duration-200 ease-out"
+                                >
+                                  Supprimer
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>

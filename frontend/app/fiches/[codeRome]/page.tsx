@@ -580,10 +580,11 @@ export default function FicheDetailPage() {
       {/* ── HEADER ── */}
       <div className="bg-gradient-to-br from-indigo-50 via-white to-purple-50/40 border-b border-indigo-100/50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 md:px-8 py-6">
-          <Link href="/fiches" className="inline-flex items-center gap-1.5 text-sm text-indigo-600 hover:underline mb-4">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            {t.backToList}
-          </Link>
+          <nav className="flex items-center gap-2 text-sm mb-4">
+            <Link href="/fiches" className="text-indigo-600 hover:underline font-medium">Fiches</Link>
+            <span className="text-gray-400">›</span>
+            <span className="text-gray-600 font-medium">{fiche.code_rome} — {fiche.nom_epicene}</span>
+          </nav>
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
             <div>
               <div className="flex items-center gap-3 mb-2">
