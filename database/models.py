@@ -5,7 +5,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional, Dict, List, Any
 from dataclasses import dataclass, field
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, model_validator
 import json
 
 
@@ -201,6 +201,118 @@ class FicheMetier(BaseModel):
 
     # Métadonnées
     metadata: MetadataFiche = Field(default_factory=MetadataFiche)
+
+    @field_validator('competences', 'competences_transversales', 'formations', 'certifications',
+                     'conditions_travail', 'environnements', 'metiers_proches', 'secteurs_activite',
+                     'missions_principales', 'savoirs', 'autres_appellations', 'traits_personnalite',
+                     'statuts_professionnels', mode='before')
+    @classmethod
+    def _normalize_string_lists(cls, v):
+        if not v:
+            return []
+        if isinstance(v, str):
+            try:
+                v = json.loads(v)
+            except (json.JSONDecodeError, ValueError):
+                return [v]
+        if not isinstance(v, list):
+            return []
+        result = []
+        for item in v:
+            if isinstance(item, str):
+                result.append(item)
+            elif isinstance(item, dict):
+                result.append(item.get('nom') or item.get('name') or item.get('label') or str(item))
+            else:
+                result.append(str(item))
+        return result
+
+    @field_validator('aptitudes', mode='before')
+    @classmethod
+    def _normalize_aptitudes(cls, v):
+        if not v:
+            return []
+        if isinstance(v, str):
+            try:
+                v = json.loads(v)
+            except (json.JSONDecodeError, ValueError):
+                return []
+        if not isinstance(v, list):
+            return []
+        return [item if isinstance(item, dict) else {"nom": str(item), "niveau": 3} for item in v]
+
+    @field_validator('sites_utiles', mode='before')
+    @classmethod
+    def _normalize_sites(cls, v):
+        if not v:
+            return []
+        if isinstance(v, str):
+            try:
+                v = json.loads(v)
+            except (json.JSONDecodeError, ValueError):
+                return []
+        if not isinstance(v, list):
+            return []
+        return [item if isinstance(item, dict) else {"nom": str(item), "url": ""} for item in v]
+
+    @field_validator('profil_riasec', 'competences_dimensions', 'domaine_professionnel',
+                     'preferences_interets', 'conditions_travail_detaillees', 'types_contrats',
+                     'validation_ia_details', mode='before')
+    @classmethod
+    def _normalize_dict_fields(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, str):
+            try:
+                v = json.loads(v)
+            except (json.JSONDecodeError, ValueError):
+                return None
+        if isinstance(v, dict) and len(v) == 0:
+            return None
+        return v if isinstance(v, dict) else None
+
+    @field_validator('salaires', mode='before')
+    @classmethod
+    def _normalize_salaires(cls, v):
+        if not v:
+            return SalairesMetier()
+        if isinstance(v, str):
+            try:
+                v = json.loads(v)
+            except (json.JSONDecodeError, ValueError):
+                return SalairesMetier()
+        if isinstance(v, SalairesMetier):
+            return v
+        if isinstance(v, dict):
+            try:
+                return SalairesMetier(**v)
+            except Exception:
+                return SalairesMetier()
+        return SalairesMetier()
+
+    @field_validator('perspectives', mode='before')
+    @classmethod
+    def _normalize_perspectives(cls, v):
+        if not v:
+            return PerspectivesMetier()
+        if isinstance(v, str):
+            try:
+                v = json.loads(v)
+            except (json.JSONDecodeError, ValueError):
+                return PerspectivesMetier()
+        if isinstance(v, PerspectivesMetier):
+            return v
+        if isinstance(v, dict):
+            tendance = v.get('tendance', 'stable')
+            try:
+                TendanceMetier(tendance)
+            except ValueError:
+                v = {**v, 'tendance': 'stable'}
+            try:
+                return PerspectivesMetier(**v)
+            except Exception:
+                return PerspectivesMetier()
+        return PerspectivesMetier()
 
     def to_dict(self) -> Dict[str, Any]:
         """Convertit la fiche en dictionnaire."""
@@ -451,35 +563,35 @@ class FicheMetierDB(Base):
             nom_epicene=self.nom_epicene,
             description=self.description or "",
             description_courte=self.description_courte,
-            competences=_to_string_list(self.competences),
-            competences_transversales=_to_string_list(self.competences_transversales),
-            formations=_to_string_list(self.formations),
-            certifications=_to_string_list(self.certifications),
-            conditions_travail=_to_string_list(self.conditions_travail),
-            environnements=_to_string_list(self.environnements),
-            metiers_proches=_to_string_list(self.metiers_proches),
-            secteurs_activite=_to_string_list(self.secteurs_activite),
-            missions_principales=_to_string_list(getattr(self, 'missions_principales', None)),
+            competences=self.competences or [],
+            competences_transversales=self.competences_transversales or [],
+            formations=self.formations or [],
+            certifications=self.certifications or [],
+            conditions_travail=self.conditions_travail or [],
+            environnements=self.environnements or [],
+            metiers_proches=self.metiers_proches or [],
+            secteurs_activite=self.secteurs_activite or [],
+            missions_principales=getattr(self, 'missions_principales', None) or [],
             acces_metier=getattr(self, 'acces_metier', None),
-            savoirs=_to_string_list(getattr(self, 'savoirs', None)),
-            autres_appellations=_to_string_list(getattr(self, 'autres_appellations', None)),
-            traits_personnalite=_to_string_list(getattr(self, 'traits_personnalite', None)),
+            savoirs=getattr(self, 'savoirs', None) or [],
+            autres_appellations=getattr(self, 'autres_appellations', None) or [],
+            traits_personnalite=getattr(self, 'traits_personnalite', None) or [],
             aptitudes=getattr(self, 'aptitudes', None) or [],
-            profil_riasec=_parse_json_field(getattr(self, 'profil_riasec', None)),
-            competences_dimensions=_parse_json_field(getattr(self, 'competences_dimensions', None)),
-            domaine_professionnel=_parse_json_field(getattr(self, 'domaine_professionnel', None)),
-            preferences_interets=_parse_json_field(getattr(self, 'preferences_interets', None)),
+            profil_riasec=getattr(self, 'profil_riasec', None),
+            competences_dimensions=getattr(self, 'competences_dimensions', None),
+            domaine_professionnel=getattr(self, 'domaine_professionnel', None),
+            preferences_interets=getattr(self, 'preferences_interets', None),
             sites_utiles=getattr(self, 'sites_utiles', None) or [],
-            conditions_travail_detaillees=_parse_json_field(getattr(self, 'conditions_travail_detaillees', None)),
-            statuts_professionnels=_to_string_list(getattr(self, 'statuts_professionnels', None)),
+            conditions_travail_detaillees=getattr(self, 'conditions_travail_detaillees', None),
+            statuts_professionnels=getattr(self, 'statuts_professionnels', None) or [],
             niveau_formation=getattr(self, 'niveau_formation', None),
-            types_contrats=_parse_json_field(getattr(self, 'types_contrats', None)),
+            types_contrats=getattr(self, 'types_contrats', None),
             rome_update_pending=bool(getattr(self, 'rome_update_pending', 0)),
             validation_ia_score=getattr(self, 'validation_ia_score', None),
             validation_ia_date=getattr(self, 'validation_ia_date', None),
-            validation_ia_details=_parse_json_field(getattr(self, 'validation_ia_details', None)),
-            salaires=_safe_salaires(self.salaires),
-            perspectives=_safe_perspectives(self.perspectives),
+            validation_ia_details=getattr(self, 'validation_ia_details', None),
+            salaires=self.salaires or {},
+            perspectives=self.perspectives or {},
             metadata=MetadataFiche(
                 date_creation=self.date_creation,
                 date_maj=self.date_maj,
