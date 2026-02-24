@@ -1407,62 +1407,105 @@ export default function FicheDetailPage() {
                   </div>
                 )}
 
-                {/* ── Compétences par dimension (Donut) ── */}
+                {/* ── Compétences par dimension ── */}
                 {fiche.competences_dimensions && Object.values(fiche.competences_dimensions).some(v => (v ?? 0) > 0) && (() => {
                   const dim = fiche.competences_dimensions;
-                  // Map DB keys to display labels — handles both old and new key names
-                  const dimData = [
-                    { label: "Technique", value: dim.technique ?? 0, color: PURPLE },
-                    { label: "Relationnel", value: dim.relationnel ?? 0, color: PINK },
-                    { label: "Analytique", value: dim.analytique ?? dim.intellectuel ?? 0, color: CYAN },
-                    { label: "Organisationnel", value: dim.organisationnel ?? dim.realisation ?? 0, color: "#F59E0B" },
-                    { label: "Leadership", value: dim.leadership ?? dim.management ?? 0, color: "#8B5CF6" },
-                    { label: "Num\u00e9rique", value: dim.numerique ?? 0, color: "#10B981" },
-                    { label: "Cr\u00e9atif", value: dim.creatif ?? dim.expression ?? 0, color: "#6366F1" },
-                    { label: "Communication", value: dim.communication ?? 0, color: "#EC4899" },
-                  ].filter(d => d.value > 0)
-                   .map(d => ({ ...d, value: d.value <= 1 ? Math.round(d.value * 100) : d.value }));
+                  const DIM_CONFIG = [
+                    { key: "technique", label: "Technique", icon: "🔧", color: "#6366F1", fallback: [] as string[] },
+                    { key: "relationnel", label: "Relationnel", icon: "🤝", color: "#EC4899", fallback: [] },
+                    { key: "analytique", label: "Analytique", icon: "🧠", color: "#06B6D4", fallback: ["intellectuel"] },
+                    { key: "organisationnel", label: "Organisation", icon: "📋", color: "#F59E0B", fallback: ["realisation"] },
+                    { key: "leadership", label: "Leadership", icon: "👥", color: "#8B5CF6", fallback: ["management"] },
+                    { key: "numerique", label: "Numérique", icon: "💻", color: "#10B981", fallback: [] },
+                    { key: "creatif", label: "Créativité", icon: "🎨", color: "#F97316", fallback: ["expression"] },
+                    { key: "communication", label: "Communication", icon: "💬", color: "#14B8A6", fallback: [] },
+                  ];
+
+                  const dimData = DIM_CONFIG.map(cfg => {
+                    let val = (dim as any)[cfg.key] ?? 0;
+                    if (!val) {
+                      for (const fb of cfg.fallback) {
+                        val = (dim as any)[fb] ?? 0;
+                        if (val) break;
+                      }
+                    }
+                    return { ...cfg, value: val <= 1 && val > 0 ? Math.round(val * 100) : val };
+                  }).filter(d => d.value > 0)
+                   .sort((a, b) => b.value - a.value);
 
                   if (dimData.length === 0) return null;
+                  const maxVal = Math.max(...dimData.map(d => d.value));
 
                   return (
                   <div className="mb-8">
                     <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-1">{t.skillsDimensions}</h3>
-                    <p className="text-xs text-gray-400 mb-4">{t.skillsDimensionsDesc}</p>
-                    <div className="flex flex-col md:flex-row items-center gap-6">
-                      <div className="w-full md:w-1/2 h-[260px]">
+                    <p className="text-xs text-gray-400 mb-5">{t.skillsDimensionsDesc}</p>
+
+                    {/* Radar visualization */}
+                    <div className="flex justify-center mb-6">
+                      <div className="w-full max-w-md h-[280px]">
                         <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Pie
-                              data={dimData}
-                              cx="50%" cy="50%"
-                              innerRadius={50} outerRadius={90}
-                              paddingAngle={3} dataKey="value"
-                              nameKey="label"
-                              label={false}
-                            >
-                              {dimData.map((d, idx) => (
-                                <Cell key={idx} fill={d.color} />
-                              ))}
-                            </Pie>
-                            <Tooltip
-                              formatter={(val: number, name: string) => [`${val}%`, name]}
-                              contentStyle={{ borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", backgroundColor: "#0c0c1a", fontSize: 13 }}
-                              labelStyle={{ color: "#e5e7eb", fontWeight: 600, marginBottom: 4 }}
-                              itemStyle={{ color: "#9ca3af" }}
+                          <RadarChart data={dimData.map(d => ({ subject: d.label, value: d.value }))} outerRadius="70%">
+                            <PolarGrid stroke="rgba(255,255,255,0.06)" strokeDasharray="3 3" />
+                            <PolarAngleAxis
+                              dataKey="subject"
+                              tick={{ fontSize: 11, fill: "#9CA3AF", fontWeight: 600 }}
+                              tickLine={false}
                             />
-                          </PieChart>
+                            <PolarRadiusAxis
+                              angle={90}
+                              domain={[0, 100]}
+                              tick={{ fontSize: 9, fill: "rgba(255,255,255,0.2)" }}
+                              tickCount={3}
+                              axisLine={false}
+                            />
+                            <Radar
+                              name="Dimensions"
+                              dataKey="value"
+                              stroke="rgba(99,102,241,0.7)"
+                              fill="url(#dimGradient)"
+                              fillOpacity={0.5}
+                              strokeWidth={2}
+                              dot={{ r: 4, fill: "#818CF8", stroke: "#0c0c1a", strokeWidth: 2 }}
+                            />
+                            <Tooltip
+                              formatter={(val: number, name: string) => [`${val}/100`, name]}
+                              contentStyle={{ borderRadius: 12, border: "1px solid rgba(255,255,255,0.1)", backgroundColor: "#0c0c1a", fontSize: 13, padding: "8px 14px" }}
+                              labelStyle={{ color: "#e5e7eb", fontWeight: 700, marginBottom: 4 }}
+                              itemStyle={{ color: "#818CF8" }}
+                            />
+                            <defs>
+                              <radialGradient id="dimGradient" cx="50%" cy="50%" r="50%">
+                                <stop offset="0%" stopColor="#818CF8" stopOpacity={0.35} />
+                                <stop offset="100%" stopColor="#4F46E5" stopOpacity={0.1} />
+                              </radialGradient>
+                            </defs>
+                          </RadarChart>
                         </ResponsiveContainer>
                       </div>
-                      <div className="w-full md:w-1/2 space-y-2">
-                        {dimData.map((d, i) => (
-                          <div key={i} className="flex items-center gap-3">
-                            <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
-                            <span className="text-sm text-gray-300 flex-1">{d.label}</span>
-                            <span className="text-sm font-bold" style={{ color: d.color }}>{d.value}%</span>
+                    </div>
+
+                    {/* Detailed bars */}
+                    <div className="space-y-3 max-w-lg mx-auto">
+                      {dimData.map((d) => (
+                        <div key={d.key} className="group">
+                          <div className="flex items-center gap-3">
+                            <span className="text-base w-7 text-center shrink-0">{d.icon}</span>
+                            <span className="text-sm text-gray-300 w-28 shrink-0 font-medium">{d.label}</span>
+                            <div className="flex-1 h-3 bg-white/[0.06] rounded-full overflow-hidden relative">
+                              <div
+                                className="h-full rounded-full transition-all duration-700 relative"
+                                style={{
+                                  width: `${(d.value / maxVal) * 100}%`,
+                                  backgroundColor: d.color,
+                                  boxShadow: `0 0 10px ${d.color}30`,
+                                }}
+                              />
+                            </div>
+                            <span className="text-xs font-bold w-10 text-right tabular-nums" style={{ color: d.color }}>{d.value}</span>
                           </div>
-                        ))}
-                      </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                   );
@@ -1471,58 +1514,138 @@ export default function FicheDetailPage() {
                 {/* ── Profil RIASEC (Radar) ── */}
                 {fiche.profil_riasec && Object.values(fiche.profil_riasec).some(v => v > 0) && (() => {
                   const r = fiche.profil_riasec;
-                  // Auto-detect scale: if all values <= 1, they're 0-1 scale -> multiply by 100
                   const allSmall = Object.values(r).every((v: number) => v <= 1);
-                  const scale = (v: number) => allSmall ? Math.round(v * 100) : v;
+                  const scaleVal = (v: number) => allSmall ? Math.round(v * 100) : v;
+
+                  // RIASEC colors per type (matching reference image style)
+                  const RIASEC_COLORS = {
+                    R: { bg: "#3B82F6", text: "#DBEAFE", label: "Pratique" },
+                    I: { bg: "#DC2626", text: "#FEE2E2", label: "Investigateur" },
+                    A: { bg: "#F97316", text: "#FED7AA", label: "Créatif" },
+                    S: { bg: "#84CC16", text: "#ECFCCB", label: "Social" },
+                    E: { bg: "#E11D48", text: "#FFE4E6", label: "Entreprenant" },
+                    C: { bg: "#F472B6", text: "#FCE7F3", label: "Méthodique" },
+                  };
+
                   const riasecData = [
-                    { subject: t.riasecR, value: scale(r.realiste ?? 0), fullName: "R\u00e9aliste" },
-                    { subject: t.riasecI, value: scale(r.investigateur ?? 0), fullName: "Investigateur" },
-                    { subject: t.riasecA, value: scale(r.artistique ?? 0), fullName: "Artistique" },
-                    { subject: t.riasecS, value: scale(r.social ?? 0), fullName: "Social" },
-                    { subject: t.riasecE, value: scale(r.entreprenant ?? 0), fullName: "Entreprenant" },
-                    { subject: t.riasecC, value: scale(r.conventionnel ?? 0), fullName: "Conventionnel" },
+                    { key: "R", value: scaleVal(r.realiste ?? 0), ...RIASEC_COLORS.R },
+                    { key: "I", value: scaleVal(r.investigateur ?? 0), ...RIASEC_COLORS.I },
+                    { key: "A", value: scaleVal(r.artistique ?? 0), ...RIASEC_COLORS.A },
+                    { key: "S", value: scaleVal(r.social ?? 0), ...RIASEC_COLORS.S },
+                    { key: "E", value: scaleVal(r.entreprenant ?? 0), ...RIASEC_COLORS.E },
+                    { key: "C", value: scaleVal(r.conventionnel ?? 0), ...RIASEC_COLORS.C },
                   ];
-                  // Find top 3 types for summary
+
+                  const chartData = riasecData.map(d => ({ subject: d.label, value: d.value, key: d.key }));
                   const top3 = [...riasecData].sort((a, b) => b.value - a.value).slice(0, 3);
-                  const riasecCode = top3.map(d => d.subject).join("");
+                  const riasecCode = top3.map(d => d.key).join("");
+
+                  // Custom tick renderer: colored badges like the reference image
+                  const renderAxisTick = (tickProps: { x: number; y: number; payload: { value: string } }) => {
+                    const { x, y, payload } = tickProps;
+                    const item = riasecData.find(d => d.label === payload.value);
+                    if (!item) return <text x={x} y={y} fill="#fff" fontSize={12}>{payload.value}</text>;
+                    const w = payload.value.length * 8 + 20;
+                    const h = 24;
+                    return (
+                      <g>
+                        <rect x={x - w / 2} y={y - h / 2} width={w} height={h} rx={4} fill={item.bg} opacity={0.9} />
+                        <text x={x} y={y + 1} textAnchor="middle" dominantBaseline="middle" fill="#fff" fontSize={11} fontWeight={700}>
+                          {payload.value}
+                        </text>
+                      </g>
+                    );
+                  };
 
                   return (
                   <div className="mb-8">
                     <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-1">{t.riasecProfile}</h3>
                     <p className="text-xs text-gray-400 mb-3">{t.riasecDesc}</p>
+
                     {/* RIASEC code summary */}
-                    <div className="flex items-center justify-center gap-3 mb-4">
-                      <span className="text-xs text-gray-500">Code dominant :</span>
-                      <span className="px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-400 text-sm font-bold tracking-widest">{riasecCode}</span>
+                    <div className="flex items-center justify-center gap-2 mb-5">
+                      <span className="text-xs text-gray-500 uppercase tracking-wider">Profil dominant</span>
+                      <div className="flex gap-1">
+                        {top3.map((d) => (
+                          <span key={d.key} className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-black shadow-lg" style={{ backgroundColor: d.bg }}>
+                            {d.key}
+                          </span>
+                        ))}
+                      </div>
+                      <span className="text-sm font-bold text-white tracking-widest ml-1">{riasecCode}</span>
                     </div>
+
+                    {/* Radar chart */}
                     <div className="flex justify-center">
-                      <div className="w-full max-w-md h-[300px]">
+                      <div className="w-full max-w-lg h-[340px]">
                         <ResponsiveContainer width="100%" height="100%">
-                          <RadarChart data={riasecData}>
-                            <PolarGrid stroke="rgba(99,102,241,0.3)" />
-                            <PolarAngleAxis dataKey="subject" tick={{ fontSize: 13, fill: "#818CF8", fontWeight: 700 }} />
-                            <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 9, fill: "#9ca3af" }} tickCount={5} />
-                            <Radar name="RIASEC" dataKey="value" stroke={PURPLE} fill={PURPLE} fillOpacity={0.3} strokeWidth={2} dot={{ r: 4, fill: PURPLE }} />
-                            <Tooltip
-                              formatter={(val: number, _name: string, props: { payload?: { fullName?: string } }) => [`${val}/100`, props?.payload?.fullName || ""]}
-                              contentStyle={{ borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", backgroundColor: "#0c0c1a", fontSize: 13 }}
-                              labelStyle={{ color: "#e5e7eb", fontWeight: 600, marginBottom: 4 }}
-                              itemStyle={{ color: "#9ca3af" }}
+                          <RadarChart data={chartData} outerRadius="72%">
+                            <PolarGrid stroke="rgba(255,255,255,0.08)" strokeDasharray="3 3" />
+                            <PolarAngleAxis
+                              dataKey="subject"
+                              tick={renderAxisTick as any}
+                              tickLine={false}
                             />
+                            <PolarRadiusAxis
+                              angle={90}
+                              domain={[0, 100]}
+                              tick={{ fontSize: 9, fill: "rgba(255,255,255,0.25)" }}
+                              tickCount={3}
+                              axisLine={false}
+                            />
+                            <Radar
+                              name="RIASEC"
+                              dataKey="value"
+                              stroke="rgba(99,102,241,0.8)"
+                              fill="url(#riasecGradient)"
+                              fillOpacity={0.6}
+                              strokeWidth={2.5}
+                              dot={(dotProps: any) => {
+                                const { cx, cy, index } = dotProps;
+                                const item = riasecData[index];
+                                return (
+                                  <g key={index}>
+                                    <circle cx={cx} cy={cy} r={6} fill={item?.bg || PURPLE} stroke="#0c0c1a" strokeWidth={2} />
+                                    <circle cx={cx} cy={cy} r={3} fill="#fff" opacity={0.8} />
+                                  </g>
+                                );
+                              }}
+                            />
+                            <Tooltip
+                              formatter={(val: number, _name: string, props: { payload?: { key?: string } }) => {
+                                const item = riasecData.find(d => d.key === props?.payload?.key);
+                                return [`${val}/100`, item?.label || ""];
+                              }}
+                              contentStyle={{ borderRadius: 12, border: "1px solid rgba(255,255,255,0.1)", backgroundColor: "#0c0c1a", fontSize: 13, padding: "8px 14px" }}
+                              labelStyle={{ color: "#e5e7eb", fontWeight: 700, marginBottom: 4 }}
+                              itemStyle={{ color: "#818CF8" }}
+                            />
+                            <defs>
+                              <radialGradient id="riasecGradient" cx="50%" cy="50%" r="50%">
+                                <stop offset="0%" stopColor="#818CF8" stopOpacity={0.4} />
+                                <stop offset="100%" stopColor="#4F46E5" stopOpacity={0.15} />
+                              </radialGradient>
+                            </defs>
                           </RadarChart>
                         </ResponsiveContainer>
                       </div>
                     </div>
-                    {/* RIASEC legend bars */}
-                    <div className="mt-4 space-y-2 max-w-md mx-auto">
-                      {riasecData.map((d, i) => (
-                        <div key={i} className="flex items-center gap-3">
-                          <span className="text-xs font-bold text-indigo-400 w-4 text-center">{d.subject}</span>
-                          <span className="text-sm text-gray-400 w-28 shrink-0">{d.fullName}</span>
-                          <div className="flex-1 h-2 bg-white/[0.06] rounded-full overflow-hidden">
-                            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${d.value}%`, background: `linear-gradient(90deg, ${PURPLE}, ${LIGHT_PURPLE})` }} />
+
+                    {/* RIASEC detailed bars */}
+                    <div className="mt-5 space-y-2.5 max-w-lg mx-auto">
+                      {riasecData.map((d) => (
+                        <div key={d.key} className="flex items-center gap-3">
+                          <span className="w-7 h-7 rounded-md flex items-center justify-center text-white text-[11px] font-black shrink-0" style={{ backgroundColor: d.bg }}>
+                            {d.key}
+                          </span>
+                          <span className="text-sm text-gray-300 w-28 shrink-0 font-medium">{d.label}</span>
+                          <div className="flex-1 h-2.5 bg-white/[0.06] rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all duration-700"
+                              style={{ width: `${d.value}%`, backgroundColor: d.bg, boxShadow: `0 0 8px ${d.bg}40` }}
+                            />
                           </div>
-                          <span className="text-xs font-bold text-indigo-400 w-10 text-right">{d.value}%</span>
+                          <span className="text-xs font-bold w-10 text-right" style={{ color: d.bg }}>{d.value}</span>
                         </div>
                       ))}
                     </div>
