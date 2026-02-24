@@ -192,6 +192,11 @@ class FicheMetier(BaseModel):
     types_contrats: Optional[Dict[str, int]] = Field(None, description="Répartition CDI/CDD/interim/autre")
     rome_update_pending: bool = Field(False, description="MAJ ROME en attente")
 
+    # Validation IA
+    validation_ia_score: Optional[int] = Field(None, description="Score global de validation IA (0-100)")
+    validation_ia_date: Optional[datetime] = Field(None, description="Date de la dernière validation IA")
+    validation_ia_details: Optional[Dict[str, Any]] = Field(None, description="Détails complets de la validation IA")
+
     # Métadonnées
     metadata: MetadataFiche = Field(default_factory=MetadataFiche)
 
@@ -340,6 +345,11 @@ class FicheMetierDB(Base):
     types_contrats = Column(JSON, nullable=True)
     rome_update_pending = Column(Integer, default=0)
 
+    # Validation IA
+    validation_ia_score = Column(Integer, nullable=True)
+    validation_ia_date = Column(DateTime, nullable=True)
+    validation_ia_details = Column(JSON, nullable=True)
+
     # Données salariales (JSON)
     salaires = Column(JSON, default=dict)
 
@@ -397,6 +407,9 @@ class FicheMetierDB(Base):
             niveau_formation=getattr(self, 'niveau_formation', None),
             types_contrats=getattr(self, 'types_contrats', None),
             rome_update_pending=bool(getattr(self, 'rome_update_pending', 0)),
+            validation_ia_score=getattr(self, 'validation_ia_score', None),
+            validation_ia_date=getattr(self, 'validation_ia_date', None),
+            validation_ia_details=getattr(self, 'validation_ia_details', None),
             salaires=SalairesMetier(**self.salaires) if self.salaires else SalairesMetier(),
             perspectives=PerspectivesMetier(**self.perspectives) if self.perspectives else PerspectivesMetier(),
             metadata=MetadataFiche(
@@ -445,6 +458,9 @@ class FicheMetierDB(Base):
             niveau_formation=fiche.niveau_formation,
             types_contrats=fiche.types_contrats,
             rome_update_pending=int(fiche.rome_update_pending),
+            validation_ia_score=fiche.validation_ia_score,
+            validation_ia_date=fiche.validation_ia_date,
+            validation_ia_details=fiche.validation_ia_details,
             salaires=fiche.salaires.model_dump(mode="json"),
             perspectives=fiche.perspectives.model_dump(mode="json"),
             statut=fiche.metadata.statut.value,

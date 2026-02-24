@@ -623,16 +623,16 @@ export default function FicheDetailPage() {
                   ];
                   const score = fields.reduce((sum, f) => sum + (f.filled ? f.weight : 0), 0);
                   const color = score >= 80 ? '#16a34a' : score >= 50 ? '#f59e0b' : '#ef4444';
-                  const r = 14; const c = 2 * Math.PI * r; const offset = c - (score / 100) * c;
+                  const r = 20; const c = 2 * Math.PI * r; const offset = c - (score / 100) * c;
                   return (
-                    <div className="relative flex items-center justify-center w-9 h-9" title={`Complétude : ${score}%`}>
-                      <svg width="36" height="36" className="absolute">
-                        <circle cx="18" cy="18" r={r} fill="none" stroke="#e5e7eb" strokeWidth="3" />
-                        <circle cx="18" cy="18" r={r} fill="none" stroke={color} strokeWidth="3" strokeLinecap="round"
+                    <div className="relative flex items-center justify-center w-12 h-12" title={`Complétude : ${score}%`}>
+                      <svg width="48" height="48" className="absolute">
+                        <circle cx="24" cy="24" r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="3.5" />
+                        <circle cx="24" cy="24" r={r} fill="none" stroke={color} strokeWidth="3.5" strokeLinecap="round"
                           strokeDasharray={c} strokeDashoffset={offset}
-                          transform="rotate(-90 18 18)" />
+                          transform="rotate(-90 24 24)" />
                       </svg>
-                      <span className="text-[10px] font-bold" style={{ color }}>{score}%</span>
+                      <span className="text-xs font-bold" style={{ color }}>{score}%</span>
                     </div>
                   );
                 })()}
