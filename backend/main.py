@@ -64,15 +64,23 @@ async def startup_event():
         if "users" in inspector.get_table_names():
             existing_cols = {c["name"] for c in inspector.get_columns("users")}
             with repo.engine.begin() as conn:
-                if "password_hash" not in existing_cols:
-                    logger.info("Migrating users table: adding password_hash column")
-                    conn.execute(text("ALTER TABLE users ADD COLUMN password_hash VARCHAR(255) NOT NULL DEFAULT ''"))
+                # Model maps password_hash -> hashed_password column
+                if "hashed_password" not in existing_cols:
+                    logger.info("Migrating users table: adding hashed_password column")
+                    conn.execute(text("ALTER TABLE users ADD COLUMN hashed_password VARCHAR(255) NOT NULL DEFAULT ''"))
                 if "created_at" not in existing_cols:
                     logger.info("Migrating users table: adding created_at column")
                     conn.execute(text("ALTER TABLE users ADD COLUMN created_at TIMESTAMP DEFAULT NOW()"))
                 if "name" not in existing_cols:
                     logger.info("Migrating users table: adding name column")
                     conn.execute(text("ALTER TABLE users ADD COLUMN name VARCHAR(255) NOT NULL DEFAULT ''"))
+                # Clean up unused password_hash column if it was added by mistake
+                if "password_hash" in existing_cols and "hashed_password" in existing_cols:
+                    try:
+                        conn.execute(text("ALTER TABLE users DROP COLUMN password_hash"))
+                        logger.info("Cleaned up unused password_hash column")
+                    except Exception:
+                        pass  # Column might not exist or might have constraints
 
         # Check audit_log table columns
         if "audit_log" in inspector.get_table_names():
