@@ -10,6 +10,7 @@ import TabVariantesExport from "@/components/actions/TabVariantesExport";
 import TabSynchronisation from "@/components/actions/TabSynchronisation";
 import TabVeilleRome from "@/components/actions/TabVeilleRome";
 import TabExporter from "@/components/actions/TabExporter";
+import TabHistorique from "@/components/actions/TabHistorique";
 
 export default function ActionsPage() {
   const [activeStep, setActiveStep] = useState<WorkflowStep>("enrichir");
@@ -51,6 +52,7 @@ export default function ActionsPage() {
         {activeStep === "sync" && <TabSynchronisation />}
         {activeStep === "veille" && <TabVeilleRome />}
         {activeStep === "exporter" && <TabExporter />}
+        {activeStep === "historique" && <TabHistorique />}
       </div>
     </main>
   );
