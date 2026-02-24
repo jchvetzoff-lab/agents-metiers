@@ -3,11 +3,14 @@
 import { useState } from "react";
 import { FadeInView } from "@/components/motion";
 import WorkflowBar, { type WorkflowStep } from "@/components/actions/WorkflowBar";
-import TabSynchronisation from "@/components/actions/TabSynchronisation";
 import TabEnrichir from "@/components/actions/TabEnrichir";
 import TabValider from "@/components/actions/TabValider";
 import TabPublier from "@/components/actions/TabPublier";
 import TabVariantesExport from "@/components/actions/TabVariantesExport";
+import TabSynchronisation from "@/components/actions/TabSynchronisation";
+import TabVeilleRome from "@/components/actions/TabVeilleRome";
+import TabExporter from "@/components/actions/TabExporter";
+
 export default function ActionsPage() {
   const [activeStep, setActiveStep] = useState<WorkflowStep>("enrichir");
 
@@ -41,11 +44,13 @@ export default function ActionsPage() {
 
       {/* Content */}
       <div className="max-w-5xl mx-auto px-4 md:px-8 py-8">
-        {activeStep === "sync" && <TabSynchronisation />}
         {activeStep === "enrichir" && <TabEnrichir />}
         {activeStep === "valider" && <TabValider />}
         {activeStep === "publier" && <TabPublier />}
         {activeStep === "variantes" && <TabVariantesExport />}
+        {activeStep === "sync" && <TabSynchronisation />}
+        {activeStep === "veille" && <TabVeilleRome />}
+        {activeStep === "exporter" && <TabExporter />}
       </div>
     </main>
   );

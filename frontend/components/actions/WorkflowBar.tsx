@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { api, Stats } from "@/lib/api";
 
-export type WorkflowStep = "sync" | "enrichir" | "valider" | "publier" | "variantes";
+export type WorkflowStep = "enrichir" | "valider" | "publier" | "variantes" | "sync" | "veille" | "exporter";
 
 interface WorkflowBarProps {
   active: WorkflowStep;
@@ -13,19 +13,9 @@ interface WorkflowBarProps {
 
 const steps: { id: WorkflowStep; label: string; icon: React.ReactNode; short: string }[] = [
   {
-    id: "sync",
-    label: "Synchroniser le ROME",
-    short: "Sync ROME",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-      </svg>
-    ),
-  },
-  {
     id: "enrichir",
     label: "Enrichir avec l'IA",
-    short: "Enrichir IA",
+    short: "Enrichir",
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
@@ -34,7 +24,7 @@ const steps: { id: WorkflowStep; label: string; icon: React.ReactNode; short: st
   },
   {
     id: "valider",
-    label: "Valider",
+    label: "Validation IA",
     short: "Valider",
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -44,7 +34,7 @@ const steps: { id: WorkflowStep; label: string; icon: React.ReactNode; short: st
   },
   {
     id: "publier",
-    label: "Publier",
+    label: "Publication",
     short: "Publier",
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -55,10 +45,40 @@ const steps: { id: WorkflowStep; label: string; icon: React.ReactNode; short: st
   {
     id: "variantes",
     label: "Variantes & Export",
-    short: "Export",
+    short: "Variantes",
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+      </svg>
+    ),
+  },
+  {
+    id: "sync",
+    label: "Sync ROME",
+    short: "Sync",
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+      </svg>
+    ),
+  },
+  {
+    id: "veille",
+    label: "Veille ROME",
+    short: "Veille",
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+      </svg>
+    ),
+  },
+  {
+    id: "exporter",
+    label: "Exporter",
+    short: "Export",
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
       </svg>
     ),
   },
@@ -74,11 +94,13 @@ export default function WorkflowBar({ active, onChange }: WorkflowBarProps) {
 
   // Map step → count from stats
   const stepCounts: Record<WorkflowStep, number | null> = {
-    sync: stats ? stats.total : null,
     enrichir: stats ? stats.brouillons : null,
-    valider: stats ? stats.enrichis : null,
+    valider: stats ? (stats.enrichis || 0) : null,
     publier: stats ? stats.en_validation : null,
     variantes: stats ? stats.publiees : null,
+    sync: stats ? stats.total : null,
+    veille: null,
+    exporter: null,
   };
 
   return (
