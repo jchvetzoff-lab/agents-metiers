@@ -57,6 +57,20 @@ async def health():
         return {"status": "degraded", "db": str(e)}
 
 
+@app.get("/api/debug-env")
+async def debug_env():
+    """Debug: check if critical env vars are set."""
+    import os
+    anthropic_key = os.getenv("ANTHROPIC_API_KEY", "")
+    return {
+        "anthropic_key_set": bool(anthropic_key),
+        "anthropic_key_prefix": anthropic_key[:15] + "..." if anthropic_key else "NOT SET",
+        "anthropic_key_len": len(anthropic_key),
+        "database_url_set": bool(os.getenv("DATABASE_URL", "")),
+        "jwt_secret_set": bool(os.getenv("JWT_SECRET", "")),
+    }
+
+
 @app.get("/api/git-version")
 async def git_version():
     """Shows deployed git commit for debugging."""
