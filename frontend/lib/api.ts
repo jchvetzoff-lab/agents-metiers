@@ -167,6 +167,16 @@ export interface FicheDetail extends FicheMetier {
     risques: string[];
   } | null;
   rome_update_pending?: boolean;
+  validation_ia_score?: number | null;
+  validation_ia_date?: string | null;
+  validation_ia_details?: {
+    score?: number;
+    verdict?: string;
+    resume?: string;
+    criteres?: Record<string, { score: number; commentaire: string }>;
+    problemes?: string[];
+    suggestions?: string[];
+  } | null;
 }
 
 export interface Variante {

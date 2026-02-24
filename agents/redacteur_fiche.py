@@ -122,6 +122,8 @@ class AgentRedacteurFiche(BaseAgent):
     async def enrichir_fiche(self, fiche: FicheMetier) -> FicheMetier:
         """
         Enrichit une fiche existante avec du contenu généré par Claude.
+        Si des champs critiques manquent après le premier appel, fait un
+        second appel ciblé pour les compléter.
 
         Args:
             fiche: Fiche à enrichir
@@ -139,6 +141,36 @@ class AgentRedacteurFiche(BaseAgent):
 
         if not contenu:
             raise ValueError(f"Impossible de générer le contenu pour {fiche.code_rome}")
+
+        # Vérifier les champs critiques manquants et compléter si nécessaire
+        champs_critiques = {
+            "mobilite": lambda v: isinstance(v, dict) and bool(v.get("metiers_proches")),
+            "traits_personnalite": lambda v: isinstance(v, list) and len(v) > 0,
+            "aptitudes": lambda v: isinstance(v, list) and len(v) > 0,
+            "profil_riasec": lambda v: isinstance(v, dict) and len(v) >= 6,
+            "domaine_professionnel": lambda v: isinstance(v, dict) and bool(v.get("domaine")),
+            "sites_utiles": lambda v: isinstance(v, list) and len(v) > 0,
+            "autres_appellations": lambda v: isinstance(v, list) and len(v) > 0,
+            "conditions_travail_detaillees": lambda v: isinstance(v, dict) and bool(v.get("horaires")),
+            "competences_dimensions": lambda v: isinstance(v, dict) and len(v) >= 5,
+            "preferences_interets": lambda v: isinstance(v, dict) and bool(v.get("domaine_interet")),
+            "types_contrats": lambda v: isinstance(v, dict) and bool(v.get("cdi")),
+        }
+
+        manquants = [k for k, check in champs_critiques.items() if not check(contenu.get(k))]
+
+        if manquants and self.claude_client:
+            self.logger.info(f"Champs manquants pour {fiche.code_rome}: {', '.join(manquants)}. Second appel...")
+            completion = await self._completer_champs_manquants(
+                nom_masculin=fiche.nom_masculin,
+                code_rome=fiche.code_rome,
+                champs_manquants=manquants
+            )
+            if completion:
+                for champ, valeur in completion.items():
+                    if champ in champs_critiques and champs_critiques[champ](valeur):
+                        contenu[champ] = valeur
+                        self.logger.info(f"Champ '{champ}' complété pour {fiche.code_rome}")
 
         # Mettre à jour la fiche avec le contenu généré
         fiche_data = fiche.model_dump()
@@ -302,6 +334,97 @@ class AgentRedacteurFiche(BaseAgent):
                 "status": "creee"
             }]
         }
+
+    async def _completer_champs_manquants(
+        self,
+        nom_masculin: str,
+        code_rome: str,
+        champs_manquants: list
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Second appel ciblé pour compléter les champs manquants après le premier enrichissement.
+        """
+        schemas = {
+            "mobilite": '''"mobilite": {
+        "metiers_proches": [{"nom": "Nom du métier proche 1"}, {"nom": "Nom 2"}, {"nom": "Nom 3"}],
+        "evolutions": [{"nom": "Evolution 1", "type": "ascendante"}, {"nom": "Evolution 2", "type": "laterale"}]
+    }''',
+            "traits_personnalite": '"traits_personnalite": ["4 à 6 traits de personnalité adaptés au métier"]',
+            "aptitudes": '''"aptitudes": [
+        {"nom": "Nom", "niveau": 4, "description": "Courte description"},
+        ... 5 à 8 aptitudes avec niveau de 1 (basique) à 5 (expert)
+    ]''',
+            "profil_riasec": '''"profil_riasec": {
+        "realiste": 0.3, "investigateur": 0.5, "artistique": 0.2,
+        "social": 0.6, "entreprenant": 0.4, "conventionnel": 0.3
+    }''',
+            "domaine_professionnel": '''"domaine_professionnel": {
+        "domaine": "Nom du domaine", "sous_domaine": "Nom du sous-domaine", "code_domaine": "H01"
+    }''',
+            "sites_utiles": '''"sites_utiles": [
+        {"nom": "Nom du site", "url": "https://url-reelle.fr", "description": "Ce qu'on y trouve"},
+        ... 3 à 5 sites RÉELS et vérifiables
+    ]''',
+            "autres_appellations": '"autres_appellations": ["2 à 5 autres noms courants pour ce métier"]',
+            "conditions_travail_detaillees": '''"conditions_travail_detaillees": {
+        "exigences_physiques": [], "horaires": "Horaires typiques",
+        "deplacements": "Fréquence", "environnement": "Description", "risques": []
+    }''',
+            "competences_dimensions": '''"competences_dimensions": {
+        "technique": 0.7, "relationnel": 0.5, "analytique": 0.6,
+        "creatif": 0.3, "organisationnel": 0.5, "leadership": 0.4, "numerique": 0.6
+    }''',
+            "preferences_interets": '''"preferences_interets": {
+        "domaine_interet": "Nom du domaine",
+        "familles": [{"nom": "Famille", "description": "Description"}]
+    }''',
+            "types_contrats": '"types_contrats": {"cdi": 65, "cdd": 20, "interim": 10, "autre": 5}',
+        }
+
+        champs_json = ",\n    ".join(schemas[c] for c in champs_manquants if c in schemas)
+
+        prompt = f"""Tu es un expert en ressources humaines. Complete les champs manquants pour cette fiche métier.
+
+Métier : {nom_masculin} (Code ROME : {code_rome})
+
+Génère UNIQUEMENT un objet JSON valide contenant ces champs :
+
+{{
+    {champs_json}
+}}
+
+IMPORTANT :
+- profil_riasec : modèle Holland, chaque dimension float entre 0 et 1
+- competences_dimensions : 7 dimensions, chaque valeur entre 0 et 1  
+- aptitudes : niveau de 1 à 5
+- types_contrats : pourcentages réalistes, somme = 100
+- sites_utiles : UNIQUEMENT des sites RÉELS (francetravail.fr, onisep.fr, apec.fr, etc.)
+- mobilite : métiers proches RÉELS du référentiel ROME
+- Tous les textes en français
+- JSON valide uniquement, pas de texte autour"""
+
+        try:
+            response = await self.claude_client.messages.create(
+                model=self.config.api.claude_model,
+                max_tokens=4096,
+                messages=[{"role": "user", "content": prompt}]
+            )
+
+            content = response.content[0].text.strip()
+            json_match = re.search(r'\{[\s\S]*\}', content)
+            if json_match:
+                raw_json = json_match.group()
+                try:
+                    data = json.loads(raw_json)
+                except json.JSONDecodeError:
+                    raw_json = re.sub(r',\s*([}\]])', r'\1', raw_json)
+                    data = json.loads(raw_json)
+                self.logger.info(f"Completion réussie pour {code_rome}: {list(data.keys())}")
+                return data
+            return None
+        except Exception as e:
+            self.logger.error(f"Erreur completion {code_rome}: {e}")
+            return None
 
     async def _generer_contenu(
         self,
