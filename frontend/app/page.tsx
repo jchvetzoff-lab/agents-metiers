@@ -3,24 +3,87 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { api, FicheMetier, Stats } from "@/lib/api";
-import { FadeInView, StaggerContainer, StaggerItem } from "@/components/motion";
+import { api, Stats } from "@/lib/api";
+import { FadeInView, StaggerContainer, StaggerItem, CountUp } from "@/components/motion";
 
-function TensionBadge({ fiche }: { fiche: FicheMetier }) {
-  // Heuristic: fiches with has_perspectives and has_salaires are more likely high-tension
-  const hasFull = fiche.has_competences && fiche.has_formations && fiche.has_salaires && fiche.has_perspectives;
-  const color = hasFull ? "bg-green-500/20 text-green-400 border-green-500/30" : "bg-amber-500/20 text-amber-400 border-amber-500/30";
-  const label = hasFull ? "Forte demande" : "Demande modérée";
-  return <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${color}`}>{label}</span>;
+// Icon components
+function SyncIcon({ className = "w-6 h-6" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+    </svg>
+  );
 }
 
-function StatCard({ value, label, icon }: { value: string; label: string; icon: string }) {
+function SparklesIcon({ className = "w-6 h-6" }: { className?: string }) {
   return (
-    <div className="bg-white/5 rounded-2xl border border-white/[0.06] p-6 text-center hover:bg-white/[0.08] transition-colors">
-      <div className="text-3xl mb-2">{icon}</div>
-      <div className="text-2xl md:text-3xl font-bold text-indigo-400 mb-1">{value}</div>
-      <div className="text-sm text-gray-400">{label}</div>
-    </div>
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+    </svg>
+  );
+}
+
+function CheckIcon({ className = "w-6 h-6" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+    </svg>
+  );
+}
+
+function GlobeIcon({ className = "w-6 h-6" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9v-9m0-9v9m0 9c-1.657 0-3-4.03-3-9s1.343-9 3-9m0 18c1.657 0 3-4.03 3-9s-1.343-9-3-9m-9 9a9 9 0 019-9" />
+    </svg>
+  );
+}
+
+function DocumentIcon({ className = "w-6 h-6" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>
+  );
+}
+
+function DatabaseIcon({ className = "w-6 h-6" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+    </svg>
+  );
+}
+
+function BrainIcon({ className = "w-6 h-6" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+    </svg>
+  );
+}
+
+function VariantsIcon({ className = "w-6 h-6" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM7 21a4 4 0 004-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4" />
+    </svg>
+  );
+}
+
+function WatchIcon({ className = "w-6 h-6" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
+}
+
+function ExportIcon({ className = "w-6 h-6" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>
   );
 }
 
@@ -29,13 +92,11 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<{ code_rome: string; nom_masculin: string; description_courte?: string }[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
-  const [fiches, setFiches] = useState<FicheMetier[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
-    api.getFiches({ limit: 6 }).then(r => setFiches(r.results)).catch(() => {});
     api.getStats().then(s => setStats(s)).catch(() => {});
   }, []);
 
@@ -128,59 +189,174 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── MÉTIERS QUI RECRUTENT ── */}
-      {fiches.length > 0 && (
-        <section className="py-20 px-6 bg-white/[0.02]">
-          <div className="max-w-7xl mx-auto">
-            <div className="text-center mb-12">
-              <FadeInView>
-                <h2 className="text-3xl md:text-4xl font-bold text-white mb-3">Métiers qui recrutent</h2>
-              </FadeInView>
-              <FadeInView delay={0.1}>
-                <p className="text-gray-400 text-lg">Les fiches les plus complètes, prêtes à consulter</p>
-              </FadeInView>
-            </div>
-            <StaggerContainer stagger={0.08} className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {fiches.map(f => (
-                <StaggerItem key={f.code_rome}>
-                  <Link href={`/fiches/${f.code_rome}`}
-                    className="block bg-[#0c0c1a] rounded-2xl border border-white/[0.06] p-6 hover:border-indigo-500/30 hover:-translate-y-1 transition-all duration-300 group">
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="text-xs font-bold text-indigo-400 bg-indigo-500/10 px-2.5 py-1 rounded-lg">{f.code_rome}</span>
-                      <TensionBadge fiche={f} />
-                    </div>
-                    <h3 className="text-lg font-bold text-white mb-2 group-hover:text-indigo-400 transition-colors">{f.nom_masculin}</h3>
-                    {f.description_courte && (
-                      <p className="text-sm text-gray-400 line-clamp-2 leading-relaxed">{f.description_courte}</p>
-                    )}
-                    <div className="mt-4 text-sm font-medium text-indigo-400 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      Voir la fiche <span>→</span>
-                    </div>
-                  </Link>
-                </StaggerItem>
-              ))}
-            </StaggerContainer>
-            <div className="text-center mt-10">
-              <Link href="/fiches" className="inline-flex items-center gap-2 text-indigo-400 font-semibold hover:underline">
-                Voir toutes les fiches →
-              </Link>
-            </div>
-          </div>
-        </section>
-      )}
-
       {/* ── CHIFFRES CLÉS ── */}
       <section className="py-20 px-6">
         <div className="max-w-5xl mx-auto">
           <FadeInView>
             <h2 className="text-3xl md:text-4xl font-bold text-center text-white mb-12">Chiffres clés</h2>
           </FadeInView>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-            <FadeInView delay={0.1}><StatCard value={stats ? stats.total.toLocaleString("fr-FR") : "…"} label="Fiches métiers" icon="📄" /></FadeInView>
-            <FadeInView delay={0.15}><StatCard value="13" label="Régions couvertes" icon="🗺️" /></FadeInView>
-            <FadeInView delay={0.2}><StatCard value="Temps réel" label="Données France Travail" icon="📡" /></FadeInView>
-            <FadeInView delay={0.25}><StatCard value="Claude" label="IA pour l'enrichissement" icon="🤖" /></FadeInView>
+          <StaggerContainer stagger={0.1} className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+            <div className="bg-white/5 rounded-2xl border border-white/[0.06] p-6 text-center hover:bg-white/[0.08] transition-colors">
+              <div className="text-2xl md:text-3xl font-bold text-indigo-400 mb-1">
+                <CountUp value={stats?.total || 0} />
+              </div>
+              <div className="text-sm text-gray-400">Fiches métiers</div>
+            </div>
+            <div className="bg-white/5 rounded-2xl border border-white/[0.06] p-6 text-center hover:bg-white/[0.08] transition-colors">
+              <div className="text-2xl md:text-3xl font-bold text-indigo-400 mb-1">
+                <CountUp value={stats?.enrichis || 0} />
+              </div>
+              <div className="text-sm text-gray-400">Fiches enrichies</div>
+            </div>
+            <div className="bg-white/5 rounded-2xl border border-white/[0.06] p-6 text-center hover:bg-white/[0.08] transition-colors">
+              <div className="text-2xl md:text-3xl font-bold text-indigo-400 mb-1">
+                <CountUp value={stats?.publiees || 0} />
+              </div>
+              <div className="text-sm text-gray-400">Fiches publiées</div>
+            </div>
+            <div className="bg-white/5 rounded-2xl border border-white/[0.06] p-6 text-center hover:bg-white/[0.08] transition-colors">
+              <div className="text-2xl md:text-3xl font-bold text-indigo-400 mb-1">
+                <CountUp value={13} />
+              </div>
+              <div className="text-sm text-gray-400">Régions couvertes</div>
+            </div>
+          </StaggerContainer>
+        </div>
+      </section>
+
+      {/* ── COMMENT ÇA MARCHE ── */}
+      <section className="py-20 px-6 bg-white/[0.02]">
+        <div className="max-w-6xl mx-auto">
+          <FadeInView>
+            <h2 className="text-3xl md:text-4xl font-bold text-center text-white mb-4">Comment ça marche</h2>
+          </FadeInView>
+          <FadeInView delay={0.1}>
+            <p className="text-gray-400 text-lg text-center mb-16">Notre système automatisé pour créer des fiches métiers de qualité</p>
+          </FadeInView>
+
+          <div className="relative">
+            {/* Ligne de connexion animée */}
+            <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-gradient-to-r from-indigo-500 via-cyan-500 to-indigo-500 -translate-y-1/2 opacity-20"></div>
+            
+            <StaggerContainer stagger={0.15} className="grid md:grid-cols-4 gap-8">
+              <div className="bg-[#0c0c1a] border border-white/[0.06] rounded-2xl p-8 text-center relative">
+                <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-gradient-to-br from-indigo-500 to-cyan-500 flex items-center justify-center">
+                  <SyncIcon className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-3">Import ROME</h3>
+                <p className="text-gray-400 text-sm leading-relaxed">
+                  Synchronisation automatique avec le référentiel ROME de France Travail
+                </p>
+                <div className="absolute -right-4 top-1/2 w-8 h-0.5 bg-gradient-to-r from-indigo-500 to-cyan-500 hidden md:block -translate-y-1/2"></div>
+              </div>
+
+              <div className="bg-[#0c0c1a] border border-white/[0.06] rounded-2xl p-8 text-center relative">
+                <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-gradient-to-br from-indigo-500 to-cyan-500 flex items-center justify-center">
+                  <SparklesIcon className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-3">Enrichissement IA</h3>
+                <p className="text-gray-400 text-sm leading-relaxed">
+                  Claude analyse et enrichit chaque fiche avec 13 sections complètes
+                </p>
+                <div className="absolute -right-4 top-1/2 w-8 h-0.5 bg-gradient-to-r from-indigo-500 to-cyan-500 hidden md:block -translate-y-1/2"></div>
+              </div>
+
+              <div className="bg-[#0c0c1a] border border-white/[0.06] rounded-2xl p-8 text-center relative">
+                <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-gradient-to-br from-indigo-500 to-cyan-500 flex items-center justify-center">
+                  <CheckIcon className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-3">Validation</h3>
+                <p className="text-gray-400 text-sm leading-relaxed">
+                  Double validation : IA + humain pour garantir la qualité
+                </p>
+                <div className="absolute -right-4 top-1/2 w-8 h-0.5 bg-gradient-to-r from-indigo-500 to-cyan-500 hidden md:block -translate-y-1/2"></div>
+              </div>
+
+              <div className="bg-[#0c0c1a] border border-white/[0.06] rounded-2xl p-8 text-center relative">
+                <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-gradient-to-br from-indigo-500 to-cyan-500 flex items-center justify-center">
+                  <GlobeIcon className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-3">Publication</h3>
+                <p className="text-gray-400 text-sm leading-relaxed">
+                  Fiches accessibles avec données temps réel France Travail
+                </p>
+              </div>
+            </StaggerContainer>
           </div>
+        </div>
+      </section>
+
+      {/* ── FONCTIONNALITÉS ── */}
+      <section className="py-20 px-6">
+        <div className="max-w-6xl mx-auto">
+          <FadeInView>
+            <h2 className="text-3xl md:text-4xl font-bold text-center text-white mb-4">Fonctionnalités</h2>
+          </FadeInView>
+          <FadeInView delay={0.1}>
+            <p className="text-gray-400 text-lg text-center mb-16">Tout ce dont vous avez besoin pour des fiches métiers complètes</p>
+          </FadeInView>
+
+          <StaggerContainer stagger={0.08} className="grid md:grid-cols-3 gap-6">
+            <div className="bg-[#0c0c1a] border border-white/[0.06] rounded-2xl p-8 hover:border-indigo-500/30 transition-colors">
+              <div className="w-12 h-12 mb-6 rounded-xl bg-indigo-500/10 flex items-center justify-center">
+                <DocumentIcon className="w-6 h-6 text-indigo-400" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-3">13 sections par fiche</h3>
+              <p className="text-gray-400 text-sm leading-relaxed">
+                Compétences, formations, salaires, RIASEC, perspectives... Tout y est !
+              </p>
+            </div>
+
+            <div className="bg-[#0c0c1a] border border-white/[0.06] rounded-2xl p-8 hover:border-indigo-500/30 transition-colors">
+              <div className="w-12 h-12 mb-6 rounded-xl bg-indigo-500/10 flex items-center justify-center">
+                <DatabaseIcon className="w-6 h-6 text-indigo-400" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-3">Données temps réel</h3>
+              <p className="text-gray-400 text-sm leading-relaxed">
+                Offres d'emploi et tendances de recrutement directement de France Travail
+              </p>
+            </div>
+
+            <div className="bg-[#0c0c1a] border border-white/[0.06] rounded-2xl p-8 hover:border-indigo-500/30 transition-colors">
+              <div className="w-12 h-12 mb-6 rounded-xl bg-indigo-500/10 flex items-center justify-center">
+                <BrainIcon className="w-6 h-6 text-indigo-400" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-3">Enrichissement IA Claude</h3>
+              <p className="text-gray-400 text-sm leading-relaxed">
+                Intelligence artificielle avancée pour des contenus riches et pertinents
+              </p>
+            </div>
+
+            <div className="bg-[#0c0c1a] border border-white/[0.06] rounded-2xl p-8 hover:border-indigo-500/30 transition-colors">
+              <div className="w-12 h-12 mb-6 rounded-xl bg-indigo-500/10 flex items-center justify-center">
+                <VariantsIcon className="w-6 h-6 text-indigo-400" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-3">Variantes multi-formats</h3>
+              <p className="text-gray-400 text-sm leading-relaxed">
+                Adaptations par genre, âge, langue et version FALC pour tous publics
+              </p>
+            </div>
+
+            <div className="bg-[#0c0c1a] border border-white/[0.06] rounded-2xl p-8 hover:border-indigo-500/30 transition-colors">
+              <div className="w-12 h-12 mb-6 rounded-xl bg-indigo-500/10 flex items-center justify-center">
+                <WatchIcon className="w-6 h-6 text-indigo-400" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-3">Veille automatique ROME</h3>
+              <p className="text-gray-400 text-sm leading-relaxed">
+                Surveillance continue des mises à jour du référentiel ROME
+              </p>
+            </div>
+
+            <div className="bg-[#0c0c1a] border border-white/[0.06] rounded-2xl p-8 hover:border-indigo-500/30 transition-colors">
+              <div className="w-12 h-12 mb-6 rounded-xl bg-indigo-500/10 flex items-center justify-center">
+                <ExportIcon className="w-6 h-6 text-indigo-400" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-3">Export PDF et données</h3>
+              <p className="text-gray-400 text-sm leading-relaxed">
+                Exportation facile en PDF ou formats de données structurées
+              </p>
+            </div>
+          </StaggerContainer>
         </div>
       </section>
 
