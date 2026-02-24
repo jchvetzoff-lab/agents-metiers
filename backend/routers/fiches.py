@@ -80,7 +80,7 @@ def _normalize_text(text: str) -> str:
 def _compute_score(fiche) -> int:
     """Calcule le score de complétude d'une fiche (0-100)."""
     score = 0
-    if fiche.description:
+    if fiche.description and fiche.description.strip():
         score += 10
     if fiche.missions_principales if hasattr(fiche, 'missions_principales') and fiche.missions_principales else False:
         score += 15
@@ -284,7 +284,32 @@ async def get_fiche_detail(code_rome: str):
             "date_maj": fiche.metadata.date_maj,
             "version": fiche.metadata.version,
             "nb_variantes": repo.count_variantes(code_rome),
-            "score_completude": _compute_score(fiche)
+            "score_completude": _compute_score(fiche),
+
+            # Champs enrichis
+            "missions_principales": fiche.missions_principales,
+            "acces_metier": fiche.acces_metier,
+            "savoirs": fiche.savoirs,
+            "autres_appellations": fiche.autres_appellations,
+            "traits_personnalite": fiche.traits_personnalite,
+            "aptitudes": fiche.aptitudes,
+            "profil_riasec": fiche.profil_riasec,
+            "competences_dimensions": fiche.competences_dimensions,
+            "domaine_professionnel": fiche.domaine_professionnel,
+            "preferences_interets": fiche.preferences_interets,
+            "sites_utiles": fiche.sites_utiles,
+            "conditions_travail_detaillees": fiche.conditions_travail_detaillees,
+            "statuts_professionnels": fiche.statuts_professionnels,
+            "niveau_formation": fiche.niveau_formation,
+            "types_contrats": fiche.types_contrats,
+            "rome_update_pending": fiche.rome_update_pending,
+            "secteurs_activite": fiche.secteurs_activite,
+
+            # Mobilité
+            "mobilite": {
+                "metiers_proches": [{"nom": m, "contexte": ""} for m in (fiche.metiers_proches or [])],
+                "evolutions": []
+            } if fiche.metiers_proches else None,
         }
     except HTTPException:
         raise

@@ -14,7 +14,12 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 security = HTTPBearer(auto_error=False)
 
-JWT_SECRET = os.getenv("JWT_SECRET", "agents-metiers-secret-change-in-production")
+JWT_SECRET = os.getenv("JWT_SECRET", "")
+if not JWT_SECRET:
+    import secrets as _secrets
+    JWT_SECRET = _secrets.token_hex(32)
+    import logging as _log
+    _log.getLogger(__name__).warning("JWT_SECRET non défini — clé éphémère générée. Définir JWT_SECRET en production.")
 JWT_ALGORITHM = "HS256"
 
 

@@ -150,6 +150,22 @@ class Repository:
             db_fiche.environnements = fiche.environnements
             db_fiche.metiers_proches = fiche.metiers_proches
             db_fiche.secteurs_activite = fiche.secteurs_activite
+            db_fiche.missions_principales = fiche.missions_principales
+            db_fiche.acces_metier = fiche.acces_metier
+            db_fiche.savoirs = fiche.savoirs
+            db_fiche.autres_appellations = fiche.autres_appellations
+            db_fiche.traits_personnalite = fiche.traits_personnalite
+            db_fiche.aptitudes = fiche.aptitudes
+            db_fiche.profil_riasec = fiche.profil_riasec
+            db_fiche.competences_dimensions = fiche.competences_dimensions
+            db_fiche.domaine_professionnel = fiche.domaine_professionnel
+            db_fiche.preferences_interets = fiche.preferences_interets
+            db_fiche.sites_utiles = fiche.sites_utiles
+            db_fiche.conditions_travail_detaillees = fiche.conditions_travail_detaillees
+            db_fiche.statuts_professionnels = fiche.statuts_professionnels
+            db_fiche.niveau_formation = fiche.niveau_formation
+            db_fiche.types_contrats = fiche.types_contrats
+            db_fiche.rome_update_pending = int(fiche.rome_update_pending)
             db_fiche.salaires = fiche.salaires.model_dump(mode="json")
             db_fiche.perspectives = fiche.perspectives.model_dump(mode="json")
             db_fiche.statut = fiche.metadata.statut.value

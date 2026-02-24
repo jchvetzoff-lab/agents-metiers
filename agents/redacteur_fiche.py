@@ -142,14 +142,28 @@ class AgentRedacteurFiche(BaseAgent):
 
         # Mettre à jour la fiche avec le contenu généré
         fiche_data = fiche.model_dump()
-        fiche_data["description"] = contenu.get("description", fiche.description)
-        fiche_data["description_courte"] = contenu.get("description_courte", fiche.description_courte)
-        fiche_data["competences"] = contenu.get("competences", fiche.competences)
-        fiche_data["competences_transversales"] = contenu.get("competences_transversales", fiche.competences_transversales)
-        fiche_data["formations"] = contenu.get("formations", fiche.formations)
-        fiche_data["certifications"] = contenu.get("certifications", fiche.certifications)
-        fiche_data["conditions_travail"] = contenu.get("conditions_travail", fiche.conditions_travail)
-        fiche_data["environnements"] = contenu.get("environnements", fiche.environnements)
+
+        # Champs textuels et listes simples
+        champs_simples = [
+            "description", "description_courte", "competences",
+            "competences_transversales", "formations", "certifications",
+            "conditions_travail", "environnements", "missions_principales",
+            "savoirs", "acces_metier", "autres_appellations",
+            "traits_personnalite", "statuts_professionnels", "niveau_formation",
+        ]
+        for champ in champs_simples:
+            if contenu.get(champ) is not None:
+                fiche_data[champ] = contenu[champ]
+
+        # Champs structurés (dictionnaires/listes d'objets)
+        champs_structures = [
+            "aptitudes", "profil_riasec", "competences_dimensions",
+            "domaine_professionnel", "preferences_interets", "sites_utiles",
+            "conditions_travail_detaillees", "types_contrats",
+        ]
+        for champ in champs_structures:
+            if contenu.get(champ) is not None:
+                fiche_data[champ] = contenu[champ]
 
         # Salaires estimés
         if contenu.get("salaires"):
@@ -219,6 +233,18 @@ class AgentRedacteurFiche(BaseAgent):
         except ValueError:
             tendance = TendanceMetier.STABLE
 
+        # Extraire tous les champs enrichis
+        champs_optionnels = {}
+        for champ in [
+            "missions_principales", "savoirs", "acces_metier",
+            "autres_appellations", "traits_personnalite", "aptitudes",
+            "profil_riasec", "competences_dimensions", "domaine_professionnel",
+            "preferences_interets", "sites_utiles", "conditions_travail_detaillees",
+            "statuts_professionnels", "niveau_formation", "types_contrats",
+        ]:
+            if contenu.get(champ) is not None:
+                champs_optionnels[champ] = contenu[champ]
+
         fiche = FicheMetier(
             id=code_rome,
             code_rome=code_rome,
@@ -234,6 +260,7 @@ class AgentRedacteurFiche(BaseAgent):
             conditions_travail=contenu.get("conditions_travail", []),
             environnements=contenu.get("environnements", []),
             secteurs_activite=contenu.get("secteurs_activite", []),
+            **champs_optionnels,
             salaires=SalairesMetier(
                 junior=SalaireNiveau(**sal.get("junior", {})),
                 confirme=SalaireNiveau(**sal.get("confirme", {})),
@@ -303,7 +330,7 @@ class AgentRedacteurFiche(BaseAgent):
         contexte = "\n".join(contexte_parts) if contexte_parts else "Aucun contexte supplémentaire."
 
         prompt = f"""Tu es un expert en ressources humaines et en rédaction de fiches métiers en France.
-Génère le contenu complet pour la fiche métier suivante.
+Génère le contenu COMPLET pour la fiche métier suivante. Toutes les données doivent être réalistes, vérifiables et basées sur le marché français 2025.
 
 Métier : {nom_masculin}
 {contexte}
@@ -313,13 +340,70 @@ Réponds UNIQUEMENT avec un objet JSON valide (sans texte avant ou après) conte
 {{
     "description": "Description complète du métier en 3-5 phrases. Décris les missions principales, le contexte d'exercice et les responsabilités.",
     "description_courte": "Description en 1 phrase (max 200 caractères).",
+    "missions_principales": ["5 à 8 missions principales du métier, formulées avec un verbe d'action"],
     "competences": ["6 à 10 compétences techniques clés du métier"],
     "competences_transversales": ["3 à 5 compétences transversales (soft skills)"],
+    "savoirs": ["5 à 8 savoirs théoriques ou domaines de connaissances nécessaires"],
     "formations": ["3 à 5 formations ou diplômes typiques pour accéder au métier en France"],
     "certifications": ["1 à 3 certifications professionnelles pertinentes, ou liste vide si aucune"],
+    "acces_metier": "Texte décrivant les voies d'accès au métier (diplômes, expérience, VAE, reconversion). 3-5 phrases.",
+    "autres_appellations": ["2 à 5 autres noms ou appellations courantes pour ce métier"],
     "conditions_travail": ["3 à 5 conditions de travail caractéristiques"],
     "environnements": ["2 à 4 types de structures où s'exerce le métier"],
     "secteurs_activite": ["2 à 3 secteurs d'activité principaux"],
+    "traits_personnalite": ["4 à 6 traits de personnalité adaptés au métier"],
+    "aptitudes": [
+        {{"nom": "Nom de l'aptitude", "niveau": 4, "description": "Courte description"}},
+        ... 5 à 8 aptitudes avec niveau de 1 (basique) à 5 (expert)
+    ],
+    "profil_riasec": {{
+        "realiste": 0.3,
+        "investigateur": 0.5,
+        "artistique": 0.2,
+        "social": 0.6,
+        "entreprenant": 0.4,
+        "conventionnel": 0.3
+    }},
+    "competences_dimensions": {{
+        "technique": 0.7,
+        "relationnel": 0.5,
+        "analytique": 0.6,
+        "creatif": 0.3,
+        "organisationnel": 0.5,
+        "leadership": 0.4,
+        "numerique": 0.6
+    }},
+    "domaine_professionnel": {{
+        "domaine": "Nom du domaine professionnel",
+        "sous_domaine": "Nom du sous-domaine",
+        "code_domaine": "Code à 1 lettre + 2 chiffres (ex: H01)"
+    }},
+    "preferences_interets": {{
+        "domaine_interet": "Nom du domaine d'intérêt principal",
+        "familles": [
+            {{"nom": "Nom de la famille d'intérêt", "description": "Courte description"}},
+            ... 2 à 4 familles
+        ]
+    }},
+    "sites_utiles": [
+        {{"nom": "Nom du site", "url": "https://url-reelle-verifiable.fr", "description": "Ce que l'on y trouve"}},
+        ... 3 à 5 sites RÉELS et vérifiables (pas de liens inventés)
+    ],
+    "conditions_travail_detaillees": {{
+        "exigences_physiques": ["Liste des exigences physiques, ou liste vide si métier sédentaire"],
+        "horaires": "Description des horaires typiques (ex: 'Horaires de bureau, 35-39h/semaine')",
+        "deplacements": "Fréquence et nature des déplacements (ex: 'Occasionnels, principalement en Île-de-France')",
+        "environnement": "Description de l'environnement de travail principal",
+        "risques": ["Risques professionnels identifiés, ou liste vide"]
+    }},
+    "statuts_professionnels": ["2 à 4 statuts possibles (ex: 'Salarié', 'Indépendant', 'Fonctionnaire')"],
+    "niveau_formation": "Niveau de formation principal requis (ex: 'Bac+5', 'Bac+2/3', 'CAP/BEP', 'Sans diplôme')",
+    "types_contrats": {{
+        "cdi": 65,
+        "cdd": 20,
+        "interim": 10,
+        "autre": 5
+    }},
     "salaires": {{
         "junior": {{"min": 25000, "max": 35000, "median": 30000}},
         "confirme": {{"min": 35000, "max": 50000, "median": 42000}},
@@ -332,17 +416,23 @@ Réponds UNIQUEMENT avec un objet JSON valide (sans texte avant ou après) conte
     }}
 }}
 
-Notes :
-- Les salaires sont en euros brut annuel pour la France.
+Notes IMPORTANTES :
+- Les salaires sont en euros brut annuel pour la France en 2025.
 - "tension" est un float entre 0 (peu de demande) et 1 (très forte demande).
 - "tendance" est "emergence", "stable" ou "disparition".
+- profil_riasec : modèle Holland, chaque dimension est un float entre 0 et 1.
+- competences_dimensions : 7 dimensions, chaque valeur entre 0 et 1.
+- aptitudes : niveau de 1 (basique) à 5 (expert requis).
+- types_contrats : pourcentages réalistes pour la France, la somme DOIT faire 100.
+- sites_utiles : UNIQUEMENT des sites web réels et existants (ex: pole-emploi.fr, onisep.fr, apec.fr, etc.).
 - Sois factuel et précis. Pas de formulations vagues.
+- Tous les textes en français avec accents corrects.
 - Si le code ROME est fourni, ne le modifie pas. Sinon, suggère-le dans "code_rome_suggere"."""
 
         try:
             response = await self.claude_client.messages.create(
                 model=self.config.api.claude_model,
-                max_tokens=2048,
+                max_tokens=4096,
                 messages=[{"role": "user", "content": prompt}]
             )
 
@@ -395,6 +485,11 @@ Notes :
         return {
             "description": f"Le/la {nom_metier} exerce un métier nécessitant des compétences spécialisées. Ce professionnel intervient dans son domaine d'expertise pour répondre aux besoins des organisations.",
             "description_courte": f"Professionnel spécialisé dans le domaine du/de la {nom_metier.lower()}.",
+            "missions_principales": [
+                "Réaliser les tâches principales liées au métier",
+                "Assurer la qualité des livrables",
+                "Collaborer avec les parties prenantes"
+            ],
             "competences": [
                 "Maîtrise des outils et techniques du métier",
                 "Analyse et résolution de problèmes",
@@ -405,10 +500,17 @@ Notes :
                 "Communication professionnelle",
                 "Adaptabilité"
             ],
+            "savoirs": [
+                "Connaissances théoriques du domaine",
+                "Réglementation applicable",
+                "Méthodologies professionnelles"
+            ],
             "formations": [
                 "Formation spécialisée dans le domaine"
             ],
             "certifications": [],
+            "acces_metier": f"Le métier de {nom_metier} est accessible avec une formation spécialisée dans le domaine. Une expérience préalable peut être requise selon le niveau de poste visé.",
+            "autres_appellations": [f"{nom_metier} junior", f"{nom_metier} senior"],
             "conditions_travail": [
                 "Travail en bureau ou sur site"
             ],
@@ -416,6 +518,49 @@ Notes :
                 "Entreprises du secteur",
                 "Collectivités"
             ],
+            "traits_personnalite": [
+                "Rigoureux", "Curieux", "Organisé", "Communicant"
+            ],
+            "aptitudes": [
+                {"nom": "Analyse", "niveau": 3, "description": "Capacité d'analyse et de synthèse"},
+                {"nom": "Communication", "niveau": 3, "description": "Communication écrite et orale"},
+                {"nom": "Organisation", "niveau": 3, "description": "Gestion des priorités et du temps"}
+            ],
+            "profil_riasec": {
+                "realiste": 0.3, "investigateur": 0.4, "artistique": 0.2,
+                "social": 0.5, "entreprenant": 0.4, "conventionnel": 0.4
+            },
+            "competences_dimensions": {
+                "technique": 0.5, "relationnel": 0.5, "analytique": 0.5,
+                "creatif": 0.3, "organisationnel": 0.5, "leadership": 0.3, "numerique": 0.5
+            },
+            "domaine_professionnel": {
+                "domaine": "Domaine générique",
+                "sous_domaine": "Sous-domaine générique",
+                "code_domaine": "X00"
+            },
+            "preferences_interets": {
+                "domaine_interet": "Domaine d'intérêt générique",
+                "familles": [
+                    {"nom": "Famille générique", "description": "Description générique"}
+                ]
+            },
+            "sites_utiles": [
+                {"nom": "France Travail", "url": "https://www.francetravail.fr", "description": "Offres d'emploi et fiches métiers"},
+                {"nom": "ONISEP", "url": "https://www.onisep.fr", "description": "Orientation et formations"}
+            ],
+            "conditions_travail_detaillees": {
+                "exigences_physiques": [],
+                "horaires": "Horaires de bureau, 35-39h/semaine",
+                "deplacements": "Occasionnels",
+                "environnement": "Bureau ou site professionnel",
+                "risques": []
+            },
+            "statuts_professionnels": ["Salarié"],
+            "niveau_formation": "Bac+3",
+            "types_contrats": {
+                "cdi": 65, "cdd": 20, "interim": 10, "autre": 5
+            },
             "salaires": {
                 "junior": {"min": 25000, "max": 32000, "median": 28000},
                 "confirme": {"min": 32000, "max": 45000, "median": 38000},

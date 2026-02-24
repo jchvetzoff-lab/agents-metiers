@@ -2,6 +2,7 @@
 Backend FastAPI pour Agents Métiers Web.
 App setup, CORS, and router registration.
 """
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -16,7 +17,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://frontend-seven-neon-32.vercel.app",
-        "http://localhost:3000",
+        *([  "http://localhost:3000"] if os.getenv("ENVIRONMENT", "production") != "production" else []),
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -40,6 +41,18 @@ app.include_router(actions_router)
 app.include_router(fiches_router)
 app.include_router(veille_router)
 app.include_router(regional_router)
+
+
+@app.get("/health")
+async def health():
+    """Health check endpoint."""
+    from .deps import repo
+    try:
+        # Vérifier la connexion DB
+        repo.get_all_fiches(limit=1)
+        return {"status": "ok", "db": "connected"}
+    except Exception as e:
+        return {"status": "degraded", "db": str(e)}
 
 
 @app.get("/")

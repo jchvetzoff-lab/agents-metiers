@@ -172,6 +172,24 @@ class FicheMetier(BaseModel):
     )
     secteurs_activite: List[str] = Field(default_factory=list)
 
+    # Contenu enrichi
+    missions_principales: List[str] = Field(default_factory=list, description="Missions principales du métier")
+    acces_metier: Optional[str] = Field(None, description="Comment accéder à ce métier")
+    savoirs: List[str] = Field(default_factory=list, description="Savoirs théoriques")
+    autres_appellations: List[str] = Field(default_factory=list, description="Autres noms du métier")
+    traits_personnalite: List[str] = Field(default_factory=list, description="Traits de personnalité")
+    aptitudes: List[Dict[str, Any]] = Field(default_factory=list, description="Aptitudes avec niveau 1-5")
+    profil_riasec: Optional[Dict[str, float]] = Field(None, description="Scores RIASEC (6 dimensions)")
+    competences_dimensions: Optional[Dict[str, float]] = Field(None, description="7 dimensions de compétences")
+    domaine_professionnel: Optional[Dict[str, str]] = Field(None, description="Domaine, sous-domaine, code")
+    preferences_interets: Optional[Dict[str, Any]] = Field(None, description="Domaine intérêt et familles")
+    sites_utiles: List[Dict[str, str]] = Field(default_factory=list, description="Sites web utiles")
+    conditions_travail_detaillees: Optional[Dict[str, Any]] = Field(None, description="Exigences physiques, horaires, etc.")
+    statuts_professionnels: List[str] = Field(default_factory=list)
+    niveau_formation: Optional[str] = Field(None, description="Niveau d'études requis")
+    types_contrats: Optional[Dict[str, int]] = Field(None, description="Répartition CDI/CDD/interim/autre")
+    rome_update_pending: bool = Field(False, description="MAJ ROME en attente")
+
     # Métadonnées
     metadata: MetadataFiche = Field(default_factory=MetadataFiche)
 
@@ -302,6 +320,24 @@ class FicheMetierDB(Base):
     metiers_proches = Column(JSON, default=list)
     secteurs_activite = Column(JSON, default=list)
 
+    # Contenu enrichi
+    missions_principales = Column(JSON, default=list)
+    acces_metier = Column(Text, nullable=True)
+    savoirs = Column(JSON, default=list)
+    autres_appellations = Column(JSON, default=list)
+    traits_personnalite = Column(JSON, default=list)
+    aptitudes = Column(JSON, default=list)
+    profil_riasec = Column(JSON, nullable=True)
+    competences_dimensions = Column(JSON, nullable=True)
+    domaine_professionnel = Column(JSON, nullable=True)
+    preferences_interets = Column(JSON, nullable=True)
+    sites_utiles = Column(JSON, default=list)
+    conditions_travail_detaillees = Column(JSON, nullable=True)
+    statuts_professionnels = Column(JSON, default=list)
+    niveau_formation = Column(String(100), nullable=True)
+    types_contrats = Column(JSON, nullable=True)
+    rome_update_pending = Column(Integer, default=0)
+
     # Données salariales (JSON)
     salaires = Column(JSON, default=dict)
 
@@ -343,6 +379,22 @@ class FicheMetierDB(Base):
             environnements=self.environnements or [],
             metiers_proches=self.metiers_proches or [],
             secteurs_activite=self.secteurs_activite or [],
+            missions_principales=getattr(self, 'missions_principales', None) or [],
+            acces_metier=getattr(self, 'acces_metier', None),
+            savoirs=getattr(self, 'savoirs', None) or [],
+            autres_appellations=getattr(self, 'autres_appellations', None) or [],
+            traits_personnalite=getattr(self, 'traits_personnalite', None) or [],
+            aptitudes=getattr(self, 'aptitudes', None) or [],
+            profil_riasec=getattr(self, 'profil_riasec', None),
+            competences_dimensions=getattr(self, 'competences_dimensions', None),
+            domaine_professionnel=getattr(self, 'domaine_professionnel', None),
+            preferences_interets=getattr(self, 'preferences_interets', None),
+            sites_utiles=getattr(self, 'sites_utiles', None) or [],
+            conditions_travail_detaillees=getattr(self, 'conditions_travail_detaillees', None),
+            statuts_professionnels=getattr(self, 'statuts_professionnels', None) or [],
+            niveau_formation=getattr(self, 'niveau_formation', None),
+            types_contrats=getattr(self, 'types_contrats', None),
+            rome_update_pending=bool(getattr(self, 'rome_update_pending', 0)),
             salaires=SalairesMetier(**self.salaires) if self.salaires else SalairesMetier(),
             perspectives=PerspectivesMetier(**self.perspectives) if self.perspectives else PerspectivesMetier(),
             metadata=MetadataFiche(
@@ -375,6 +427,22 @@ class FicheMetierDB(Base):
             environnements=fiche.environnements,
             metiers_proches=fiche.metiers_proches,
             secteurs_activite=fiche.secteurs_activite,
+            missions_principales=fiche.missions_principales,
+            acces_metier=fiche.acces_metier,
+            savoirs=fiche.savoirs,
+            autres_appellations=fiche.autres_appellations,
+            traits_personnalite=fiche.traits_personnalite,
+            aptitudes=fiche.aptitudes,
+            profil_riasec=fiche.profil_riasec,
+            competences_dimensions=fiche.competences_dimensions,
+            domaine_professionnel=fiche.domaine_professionnel,
+            preferences_interets=fiche.preferences_interets,
+            sites_utiles=fiche.sites_utiles,
+            conditions_travail_detaillees=fiche.conditions_travail_detaillees,
+            statuts_professionnels=fiche.statuts_professionnels,
+            niveau_formation=fiche.niveau_formation,
+            types_contrats=fiche.types_contrats,
+            rome_update_pending=int(fiche.rome_update_pending),
             salaires=fiche.salaires.model_dump(mode="json"),
             perspectives=fiche.perspectives.model_dump(mode="json"),
             statut=fiche.metadata.statut.value,
