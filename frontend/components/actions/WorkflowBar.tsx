@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { api, Stats } from "@/lib/api";
 
-export type WorkflowStep = "sync" | "enrichir" | "valider" | "publier" | "variantes";
+export type WorkflowStep = "batch" | "sync" | "enrichir" | "valider" | "publier" | "variantes";
 
 interface WorkflowBarProps {
   active: WorkflowStep;
@@ -12,6 +12,16 @@ interface WorkflowBarProps {
 }
 
 const steps: { id: WorkflowStep; label: string; icon: React.ReactNode; short: string }[] = [
+  {
+    id: "batch",
+    label: "Traitement en lot",
+    short: "Lot",
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+      </svg>
+    ),
+  },
   {
     id: "sync",
     label: "Synchroniser le ROME",
@@ -74,6 +84,7 @@ export default function WorkflowBar({ active, onChange }: WorkflowBarProps) {
 
   // Map step → count from stats
   const stepCounts: Record<WorkflowStep, number | null> = {
+    batch: stats ? stats.total : null,
     sync: stats ? stats.total : null,
     enrichir: stats ? stats.brouillons : null,
     valider: stats ? stats.en_validation : null,

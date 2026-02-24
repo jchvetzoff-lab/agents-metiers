@@ -8,9 +8,10 @@ import TabEnrichir from "@/components/actions/TabEnrichir";
 import TabValider from "@/components/actions/TabValider";
 import TabPublier from "@/components/actions/TabPublier";
 import TabVariantesExport from "@/components/actions/TabVariantesExport";
+import TabBatchProcess from "@/components/actions/TabBatchProcess";
 
 export default function ActionsPage() {
-  const [activeStep, setActiveStep] = useState<WorkflowStep>("sync");
+  const [activeStep, setActiveStep] = useState<WorkflowStep>("batch");
 
   return (
     <main className="min-h-screen bg-gray-950">
@@ -42,6 +43,7 @@ export default function ActionsPage() {
 
       {/* Content */}
       <div className="max-w-5xl mx-auto px-4 md:px-8 py-8">
+        {activeStep === "batch" && <TabBatchProcess />}
         {activeStep === "sync" && <TabSynchronisation />}
         {activeStep === "enrichir" && <TabEnrichir />}
         {activeStep === "valider" && <TabValider />}
