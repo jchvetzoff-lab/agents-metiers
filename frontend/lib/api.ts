@@ -304,68 +304,89 @@ class ApiClient {
   }
 
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`;
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      ...(options?.headers as Record<string, string>),
-    };
-
-    // Ajouter le token d'authentification si present
-    // Ne pas envoyer le token pour les requetes GET publiques (fiches, stats, regions)
     const method = options?.method?.toUpperCase() || "GET";
-    const isPublicGet = method === "GET" && (
-      endpoint.startsWith("/api/fiches") ||
-      endpoint.startsWith("/api/stats") ||
-      endpoint.startsWith("/api/regions")
-    );
-    const token = getToken();
-    if (token && !isPublicGet) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
+    const isPost = method === "POST";
+    // Render free tier cold start can take 30-50s, so GET timeout = 60s
+    const timeoutMs = isPost ? 120000 : 60000;
+    // Retry GET requests up to 2 times on network errors (cold start)
+    const maxRetries = isPost ? 0 : 2;
 
-    const controller = new AbortController();
-    // POST requests (enrich, validate, etc.) can take longer due to AI processing
-    const isPost = options?.method?.toUpperCase() === "POST";
-    const timeoutMs = isPost ? 120000 : 30000;
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    let lastError: Error | null = null;
 
-    let response: Response;
-    try {
-      response = await fetch(url, {
-        ...options,
-        headers,
-        signal: controller.signal,
-      });
-    } catch (err: any) {
-      clearTimeout(timeoutId);
-      if (err?.name === "AbortError") {
-        throw new Error(isPost
-          ? "La requête a expiré (timeout 2min). L'enrichissement IA peut prendre du temps."
-          : "La requête a expiré (timeout 30s). Le serveur est peut-être en cours de démarrage."
-        );
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      const url = `${this.baseUrl}${endpoint}`;
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        ...(options?.headers as Record<string, string>),
+      };
+
+      // Ajouter le token d'authentification si present
+      // Ne pas envoyer le token pour les requetes GET publiques (fiches, stats, regions)
+      const isPublicGet = method === "GET" && (
+        endpoint.startsWith("/api/fiches") ||
+        endpoint.startsWith("/api/stats") ||
+        endpoint.startsWith("/api/regions")
+      );
+      const token = getToken();
+      if (token && !isPublicGet) {
+        headers["Authorization"] = `Bearer ${token}`;
       }
-      throw err;
-    }
-    clearTimeout(timeoutId);
 
-    if (!response.ok) {
-      const body = await response.json().catch(() => null);
-      const detail = body?.detail || `${response.status} ${response.statusText}`;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-      // 401 sur les pages protegees = session expiree, rediriger
-      // 401 sur /api/auth/ = erreur de login, afficher le message du backend
-      if (response.status === 401 && !endpoint.startsWith("/api/auth/")) {
-        removeToken();
-        if (typeof window !== "undefined" && !window.location.pathname.includes("/login")) {
-          window.location.href = "/login";
+      let response: Response;
+      try {
+        response = await fetch(url, {
+          ...options,
+          headers,
+          signal: controller.signal,
+        });
+      } catch (err: any) {
+        clearTimeout(timeoutId);
+        lastError = err?.name === "AbortError"
+          ? new Error(isPost
+              ? "La requête a expiré (timeout 2min). L'enrichissement IA peut prendre du temps."
+              : "Le serveur démarre, nouvelle tentative...")
+          : err;
+        // Retry on network error / timeout for GET
+        if (attempt < maxRetries) {
+          console.log(`[API] Tentative ${attempt + 2}/${maxRetries + 1} pour ${endpoint}...`);
+          await new Promise(r => setTimeout(r, 2000));
+          continue;
         }
-        throw new Error("Session expiree, veuillez vous reconnecter");
+        throw new Error("Le serveur est en cours de démarrage. Rechargez la page dans quelques secondes.");
+      }
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        const detail = body?.detail || `${response.status} ${response.statusText}`;
+
+        // 401 sur les pages protegees = session expiree, rediriger
+        // 401 sur /api/auth/ = erreur de login, afficher le message du backend
+        if (response.status === 401 && !endpoint.startsWith("/api/auth/")) {
+          removeToken();
+          if (typeof window !== "undefined" && !window.location.pathname.includes("/login")) {
+            window.location.href = "/login";
+          }
+          throw new Error("Session expiree, veuillez vous reconnecter");
+        }
+
+        // Retry on 502/503/504 (Render waking up)
+        if ([502, 503, 504].includes(response.status) && attempt < maxRetries) {
+          console.log(`[API] Serveur ${response.status}, tentative ${attempt + 2}/${maxRetries + 1}...`);
+          await new Promise(r => setTimeout(r, 3000));
+          continue;
+        }
+
+        throw new Error(detail);
       }
 
-      throw new Error(detail);
+      return response.json();
     }
 
-    return response.json();
+    throw lastError || new Error("Erreur réseau inattendue");
   }
 
   // ==================== STATS ====================

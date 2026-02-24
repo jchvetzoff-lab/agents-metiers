@@ -211,11 +211,27 @@ Suggestions:
 
 Retourne un JSON avec les champs corrigés: description, competences, formations (listes de strings)."""
 
-        response = await claude_client.messages.create(
-            model=config.api.claude_model,
-            max_tokens=2048,
-            messages=[{"role": "user", "content": prompt}]
-        )
+        # Streaming + retry (cohérent avec les autres agents)
+        import asyncio
+        max_retries = 3
+        response = None
+        for attempt in range(max_retries + 1):
+            try:
+                async with claude_client.messages.stream(
+                    model=config.api.claude_model,
+                    max_tokens=4096,
+                    messages=[{"role": "user", "content": prompt}]
+                ) as stream:
+                    response = await stream.get_final_message()
+                break
+            except Exception as api_err:
+                err_str = str(api_err)
+                if ("529" in err_str or "overloaded" in err_str.lower()) and attempt < max_retries:
+                    wait = 10 * (attempt + 1)
+                    logger.warning(f"Claude overloaded (auto-correct), retry {attempt+1}/{max_retries} in {wait}s...")
+                    await asyncio.sleep(wait)
+                    continue
+                raise
 
         import json, re
         content = response.content[0].text.strip()

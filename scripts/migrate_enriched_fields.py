@@ -35,6 +35,10 @@ COLUMNS_TO_ADD = [
     ("niveau_formation", "VARCHAR(100)"),
     ("types_contrats", "JSON"),
     ("rome_update_pending", "INTEGER DEFAULT 0"),
+    # Colonnes de validation IA
+    ("validation_ia_score", "INTEGER"),
+    ("validation_ia_date", "DATETIME"),
+    ("validation_ia_details", "JSON"),
 ]
 
 def migrate():
