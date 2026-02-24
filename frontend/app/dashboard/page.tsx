@@ -103,7 +103,7 @@ export default function DashboardPage() {
         <StaggerContainer stagger={0.08} className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-4 md:gap-4 mb-16">
           <StaggerItem>
             <MetricCard
-              label="📊 Total"
+              label="Total"
               value={stats?.total || 0}
             />
           </StaggerItem>
@@ -178,10 +178,10 @@ export default function DashboardPage() {
         {/* Quick Actions Panel */}
         <FadeInView>
           <div className="sojai-card mb-16">
-            <h3 className="text-xl font-serif font-bold mb-6 text-center">⚡ Actions Rapides</h3>
+            <h3 className="text-xl font-serif font-bold mb-6 text-center">Actions Rapides</h3>
             <div className="grid md:grid-cols-3 gap-4">
               <Link 
-                href="/enrichissement"
+                href="/actions"
                 className="group flex items-center gap-4 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/20 transition-all duration-200"
               >
                 <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -231,7 +231,7 @@ export default function DashboardPage() {
         {/* Graphiques Section */}
         <SectionHeader
           badge="Statistiques"
-          title="📈 Analyse et Répartition"
+          title="Analyse et Répartition"
           description="Visualisez la distribution et les tendances de vos fiches métiers"
         />
 
@@ -341,7 +341,7 @@ export default function DashboardPage() {
         {/* Activité Récente */}
         <SectionHeader
           badge="Logs"
-          title="📜 Activité Récente"
+          title="Activité Récente"
           description="Les 15 dernières actions effectuées sur les fiches"
         />
 
@@ -349,16 +349,16 @@ export default function DashboardPage() {
           {logs.length > 0 ? (
             logs.map((log) => {
               const icons: Record<string, string> = {
-                creation: "🆕",
-                modification: "✏️",
-                correction: "🔧",
-                validation: "✔️",
-                publication: "📢",
-                archivage: "📦",
-                veille_salaires: "💰",
-                veille_metiers: "🔍",
+                creation: "N",
+                modification: "E",
+                correction: "C",
+                validation: "V",
+                publication: "P",
+                archivage: "A",
+                veille_salaires: "S",
+                veille_metiers: "M",
               };
-              const icon = icons[log.type_evenement] || "📌";
+              const icon = icons[log.type_evenement] || "•";
 
               const typeLabels: Record<string, string> = {
                 creation: "CREATION",
@@ -375,7 +375,7 @@ export default function DashboardPage() {
                 <div className={`sojai-card ${log.code_rome ? "cursor-pointer hover:shadow-card-hover transition-shadow" : ""}`} style={{ borderLeft: "3px solid #4F46E5" }}>
                   <div className="flex justify-between items-start">
                     <div className="flex items-start gap-4 flex-1">
-                      <div className="text-3xl mt-0.5">{icon}</div>
+                      <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center text-sm font-bold text-indigo-400 mt-0.5 shrink-0">{icon}</div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-semibold text-white">
@@ -432,7 +432,7 @@ export default function DashboardPage() {
             })
           ) : (
             <div className="sojai-card text-center py-12">
-              <div className="text-5xl mb-4">📋</div>
+              <div className="text-xl mb-4 text-gray-500">Aucune donnée</div>
               <h4 className="text-xl font-semibold mb-2">Aucune activité</h4>
               <p className="text-gray-400">
                 Les actions effectuées s'afficheront ici

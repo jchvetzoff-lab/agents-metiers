@@ -22,6 +22,7 @@ export interface FicheMetier {
   has_salaires: boolean;
   has_perspectives: boolean;
   nb_variantes: number;
+  score_completude: number;
   rome_update_pending?: boolean;
 }
 
@@ -312,10 +313,24 @@ class ApiClient {
       headers["Authorization"] = `Bearer ${token}`;
     }
 
-    const response = await fetch(url, {
-      ...options,
-      headers,
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        ...options,
+        headers,
+        signal: controller.signal,
+      });
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      if (err?.name === "AbortError") {
+        throw new Error("La requête a expiré (timeout 30s). Le serveur est peut-être en cours de démarrage.");
+      }
+      throw err;
+    }
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const body = await response.json().catch(() => null);

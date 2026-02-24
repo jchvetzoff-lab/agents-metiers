@@ -41,11 +41,11 @@ export default function GuidePage() {
             <div className="space-y-3">
               <div className="flex items-start gap-3">
                 <span className="text-2xl">✓</span>
-                <p className="text-lg text-gray-300"><strong>1 584 fiches</strong> de métiers français (référentiel ROME)</p>
+                <p className="text-lg text-gray-300"><strong>Plus de 1 500 fiches</strong> de métiers français (référentiel ROME)</p>
               </div>
               <div className="flex items-start gap-3">
                 <span className="text-2xl">✓</span>
-                <p className="text-lg text-gray-300"><strong>5 agents intelligents</strong> qui travaillent automatiquement</p>
+                <p className="text-lg text-gray-300"><strong>4 agents intelligents</strong> qui travaillent automatiquement</p>
               </div>
               <div className="flex items-start gap-3">
                 <span className="text-2xl">✓</span>
@@ -63,12 +63,12 @@ export default function GuidePage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
             </div>
-            <h2 className="text-3xl font-bold text-white">Comprendre les 5 Agents</h2>
+            <h2 className="text-3xl font-bold text-white">Comprendre les 4 Agents</h2>
           </div>
 
           <p className="text-lg text-gray-400 mb-10 leading-relaxed">
             Un <strong>"agent"</strong> est un programme automatique qui fait une tâche précise.
-            Voici les 5 agents qui travaillent ensemble :
+            Voici les 4 agents qui travaillent ensemble :
           </p>
 
           {/* Schéma des agents */}
@@ -77,7 +77,7 @@ export default function GuidePage() {
               {[
                 {
                   num: "1",
-                  icon: "📝",
+                  icon: "1",
                   name: "Agent Rédacteur",
                   role: "QUE FAIT-IL ?",
                   desc: "Il écrit automatiquement le contenu des fiches : description du métier, compétences nécessaires, formations requises.",
@@ -85,7 +85,7 @@ export default function GuidePage() {
                 },
                 {
                   num: "2",
-                  icon: "🔧",
+                  icon: "2",
                   name: "Agent Correcteur",
                   role: "QUE FAIT-IL ?",
                   desc: "Il vérifie et corrige les fautes d'orthographe et de grammaire dans toutes les fiches.",
@@ -93,23 +93,15 @@ export default function GuidePage() {
                 },
                 {
                   num: "3",
-                  icon: "⚧️",
-                  name: "Agent Genre",
-                  role: "QUE FAIT-IL ?",
-                  desc: "Il crée 3 versions de chaque fiche : masculin (boulanger), féminin (boulangère), et neutre (métier de boulange).",
-                  example: "Exemple : 'Un boulanger' → 'Une boulangère' → 'Ce métier de boulange'",
-                },
-                {
-                  num: "4",
-                  icon: "💰",
+                  icon: "3",
                   name: "Agent Salaires",
                   role: "QUE FAIT-IL ?",
                   desc: "Il collecte les informations sur les salaires moyens pour chaque métier (minimum, maximum, moyen).",
                   example: "Exemple : Boulanger → Salaire min: 1 800€, moyen: 2 200€, max: 3 500€",
                 },
                 {
-                  num: "5",
-                  icon: "📈",
+                  num: "4",
+                  icon: "4",
                   name: "Agent Tendances",
                   role: "QUE FAIT-IL ?",
                   desc: "Il analyse si le métier recrute beaucoup (tension) et s'il va disparaître ou se développer (tendance).",
@@ -142,26 +134,24 @@ export default function GuidePage() {
 
           {/* Comment ils travaillent ensemble */}
           <div className="sojai-card bg-indigo-500/10 border-indigo-500/20">
-            <h3 className="text-xl font-bold mb-4 text-indigo-400">🔄 Comment ils travaillent ensemble ?</h3>
+            <h3 className="text-xl font-bold mb-4 text-indigo-400">Comment ils travaillent ensemble ?</h3>
             <div className="space-y-3 text-lg text-gray-300 leading-relaxed">
               <p><strong>1.</strong> Le <strong>Rédacteur</strong> écrit la fiche</p>
               <p className="ml-6">↓</p>
               <p><strong>2.</strong> Le <strong>Correcteur</strong> corrige les fautes</p>
               <p className="ml-6">↓</p>
-              <p><strong>3.</strong> L'agent <strong>Genre</strong> crée les 3 versions</p>
+              <p><strong>3.</strong> L'agent <strong>Salaires</strong> ajoute les informations de salaire</p>
               <p className="ml-6">↓</p>
-              <p><strong>4.</strong> L'agent <strong>Salaires</strong> ajoute les informations de salaire</p>
+              <p><strong>4.</strong> L'agent <strong>Tendances</strong> ajoute les informations du marché</p>
               <p className="ml-6">↓</p>
-              <p><strong>5.</strong> L'agent <strong>Tendances</strong> ajoute les informations du marché</p>
-              <p className="ml-6">↓</p>
-              <p className="text-indigo-400 font-bold">✅ Fiche complète et prête !</p>
+              <p className="text-indigo-400 font-bold">Fiche complète et prête !</p>
             </div>
           </div>
         </div>
 
         {/* Section 2 : Guide étape par étape */}
         <div className="mb-20">
-          <h2 className="text-3xl font-bold mb-8 text-white">📖 Guide d'utilisation pas à pas</h2>
+          <h2 className="text-3xl font-bold mb-8 text-white">Guide d'utilisation pas à pas</h2>
 
           <div className="space-y-10">
             {/* Étape 1 : Dashboard */}
@@ -172,7 +162,7 @@ export default function GuidePage() {
                     1
                   </div>
                   <div>
-                    <h3 className="text-2xl font-bold mb-2 text-indigo-400">📊 Consulter le Dashboard</h3>
+                    <h3 className="text-2xl font-bold mb-2 text-indigo-400">Consulter le Dashboard</h3>
                     <p className="text-lg text-gray-400">Vue d'ensemble de toutes vos fiches</p>
                   </div>
                 </div>
@@ -187,7 +177,7 @@ export default function GuidePage() {
                     <ul className="space-y-2 text-base text-gray-300">
                       <li className="flex items-start gap-2">
                         <span className="text-indigo-400 font-bold">•</span>
-                        <span><strong>Total des fiches :</strong> Combien de fiches existent au total (1 584)</span>
+                        <span><strong>Total des fiches :</strong> Combien de fiches existent au total</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="text-indigo-400 font-bold">•</span>
@@ -223,7 +213,7 @@ export default function GuidePage() {
                     2
                   </div>
                   <div>
-                    <h3 className="text-2xl font-bold mb-2 text-indigo-400">📋 Rechercher une Fiche</h3>
+                    <h3 className="text-2xl font-bold mb-2 text-indigo-400">Rechercher une Fiche</h3>
                     <p className="text-lg text-gray-400">Trouver un métier précis</p>
                   </div>
                 </div>
@@ -255,8 +245,8 @@ export default function GuidePage() {
                   </div>
 
                   <div className="bg-indigo-500/10 rounded-xl p-6 border-l-4 border-indigo-500">
-                    <p className="font-bold text-indigo-400 mb-2">💡 Conseil</p>
-                    <p className="text-gray-300">Cliquez sur le bouton <strong>"👁️ Voir"</strong> à droite de chaque fiche pour voir tous les détails</p>
+                    <p className="font-bold text-indigo-400 mb-2">Conseil</p>
+                    <p className="text-gray-300">Cliquez sur le bouton <strong>"Voir"</strong> à droite de chaque fiche pour voir tous les détails</p>
                   </div>
                 </div>
 
@@ -274,7 +264,7 @@ export default function GuidePage() {
                     3
                   </div>
                   <div>
-                    <h3 className="text-2xl font-bold mb-2 text-indigo-400">🔧 Lancer des Actions</h3>
+                    <h3 className="text-2xl font-bold mb-2 text-indigo-400">Lancer des Actions</h3>
                     <p className="text-lg text-gray-400">Enrichir ou corriger les fiches automatiquement</p>
                   </div>
                 </div>
@@ -285,7 +275,7 @@ export default function GuidePage() {
                   </p>
 
                   <div className="bg-yellow-500/10 rounded-xl p-6 border-l-4 border-yellow-500/50">
-                    <p className="font-bold text-yellow-300 mb-2">⚠️ Attention</p>
+                    <p className="font-bold text-yellow-300 mb-2">Attention</p>
                     <p className="text-yellow-400">Les actions lancent les agents automatiquement. Ne les utilisez que si nécessaire.</p>
                   </div>
 
@@ -293,19 +283,19 @@ export default function GuidePage() {
                     <p className="text-base font-bold text-white mb-4">Actions disponibles :</p>
                     <div className="space-y-3">
                       <div className="bg-[#0c0c1a] rounded-lg p-4 border border-white/[0.08]">
-                        <p className="font-bold text-indigo-400 mb-1">📝 Enrichissement</p>
+                        <p className="font-bold text-indigo-400 mb-1">Enrichissement</p>
                         <p className="text-gray-300">L'Agent Rédacteur complète les fiches vides</p>
                       </div>
                       <div className="bg-[#0c0c1a] rounded-lg p-4 border border-white/[0.08]">
-                        <p className="font-bold text-indigo-400 mb-1">🔧 Correction</p>
+                        <p className="font-bold text-indigo-400 mb-1">Correction</p>
                         <p className="text-gray-300">L'Agent Correcteur vérifie l'orthographe</p>
                       </div>
                       <div className="bg-[#0c0c1a] rounded-lg p-4 border border-white/[0.08]">
-                        <p className="font-bold text-indigo-400 mb-1">🌐 Variantes</p>
+                        <p className="font-bold text-indigo-400 mb-1">Variantes</p>
                         <p className="text-gray-300">Génère les 90 versions (langues, âges, formats)</p>
                       </div>
                       <div className="bg-[#0c0c1a] rounded-lg p-4 border border-white/[0.08]">
-                        <p className="font-bold text-indigo-400 mb-1">📢 Publication</p>
+                        <p className="font-bold text-indigo-400 mb-1">Publication</p>
                         <p className="text-gray-300">Marque les fiches comme "Publiées"</p>
                       </div>
                     </div>
@@ -322,7 +312,7 @@ export default function GuidePage() {
 
         {/* FAQ */}
         <div className="mb-20">
-          <h2 className="text-3xl font-bold mb-8 text-white">❓ Questions Fréquentes</h2>
+          <h2 className="text-3xl font-bold mb-8 text-white">Questions Fréquentes</h2>
 
           <StaggerContainer className="space-y-4">
             {[
@@ -332,7 +322,7 @@ export default function GuidePage() {
               },
               {
                 q: "C'est quoi le 'référentiel ROME' ?",
-                a: "ROME signifie 'Répertoire Opérationnel des Métiers et des Emplois'. C'est la liste officielle française de tous les métiers (1 584 fiches).",
+                a: "ROME signifie 'Répertoire Opérationnel des Métiers et des Emplois'. C'est la liste officielle française de tous les métiers (plus de 1 500 fiches).",
               },
               {
                 q: "Que veut dire 'variante' ?",
@@ -359,7 +349,7 @@ export default function GuidePage() {
 
         {/* Besoin d'aide */}
         <div className="sojai-card bg-gradient-to-r from-indigo-600 to-cyan-500 text-white text-center">
-          <h2 className="text-2xl font-bold mb-4">💬 Besoin d'aide supplémentaire ?</h2>
+          <h2 className="text-2xl font-bold mb-4">Besoin d'aide supplémentaire ?</h2>
           <p className="text-lg mb-6 opacity-90">
             Si quelque chose n'est pas clair, n'hésitez pas à demander de l'aide
           </p>

@@ -24,24 +24,24 @@ import {
 
 const VARIANT_STYLES = {
   central: {
-    bg: "linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%)",
+    bg: "linear-gradient(135deg, rgba(79,70,229,0.15) 0%, rgba(79,70,229,0.08) 100%)",
     border: "#4F46E5",
-    badgeColor: "#4F46E5",
-    badgeBg: "#C7D2FE",
+    badgeColor: "#818CF8",
+    badgeBg: "rgba(79,70,229,0.2)",
     width: 220,
   },
   evolution: {
-    bg: "linear-gradient(135deg, #ECFEFF 0%, #CFFAFE 100%)",
+    bg: "linear-gradient(135deg, rgba(6,182,212,0.12) 0%, rgba(6,182,212,0.06) 100%)",
     border: "#06B6D4",
-    badgeColor: "#0E7490",
-    badgeBg: "#A5F3FC",
+    badgeColor: "#22D3EE",
+    badgeBg: "rgba(6,182,212,0.2)",
     width: 200,
   },
   proche: {
-    bg: "#FFFFFF",
-    border: "#D1D5DB",
-    badgeColor: "#6B7280",
-    badgeBg: "#F3F4F6",
+    bg: "#0c0c1a",
+    border: "rgba(255,255,255,0.1)",
+    badgeColor: "#9CA3AF",
+    badgeBg: "rgba(255,255,255,0.06)",
     width: 200,
   },
 };
@@ -92,7 +92,7 @@ function CareerNodeComponent({ data }: NodeProps) {
 
       <div
         className="font-semibold text-[13px] leading-tight"
-        style={{ color: "#1A1A2E" }}
+        style={{ color: "#fff" }}
       >
         {label}
       </div>
@@ -180,7 +180,7 @@ export default function CareerMap({
   if (loading) {
     return (
       <div
-        className="flex items-center justify-center rounded-xl border border-gray-200 bg-gray-50"
+        className="flex items-center justify-center rounded-xl border border-white/[0.06] bg-white/[0.02]"
         style={{ height: compact ? 400 : 600 }}
       >
         <div className="text-sm text-gray-400 animate-pulse">{t.careerMapLoading}</div>
@@ -190,22 +190,22 @@ export default function CareerMap({
 
   return (
     <div
-      className="rounded-xl border border-gray-200 overflow-hidden bg-white"
+      className="rounded-xl border border-white/[0.06] overflow-hidden bg-[#0c0c1a]"
       style={{ height: compact ? 400 : 600 }}
     >
       {/* Legend */}
-      <div className="flex items-center gap-4 px-4 py-2 bg-gray-50 border-b border-gray-100 text-xs">
+      <div className="flex items-center gap-4 px-4 py-2 bg-white/[0.02] border-b border-white/[0.04] text-xs">
         <span className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded-full bg-indigo-500" />
-          <span className="text-gray-600">{t.careerMapCentral}</span>
+          <span className="text-gray-400">{t.careerMapCentral}</span>
         </span>
         <span className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded-full bg-cyan-500" />
-          <span className="text-gray-600">{t.careerMapEvolutions}</span>
+          <span className="text-gray-400">{t.careerMapEvolutions}</span>
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded border border-gray-400 bg-white" />
-          <span className="text-gray-600">{t.careerMapProches}</span>
+          <span className="w-3 h-3 rounded border border-gray-600 bg-[#0c0c1a]" />
+          <span className="text-gray-400">{t.careerMapProches}</span>
         </span>
       </div>
 
@@ -226,7 +226,7 @@ export default function CareerMap({
         elementsSelectable={false}
         proOptions={{ hideAttribution: true }}
       >
-        <Background color="#f1f5f9" gap={20} />
+        <Background color="rgba(255,255,255,0.03)" gap={20} />
         {!compact && <Controls showInteractive={false} />}
       </ReactFlow>
     </div>

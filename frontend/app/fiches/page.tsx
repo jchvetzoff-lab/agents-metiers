@@ -8,15 +8,7 @@ import { isAuthenticated } from "@/lib/auth";
 import StatusBadge from "@/components/StatusBadge";
 import SectionHeader from "@/components/SectionHeader";
 
-const getScore = (f: FicheMetier) => {
-  let s = 0;
-  if (f.description) s += 20;
-  if (f.has_competences) s += 25;
-  if (f.has_formations) s += 20;
-  if (f.has_salaires) s += 20;
-  if (f.has_perspectives) s += 15;
-  return s;
-};
+// Score de complétude fourni par l'API
 
 export default function FichesPage() {
   const [fiches, setFiches] = useState<FicheMetier[]>([]);
@@ -193,7 +185,7 @@ export default function FichesPage() {
       case "code": cmp = a.code_rome.localeCompare(b.code_rome); break;
       case "nom": cmp = a.nom_masculin.localeCompare(b.nom_masculin); break;
       case "statut": cmp = a.statut.localeCompare(b.statut); break;
-      case "score": cmp = getScore(a) - getScore(b); break;
+      case "score": cmp = (a.score_completude || 0) - (b.score_completude || 0); break;
       case "date": cmp = new Date(a.date_maj).getTime() - new Date(b.date_maj).getTime(); break;
     }
     return sortDir === "desc" ? -cmp : cmp;
@@ -226,7 +218,7 @@ export default function FichesPage() {
           </p>
           {!authed && (
             <div className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-500/10 border border-indigo-500/20 rounded-full text-sm text-indigo-400">
-              🔒 <Link href="/login" className="font-semibold hover:underline">Connectez-vous</Link> pour gérer les fiches
+              <Link href="/login" className="font-semibold hover:underline">Connectez-vous</Link> pour gérer les fiches
             </div>
           )}
           {authed && (
@@ -246,9 +238,9 @@ export default function FichesPage() {
         <div className="sojai-card mb-8">
           <div className="grid md:grid-cols-3 gap-4">
             {/* Recherche */}
-            <div className="md:col-span-2">
+            <div className="md:col-span-2 relative">
               <label className="block text-sm font-medium text-white mb-2">
-                🔍 Recherche
+                Recherche
               </label>
               <input
                 ref={searchInputRef}
@@ -283,7 +275,7 @@ export default function FichesPage() {
             {/* Statut */}
             <div>
               <label className="block text-sm font-medium text-white mb-2">
-                📊 Statut
+                Statut
               </label>
               <select
                 value={statutFilter}
@@ -296,7 +288,9 @@ export default function FichesPage() {
               >
                 <option value="">Tous les statuts</option>
                 <option value="brouillon">Brouillon</option>
+                <option value="enrichi">Enrichi</option>
                 <option value="en_validation">En validation</option>
+                <option value="valide">Validé</option>
                 <option value="publiee">Publiée</option>
                 <option value="archivee">Archivée</option>
               </select>
@@ -362,7 +356,7 @@ export default function FichesPage() {
                     {fiches.length === 0 && (
                       <tr>
                         <td colSpan={7} className="p-12 text-center">
-                          <div className="text-4xl mb-3">🔍</div>
+                          <div className="text-4xl mb-3"></div>
                           <div className="text-gray-400 font-medium mb-1">
                             Aucun résultat trouvé
                           </div>
@@ -375,7 +369,7 @@ export default function FichesPage() {
                       </tr>
                     )}
                     {sortedFiches.map((fiche) => {
-                      const score = getScore(fiche);
+                      const score = fiche.score_completude || 0;
                       const scoreColor = score >= 80 ? "bg-green-500/20 text-green-400" : score >= 50 ? "bg-orange-500/20 text-orange-400" : "bg-red-500/20 text-red-400";
                       return (
                         <tr
@@ -456,27 +450,54 @@ export default function FichesPage() {
             </div>
 
             {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-2 mt-8">
-                <button
-                  onClick={() => setPage(Math.max(0, page - 1))}
-                  disabled={page === 0}
-                  className="btn btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  ← Précédent
-                </button>
-                <span className="px-4 py-2 text-gray-400">
-                  Page {page + 1} / {totalPages}
-                </span>
-                <button
-                  onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
-                  disabled={page >= totalPages - 1}
-                  className="btn btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Suivant →
-                </button>
-              </div>
-            )}
+            {totalPages > 1 && (() => {
+              const current = page;
+              const pages: (number | "ellipsis")[] = [];
+              if (totalPages <= 7) {
+                for (let i = 0; i < totalPages; i++) pages.push(i);
+              } else {
+                pages.push(0);
+                if (current > 2) pages.push("ellipsis");
+                for (let i = Math.max(1, current - 1); i <= Math.min(totalPages - 2, current + 1); i++) pages.push(i);
+                if (current < totalPages - 3) pages.push("ellipsis");
+                pages.push(totalPages - 1);
+              }
+              return (
+                <div className="flex items-center justify-center gap-1.5 mt-8">
+                  <button
+                    onClick={() => setPage(Math.max(0, page - 1))}
+                    disabled={page === 0}
+                    className="px-3 py-2 rounded-lg text-sm font-medium text-gray-400 bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.08] transition disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    ←
+                  </button>
+                  {pages.map((p, idx) =>
+                    p === "ellipsis" ? (
+                      <span key={`e${idx}`} className="px-2 py-2 text-gray-500 text-sm">…</span>
+                    ) : (
+                      <button
+                        key={p}
+                        onClick={() => setPage(p)}
+                        className={`px-3.5 py-2 rounded-lg text-sm font-medium transition ${
+                          p === current
+                            ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20"
+                            : "text-gray-400 bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.08]"
+                        }`}
+                      >
+                        {p + 1}
+                      </button>
+                    )
+                  )}
+                  <button
+                    onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
+                    disabled={page >= totalPages - 1}
+                    className="px-3 py-2 rounded-lg text-sm font-medium text-gray-400 bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.08] transition disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    →
+                  </button>
+                </div>
+              );
+            })()}
           </>
         )}
       </div>

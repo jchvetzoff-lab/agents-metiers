@@ -137,7 +137,7 @@ export default function Home() {
           </FadeInView>
           <FadeInView delay={0.2}>
             <p className="text-lg md:text-xl text-gray-300 max-w-2xl mx-auto mb-10 leading-relaxed">
-              Plus de 500 fiches métiers enrichies par l&apos;IA, données France Travail en temps réel
+              Plus de 1 500 fiches métiers ROME, enrichissement IA et données France Travail en temps réel
             </p>
           </FadeInView>
           <FadeInView delay={0.3}>
@@ -212,14 +212,14 @@ export default function Home() {
               <div className="text-2xl md:text-3xl font-bold text-indigo-400 mb-1">
                 <CountUp value={3} />
               </div>
-              <div className="text-sm text-gray-400">APIs connectees</div>
+              <div className="text-sm text-gray-400">APIs connectées</div>
               <div className="text-[10px] text-gray-500 mt-1">France Travail, INSEE, ROME</div>
             </div>
             <div className="bg-white/5 rounded-2xl border border-white/[0.06] p-6 text-center hover:bg-white/[0.08] transition-colors">
               <div className="text-2xl md:text-3xl font-bold text-indigo-400 mb-1">
                 <CountUp value={13} />
               </div>
-              <div className="text-sm text-gray-400">Regions couvertes</div>
+              <div className="text-sm text-gray-400">Régions couvertes</div>
               <div className="text-[10px] text-gray-500 mt-1">INSEE metropolitaines</div>
             </div>
             <div className="bg-white/5 rounded-2xl border border-white/[0.06] p-6 text-center hover:bg-white/[0.08] transition-colors">
@@ -227,7 +227,7 @@ export default function Home() {
                 <CountUp value={4} />
               </div>
               <div className="text-sm text-gray-400">Agents IA</div>
-              <div className="text-[10px] text-gray-500 mt-1">Redacteur, Correcteur, Veille, Salaires</div>
+              <div className="text-[10px] text-gray-500 mt-1">Rédacteur, Correcteur, Veille, Salaires</div>
             </div>
           </StaggerContainer>
         </div>
