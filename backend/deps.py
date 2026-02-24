@@ -21,8 +21,13 @@ repo.init_db()
 
 def get_claude_client():
     """Get async Anthropic client if available."""
+    import logging
+    logger = logging.getLogger(__name__)
     try:
         import anthropic
-        return anthropic.AsyncAnthropic()
-    except Exception:
+        client = anthropic.AsyncAnthropic()
+        logger.info(f"Claude client created successfully")
+        return client
+    except Exception as e:
+        logger.error(f"Failed to create Claude client: {e}")
         return None

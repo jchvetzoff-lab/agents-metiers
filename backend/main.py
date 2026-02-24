@@ -57,6 +57,24 @@ async def health():
         return {"status": "degraded", "db": str(e)}
 
 
+@app.get("/api/debug-claude")
+async def debug_claude():
+    """Debug: test Claude API call."""
+    from .deps import get_claude_client
+    client = get_claude_client()
+    if not client:
+        return {"error": "Claude client is None"}
+    try:
+        response = await client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=50,
+            messages=[{"role": "user", "content": "Say 'hello' in one word."}]
+        )
+        return {"status": "ok", "response": response.content[0].text}
+    except Exception as e:
+        return {"error": str(e), "type": type(e).__name__}
+
+
 @app.get("/api/debug-env")
 async def debug_env():
     """Debug: check if critical env vars are set."""
