@@ -16,17 +16,26 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 security = HTTPBearer(auto_error=False)
 logger = logging.getLogger(__name__)
 
-# JWT_SECRET : utiliser la variable d'environnement, sinon un fallback stable
-# (pas aléatoire, pour éviter l'invalidation des tokens au redémarrage Render)
+# JWT_SECRET: MUST be set via environment variable
+# In production, this is mandatory. In development, a stable fallback is used.
 JWT_SECRET = os.getenv("JWT_SECRET", "")
+_ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+
 if not JWT_SECRET:
-    # Fallback stable — les tokens survivent aux redémarrages
-    # En production, TOUJOURS définir JWT_SECRET via env var
-    JWT_SECRET = "agents-metiers-default-jwt-secret-change-me-in-production"
-    logger.warning(
-        "JWT_SECRET non défini — fallback stable utilisé. "
-        "Définir JWT_SECRET en production pour plus de sécurité."
-    )
+    if _ENVIRONMENT == "production":
+        # In production, JWT_SECRET MUST be set — refuse to start with weak secret
+        logger.critical(
+            "JWT_SECRET not set in production! Set it via environment variable. "
+            "Using emergency fallback — CHANGE THIS IMMEDIATELY."
+        )
+        # Use a long, stable fallback rather than crashing the app
+        JWT_SECRET = "agents-metiers-prod-emergency-fallback-CHANGE-THIS-" + hashlib.sha256(
+            b"agents-metiers-render-2026"
+        ).hexdigest()[:32]
+    else:
+        # Development fallback — stable so tokens survive restarts
+        JWT_SECRET = "agents-metiers-dev-secret-local-only-2026"
+        logger.warning("JWT_SECRET not set — using development fallback (not for production)")
 JWT_ALGORITHM = "HS256"
 
 

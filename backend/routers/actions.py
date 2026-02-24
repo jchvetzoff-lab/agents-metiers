@@ -76,7 +76,7 @@ async def enrich_fiche(code_rome: str, req: Optional[EnrichRequest] = None, user
         raise
     except Exception as e:
         logger.error(f"Erreur enrichissement {code_rome}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Erreur interne. Veuillez réessayer.")
 
 
 # ==================== VALIDATE ====================
@@ -141,7 +141,7 @@ async def validate_fiche(code_rome: str, user: dict = Depends(get_current_user))
         raise
     except Exception as e:
         logger.error(f"Erreur validation {code_rome}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Erreur interne. Veuillez réessayer.")
 
 
 # ==================== REVIEW ====================
@@ -198,7 +198,7 @@ async def review_fiche(code_rome: str, req: ReviewRequest, user: dict = Depends(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Erreur interne. Veuillez réessayer.")
 
 
 # ==================== AUTO-CORRECT ====================
@@ -283,7 +283,7 @@ Retourne un JSON avec les champs corrigés: description, competences, formations
         raise
     except Exception as e:
         logger.error(f"Erreur auto-correction {code_rome}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Erreur interne. Veuillez réessayer.")
 
 
 # ==================== PUBLISH ====================
@@ -323,7 +323,7 @@ async def publish_fiche(code_rome: str, user: dict = Depends(get_current_user)):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Erreur interne. Veuillez réessayer.")
 
 
 # ==================== VARIANTES GENERATE ====================
@@ -367,7 +367,7 @@ async def generate_variantes(code_rome: str, req: VariantesGenerateRequest, user
         raise
     except Exception as e:
         logger.error(f"Erreur génération variantes {code_rome}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Erreur interne. Veuillez réessayer.")
 
 
 # ==================== PUBLISH BATCH ====================

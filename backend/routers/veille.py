@@ -33,7 +33,7 @@ async def sync_rome(user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=501, detail="Module de sync ROME non disponible")
     except Exception as e:
         logger.error(f"Erreur sync ROME: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Erreur interne. Veuillez réessayer.")
 
 
 # ==================== VEILLE ROME ====================
@@ -57,7 +57,7 @@ async def trigger_rome_veille(user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=501, detail="Module de veille ROME non disponible")
     except Exception as e:
         logger.error(f"Erreur veille ROME: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Erreur interne. Veuillez réessayer.")
 
 
 @router.get("/api/veille/rome/changes")
@@ -75,7 +75,7 @@ async def get_rome_changes(reviewed: Optional[bool] = Query(None)):
             "changes": changes
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Erreur interne. Veuillez réessayer.")
 
 
 @router.post("/api/veille/rome/changes/{change_id}/review")
@@ -95,7 +95,7 @@ async def review_rome_change(change_id: int, body: dict, user: dict = Depends(ge
             "action": action
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Erreur interne. Veuillez réessayer.")
 
 
 @router.get("/api/veille/rome/status")
@@ -117,4 +117,4 @@ async def get_rome_veille_status():
             "prochaine_execution": "Non planifiée"
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Erreur interne. Veuillez réessayer.")

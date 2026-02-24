@@ -1,8 +1,13 @@
-# Environnement
+# Environnement & secrets
 .env
-ID agent.txt
+.env.*
 .env.local
+.env.production
+.env.staging
 *.env
+ID agent.txt
+*.key
+*.pem
 
 # Python
 __pycache__/
@@ -40,4 +45,11 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Node
 backend/node_modules/
+node_modules/
+
+# Next.js
+.next/
+out/

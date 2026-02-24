@@ -32,7 +32,7 @@ async def get_stats():
             publiees=counts.get("publiee", 0) + counts.get("archivee", 0),
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Erreur interne. Veuillez réessayer.")
 
 
 @router.get("/audit-logs")
@@ -75,4 +75,4 @@ async def get_audit_logs(
             ]
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Erreur interne. Veuillez réessayer.")

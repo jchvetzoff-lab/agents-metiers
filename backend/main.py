@@ -15,18 +15,18 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS configuration
+# CORS configuration — restricted methods and headers for security
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://frontend-seven-neon-32.vercel.app",
         "https://agents-metiersjae.fr",
         "https://www.agents-metiersjae.fr",
-        *([  "http://localhost:3000"] if os.getenv("ENVIRONMENT", "production") != "production" else []),
+        *(["http://localhost:3000"] if os.getenv("ENVIRONMENT", "production") != "production" else []),
     ],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept"],
 )
 
 # Register routers
@@ -90,17 +90,18 @@ async def startup_event():
                     logger.info("Migrating audit_log table: adding validateur column")
                     conn.execute(text("ALTER TABLE audit_log ADD COLUMN validateur VARCHAR(100)"))
 
-        # Migrate legacy statut values in fiches
+        # Migrate legacy statut values in fiches (parameterized queries — no SQL injection)
         with repo.engine.begin() as conn:
             for old_val, new_val in [("en_validation", "valide"), ("archivee", "publiee")]:
                 try:
-                    result = conn.execute(text(
-                        f"UPDATE fiches SET statut = '{new_val}' WHERE statut = '{old_val}'"
-                    ))
+                    result = conn.execute(
+                        text("UPDATE fiches SET statut = :new_val WHERE statut = :old_val"),
+                        {"new_val": new_val, "old_val": old_val}
+                    )
                     if result.rowcount > 0:
                         logger.info(f"Migrated {result.rowcount} fiches from '{old_val}' to '{new_val}'")
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning(f"Statut migration {old_val}->{new_val}: {e}")
 
         logger.info("Database migration check completed")
     except Exception as e:

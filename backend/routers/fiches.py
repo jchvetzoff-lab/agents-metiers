@@ -254,7 +254,8 @@ async def get_fiches(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error fetching fiches: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Erreur interne. Veuillez réessayer.")
 
 
 @router.get("/fiches/autocomplete")
@@ -308,7 +309,7 @@ async def autocomplete_fiches(
             ))
         return results
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Erreur interne. Veuillez réessayer.")
 
 
 @router.get("/fiches/{code_rome}")
@@ -369,7 +370,7 @@ async def get_fiche_detail(code_rome: str):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Erreur interne. Veuillez réessayer.")
 
 
 @router.post("/fiches", status_code=201)
@@ -434,7 +435,7 @@ async def create_fiche(fiche_data: FicheMetierCreate, user: dict = Depends(get_c
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erreur lors de la création: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erreur interne lors de la création.")
 
 
 @router.patch("/fiches/{code_rome}")
@@ -484,7 +485,7 @@ async def update_fiche(code_rome: str, update_data: FicheMetierUpdate, user: dic
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erreur mise à jour: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erreur interne lors de la mise à jour.")
 
 
 @router.delete("/fiches/{code_rome}")
@@ -518,7 +519,7 @@ async def delete_fiche(code_rome: str, user: dict = Depends(get_current_user)):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Erreur interne. Veuillez réessayer.")
 
 
 @router.get("/fiches/{code_rome}/variantes")
@@ -551,7 +552,7 @@ async def get_variantes(code_rome: str):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Erreur interne. Veuillez réessayer.")
 
 
 @router.get("/fiches/{code_rome}/variantes/{variante_id}")
@@ -587,4 +588,4 @@ async def get_variante_detail(code_rome: str, variante_id: int):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Erreur interne. Veuillez réessayer.")

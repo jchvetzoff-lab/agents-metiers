@@ -93,7 +93,7 @@ async def get_regional_data(code_rome: str, region: str = Query(...)):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Erreur interne. Veuillez réessayer.")
 
 
 @router.get("/fiches/{code_rome}/recrutements")
@@ -128,7 +128,7 @@ async def get_recrutements(code_rome: str, region: Optional[str] = Query(None)):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Erreur interne. Veuillez réessayer.")
 
 
 @router.get("/fiches/{code_rome}/offres")
@@ -169,7 +169,7 @@ async def get_offres(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Erreur interne. Veuillez réessayer.")
 
 
 def _get_regional_coefficient(region_code: str) -> float:
