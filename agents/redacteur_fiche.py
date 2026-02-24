@@ -46,7 +46,7 @@ class AgentRedacteurFiche(BaseAgent):
         max_retries = 3
         for attempt in range(max_retries):
             try:
-                return await self._call_claude(**kwargs)
+                return await self.claude_client.messages.create(**kwargs)
             except Exception as e:
                 error_str = str(e)
                 if "529" in error_str or "overloaded" in error_str.lower():
@@ -56,7 +56,7 @@ class AgentRedacteurFiche(BaseAgent):
                     continue
                 raise
         # Last attempt without catch
-        return await self._call_claude(**kwargs)
+        return await self.claude_client.messages.create(**kwargs)
 
     def get_description(self) -> str:
         return (
