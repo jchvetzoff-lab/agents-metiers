@@ -912,33 +912,24 @@ export default function FicheDetailPage() {
                       </div>
 
                       {/* Re-enrichir avec commentaire */}
-                      <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-                        <div className="flex items-start gap-3 mb-3">
-                          <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                            <svg className="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" /></svg>
-                          </div>
-                          <div>
-                            <div className="text-sm font-medium text-white/80">Re-enrichir avec des instructions</div>
-                            <div className="text-xs text-white/40 mt-0.5">Dites a l&apos;IA ce qu&apos;il faut corriger ou completer. Ex: &quot;ajoute des formations courtes&quot;, &quot;les salaires sont trop bas&quot;, &quot;complete les metiers proches&quot;</div>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <textarea
-                            value={enrichComment}
-                            onChange={(e) => setEnrichComment(e.target.value)}
-                            placeholder="Vos instructions pour l'IA..."
-                            rows={3}
-                            className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder-white/25 focus:outline-none focus:border-indigo-500 resize-none"
-                            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && enrichComment.trim() && (e.preventDefault(), handleEnrich(enrichComment.trim()))}
-                          />
-                          <button
-                            onClick={() => enrichComment.trim() && handleEnrich(enrichComment.trim())}
-                            disabled={!enrichComment.trim() || actionLoading !== null}
-                            className="px-5 self-end py-3 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition disabled:opacity-30 disabled:cursor-not-allowed"
-                          >
-                            {actionLoading === 'enrich' ? '…' : 'Envoyer'}
-                          </button>
-                        </div>
+                      <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/[0.04] p-5">
+                        <div className="text-sm font-semibold text-indigo-400 mb-1">Pas satisfait du resultat ?</div>
+                        <div className="text-xs text-white/40 mb-4">Ecrivez ce que l&apos;IA doit modifier, puis cliquez &quot;Re-enrichir&quot;. La fiche sera re-generee en tenant compte de vos instructions.</div>
+                        <textarea
+                          value={enrichComment}
+                          onChange={(e) => setEnrichComment(e.target.value)}
+                          placeholder={'Ex:\n- Les salaires sont trop bas pour ce metier\n- Ajoute des formations courtes (CQP, titres pro)\n- Complete la section metiers proches'}
+                          rows={4}
+                          className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder-white/20 focus:outline-none focus:border-indigo-500 resize-none mb-3"
+                          onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && enrichComment.trim() && (e.preventDefault(), handleEnrich(enrichComment.trim()))}
+                        />
+                        <button
+                          onClick={() => enrichComment.trim() && handleEnrich(enrichComment.trim())}
+                          disabled={!enrichComment.trim() || actionLoading !== null}
+                          className="w-full py-3 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                          {actionLoading === 'enrich' ? 'Re-enrichissement en cours…' : 'Re-enrichir avec ces instructions'}
+                        </button>
                       </div>
                     </div>
                   ) : (
