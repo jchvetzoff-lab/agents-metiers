@@ -79,8 +79,8 @@ async def startup_event():
                     try:
                         conn.execute(text("ALTER TABLE users DROP COLUMN password_hash"))
                         logger.info("Cleaned up unused password_hash column")
-                    except Exception:
-                        pass  # Column might not exist or might have constraints
+                    except Exception as e:
+                        logger.debug(f"Could not drop password_hash column: {e}")
 
         # Check audit_log table columns
         if "audit_log" in inspector.get_table_names():
@@ -117,7 +117,8 @@ async def health():
         repo.get_all_fiches(limit=1)
         return {"status": "ok", "db": "connected"}
     except Exception as e:
-        return {"status": "degraded", "db": str(e)}
+        logger.warning(f"Health check DB issue: {e}")
+        return {"status": "degraded", "db": "connection error"}
 
 
 @app.get("/api/git-version")

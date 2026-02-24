@@ -2,6 +2,7 @@
 CRUD endpoints for fiches métiers.
 """
 import re
+import logging
 import unicodedata
 from datetime import datetime
 from typing import Optional, List
@@ -10,6 +11,8 @@ from pydantic import BaseModel
 
 from ..deps import repo
 from ..auth_middleware import get_current_user
+
+logger = logging.getLogger(__name__)
 from database.models import StatutFiche, FicheMetier, MetadataFiche, TypeEvenement, AuditLog
 
 router = APIRouter(prefix="/api", tags=["fiches"])
@@ -423,8 +426,8 @@ async def create_fiche(fiche_data: FicheMetierCreate, user: dict = Depends(get_c
                 description=f"Création de la fiche {fiche_creee.nom_masculin} ({fiche_creee.code_rome})",
                 validateur=user_name,
             ))
-        except Exception:
-            pass
+        except Exception as audit_err:
+            logger.warning(f"Audit log failed: {audit_err}")
 
         return {
             "message": "Fiche créée avec succès",
@@ -474,8 +477,8 @@ async def update_fiche(code_rome: str, update_data: FicheMetierUpdate, user: dic
                 description=f"Modification manuelle de la fiche {code_rome} — champs: {champs}",
                 validateur=user_name,
             ))
-        except Exception:
-            pass
+        except Exception as audit_err:
+            logger.warning(f"Audit log failed: {audit_err}")
 
         return {
             "message": "Fiche mise à jour",
@@ -509,8 +512,8 @@ async def delete_fiche(code_rome: str, user: dict = Depends(get_current_user)):
                 description=f"Suppression de la fiche {nom} ({code_rome})",
                 validateur=user_name,
             ))
-        except Exception:
-            pass
+        except Exception as audit_err:
+            logger.warning(f"Audit log failed: {audit_err}")
 
         return {
             "message": f"Fiche {code_rome} supprimée",

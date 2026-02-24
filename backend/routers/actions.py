@@ -405,8 +405,8 @@ async def publish_batch(req: PublishBatchRequest, user: dict = Depends(get_curre
                     description=f"Publication en lot de la fiche {fiche.nom_masculin} ({code_rome})",
                     validateur=user_name,
                 ))
-            except Exception:
-                pass
+            except Exception as audit_err:
+                logger.warning(f"Audit log failed: {audit_err}")
 
             results.append({"code_rome": code_rome, "status": "published", "message": "Publiée"})
         except Exception as e:
