@@ -105,10 +105,8 @@ def _compute_score(fiche) -> int:
         score += 4
     if hasattr(fiche, 'conditions_travail_detaillees') and fiche.conditions_travail_detaillees and getattr(fiche.conditions_travail_detaillees, 'horaires', None):
         score += 3
-    # Section Mobilité
-    if hasattr(fiche, 'mobilite') and fiche.mobilite and fiche.mobilite.metiers_proches:
-        score += 8
-    elif hasattr(fiche, 'metiers_proches') and fiche.metiers_proches:
+    # Section Mobilité (le modèle utilise metiers_proches: List[str])
+    if fiche.metiers_proches and len(fiche.metiers_proches) > 0:
         score += 8
     # Section Profil (RIASEC + traits + aptitudes)
     if hasattr(fiche, 'profil_riasec') and fiche.profil_riasec and len(getattr(fiche.profil_riasec, '__dict__', fiche.profil_riasec if isinstance(fiche.profil_riasec, dict) else {})) >= 4:

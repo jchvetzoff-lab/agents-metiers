@@ -42,21 +42,22 @@ class AgentRedacteurFiche(BaseAgent):
         self.config = get_config()
 
     async def _call_claude(self, **kwargs):
-        """Call Claude API with automatic retry on overload (529)."""
+        """Call Claude API with streaming + automatic retry on overload (529)."""
         max_retries = 3
-        for attempt in range(max_retries):
+        for attempt in range(max_retries + 1):
             try:
-                return await self.claude_client.messages.create(**kwargs)
+                # Use streaming to avoid SDK 10-min timeout restriction
+                async with self.claude_client.messages.stream(**kwargs) as stream:
+                    response = await stream.get_final_message()
+                return response
             except Exception as e:
                 error_str = str(e)
-                if "529" in error_str or "overloaded" in error_str.lower():
+                if ("529" in error_str or "overloaded" in error_str.lower()) and attempt < max_retries:
                     wait = 10 * (attempt + 1)
                     self.logger.warning(f"Claude overloaded, retry {attempt+1}/{max_retries} in {wait}s...")
                     await asyncio.sleep(wait)
                     continue
                 raise
-        # Last attempt without catch
-        return await self.claude_client.messages.create(**kwargs)
 
     def get_description(self) -> str:
         return (
@@ -201,6 +202,7 @@ class AgentRedacteurFiche(BaseAgent):
             "conditions_travail", "environnements", "missions_principales",
             "savoirs", "acces_metier", "autres_appellations",
             "traits_personnalite", "statuts_professionnels", "niveau_formation",
+            "secteurs_activite",
         ]
         for champ in champs_simples:
             if contenu.get(champ) is not None:
@@ -216,9 +218,17 @@ class AgentRedacteurFiche(BaseAgent):
             if contenu.get(champ) is not None:
                 fiche_data[champ] = contenu[champ]
 
-        # Mobilité (métiers proches et évolutions)
+        # Mobilité → extraire metiers_proches (le modèle FicheMetier n'a pas de champ "mobilite")
         if contenu.get("mobilite"):
-            fiche_data["mobilite"] = contenu["mobilite"]
+            mob = contenu["mobilite"]
+            # Extraire les noms des métiers proches comme List[str]
+            mp = mob.get("metiers_proches", [])
+            if mp:
+                fiche_data["metiers_proches"] = [
+                    m.get("nom") if isinstance(m, dict) else str(m) for m in mp
+                ]
+            # Stocker les données complètes de mobilité dans un champ existant si possible
+            self.logger.info(f"Mobilité extraite: {len(fiche_data.get('metiers_proches', []))} métiers proches")
 
         # Salaires estimés
         if contenu.get("salaires"):
