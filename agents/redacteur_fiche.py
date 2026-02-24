@@ -165,6 +165,10 @@ class AgentRedacteurFiche(BaseAgent):
             if contenu.get(champ) is not None:
                 fiche_data[champ] = contenu[champ]
 
+        # Mobilité (métiers proches et évolutions)
+        if contenu.get("mobilite"):
+            fiche_data["mobilite"] = contenu["mobilite"]
+
         # Salaires estimés
         if contenu.get("salaires"):
             sal = contenu["salaires"]
@@ -413,6 +417,17 @@ Réponds UNIQUEMENT avec un objet JSON valide (sans texte avant ou après) conte
         "tension": 0.6,
         "tendance": "stable",
         "evolution_5ans": "Analyse courte de l'évolution du métier sur 5 ans"
+    }},
+    "mobilite": {{
+        "metiers_proches": [
+            {{"nom": "Nom du métier proche 1"}},
+            {{"nom": "Nom du métier proche 2"}},
+            {{"nom": "Nom du métier proche 3"}}
+        ],
+        "evolutions": [
+            {{"nom": "Nom de l'évolution de carrière 1", "type": "ascendante"}},
+            {{"nom": "Nom de l'évolution 2", "type": "laterale"}}
+        ]
     }}
 }}
 
@@ -427,12 +442,13 @@ Notes IMPORTANTES :
 - sites_utiles : UNIQUEMENT des sites web réels et existants (ex: pole-emploi.fr, onisep.fr, apec.fr, etc.).
 - Sois factuel et précis. Pas de formulations vagues.
 - Tous les textes en français avec accents corrects.
-- Si le code ROME est fourni, ne le modifie pas. Sinon, suggère-le dans "code_rome_suggere"."""
+- Si le code ROME est fourni, ne le modifie pas. Sinon, suggère-le dans "code_rome_suggere".
+- TOUS les champs ci-dessus sont OBLIGATOIRES. Ne saute aucun champ. Le JSON doit contenir chaque clé listée."""
 
         try:
             response = await self.claude_client.messages.create(
                 model=self.config.api.claude_model,
-                max_tokens=4096,
+                max_tokens=8192,
                 messages=[{"role": "user", "content": prompt}]
             )
 
