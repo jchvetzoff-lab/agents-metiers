@@ -703,79 +703,7 @@ export default function FicheDetailPage() {
                 </div>
                 <div>{t.updatedOn} {new Date(fiche.date_maj).toLocaleDateString(t.locale)}</div>
               </div>
-              {/* ── ACTION BUTTONS (authenticated only) ── */}
-              {authenticated && (
-                <div className="flex flex-wrap items-center gap-2">
-                  {fiche.statut === "brouillon" && (
-                    <button
-                      onClick={() => handleEnrich()}
-                      disabled={actionLoading !== null}
-                      className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-indigo-300 text-indigo-600 rounded-full text-xs font-medium hover:bg-indigo-50 transition disabled:opacity-40 disabled:cursor-wait"
-                    >
-                      {actionLoading === "enrich" ? (
-                        <span className="w-3 h-3 border-2 border-indigo-300 border-t-indigo-600 rounded-full animate-spin" />
-                      ) : (
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/></svg>
-                      )}
-                      Enrichir
-                    </button>
-                  )}
-                  {fiche.statut === "en_validation" && (
-                    <>
-                      <button
-                        onClick={handlePublish}
-                        disabled={actionLoading !== null}
-                        className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-green-300 text-green-600 rounded-full text-xs font-medium hover:bg-green-50 transition disabled:opacity-40 disabled:cursor-wait"
-                      >
-                        {actionLoading === "publish" ? (
-                          <span className="w-3 h-3 border-2 border-green-300 border-t-green-600 rounded-full animate-spin" />
-                        ) : (
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                        )}
-                        Publier
-                      </button>
-                      <button
-                        onClick={handleValidate}
-                        disabled={actionLoading !== null}
-                        className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-amber-300 text-amber-600 rounded-full text-xs font-medium hover:bg-amber-50 transition disabled:opacity-40 disabled:cursor-wait"
-                      >
-                        {actionLoading === "validate" ? (
-                          <span className="w-3 h-3 border-2 border-amber-300 border-t-amber-600 rounded-full animate-spin" />
-                        ) : (
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-                        )}
-                        Valider
-                      </button>
-                      <button
-                        onClick={handleGenerateVariantes}
-                        disabled={actionLoading !== null}
-                        className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-violet-300 text-violet-600 rounded-full text-xs font-medium hover:bg-violet-50 transition disabled:opacity-40 disabled:cursor-wait"
-                      >
-                        {actionLoading === "variantes" ? (
-                          <span className="w-3 h-3 border-2 border-violet-300 border-t-violet-600 rounded-full animate-spin" />
-                        ) : (
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
-                        )}
-                        Variantes
-                      </button>
-                    </>
-                  )}
-                  {fiche.statut === "publiee" && (
-                    <button
-                      onClick={handleGenerateVariantes}
-                      disabled={actionLoading !== null}
-                      className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-violet-300 text-violet-600 rounded-full text-xs font-medium hover:bg-violet-50 transition disabled:opacity-40 disabled:cursor-wait"
-                    >
-                      {actionLoading === "variantes" ? (
-                        <span className="w-3 h-3 border-2 border-violet-300 border-t-violet-600 rounded-full animate-spin" />
-                      ) : (
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
-                      )}
-                      Variantes
-                    </button>
-                  )}
-                </div>
-              )}
+              {/* Action buttons removed — all actions in workflow CTA below */}
             </div>
           </div>
         </div>
@@ -894,22 +822,21 @@ export default function FicheDetailPage() {
         const isEnrichi = hasCompetences && hasFormations && hasSalaires && hasPerspectives;
 
         const steps = [
-          { key: 'brouillon', label: 'Brouillon', icon: '📄' },
-          { key: 'enrichi', label: 'Enrichi', icon: '✨' },
-          { key: 'en_validation', label: 'Validé', icon: '✓' },
-          { key: 'publiee', label: 'Publié', icon: '🌐' },
+          { key: 'brouillon', label: 'Brouillon' },
+          { key: 'enrichi', label: 'Enrichi' },
+          { key: 'valide', label: 'Valide IA' },
+          { key: 'publiee', label: 'Publie' },
         ];
 
-        const statusOrder = ['brouillon', 'enrichi', 'en_validation', 'publiee'];
         let currentIdx = 0;
         if (fiche.statut === 'publiee') currentIdx = 3;
         else if (fiche.statut === 'en_validation') currentIdx = 2;
-        else if (isEnrichi) currentIdx = 1;
+        else if (fiche.statut === 'enrichi' || isEnrichi) currentIdx = 1;
         else currentIdx = 0;
 
         return (
           <div className="max-w-7xl mx-auto px-4 md:px-8 pt-6">
-            <div className="bg-white rounded-2xl border border-gray-200/60 shadow-card p-6">
+            <div className="rounded-2xl border border-white/[0.06] bg-[#0c0c1a] p-6">
               {/* Steps */}
               <div className="flex items-center justify-between">
                 {steps.map((step, i) => (
@@ -917,50 +844,52 @@ export default function FicheDetailPage() {
                     <div className="flex flex-col items-center">
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all ${
                         i < currentIdx
-                          ? 'bg-green-100 border-green-500 text-green-700'
+                          ? 'bg-green-500/20 border-green-500 text-green-400'
                           : i === currentIdx
-                          ? 'bg-indigo-100 border-indigo-500 text-indigo-700'
-                          : 'bg-gray-100 border-gray-300 text-gray-400'
+                          ? 'bg-indigo-500/20 border-indigo-500 text-indigo-400'
+                          : 'bg-white/[0.04] border-white/[0.08] text-white/30'
                       }`}>
-                        {i < currentIdx ? '✓' : step.icon}
+                        {i < currentIdx ? '✓' : i + 1}
                       </div>
                       <span className={`mt-2 text-xs font-medium ${
-                        i < currentIdx ? 'text-green-700' : i === currentIdx ? 'text-indigo-700' : 'text-gray-400'
+                        i < currentIdx ? 'text-green-400' : i === currentIdx ? 'text-indigo-400' : 'text-white/30'
                       }`}>{step.label}</span>
                     </div>
                     {i < steps.length - 1 && (
                       <div className={`flex-1 h-0.5 mx-3 mt-[-1rem] ${
-                        i < currentIdx ? 'bg-green-400' : 'bg-gray-200'
+                        i < currentIdx ? 'bg-green-500/50' : 'bg-white/[0.06]'
                       }`} />
                     )}
                   </div>
                 ))}
               </div>
+
               {/* CTA */}
-              <div className="mt-5 flex flex-col items-center gap-3">
-{/* removed: traitement complet step indicator */}
-                <div className="flex items-center gap-3">
+              {authenticated && (
+                <div className="mt-6 flex flex-col items-center gap-3">
                   {fiche.statut === 'publiee' ? (
-                    <span className="inline-flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-full text-sm font-semibold border border-green-200">
-                      🌐 Fiche publiée
+                    <span className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-500/10 text-green-400 rounded-full text-sm font-semibold border border-green-500/20">
+                      Fiche publiee
                     </span>
                   ) : fiche.statut === 'en_validation' ? (
-                    <>
-                      <button
-                        onClick={handleValidate}
-                        disabled={actionLoading !== null}
-                        className="px-5 py-2.5 border border-amber-300 text-amber-700 rounded-full text-sm font-semibold hover:bg-amber-50 transition disabled:opacity-50 disabled:cursor-wait"
-                      >
-                        {actionLoading === 'validate' ? 'Validation…' : 'Valider'}
-                      </button>
-                      <button
-                        onClick={handlePublish}
-                        disabled={actionLoading !== null}
-                        className="px-6 py-2.5 bg-indigo-600 text-white rounded-full text-sm font-semibold hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-wait shadow-sm"
-                      >
-                        {actionLoading === 'publish' ? 'Publication…' : 'Publier'}
-                      </button>
-                    </>
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={handlePublish}
+                          disabled={actionLoading !== null}
+                          className="px-6 py-2.5 bg-green-600 text-white rounded-full text-sm font-semibold hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-wait shadow-sm"
+                        >
+                          {actionLoading === 'publish' ? 'Publication…' : 'Publier la fiche'}
+                        </button>
+                        <button
+                          onClick={() => handleEnrich()}
+                          disabled={actionLoading !== null}
+                          className="px-5 py-2.5 border border-white/10 text-white/60 rounded-full text-sm font-medium hover:bg-white/5 transition disabled:opacity-50 disabled:cursor-wait"
+                        >
+                          {actionLoading === 'enrich' ? 'Re-enrichissement…' : 'Re-enrichir'}
+                        </button>
+                      </div>
+                    </div>
                   ) : isEnrichi ? (
                     <div className="flex flex-col items-center gap-3">
                       <div className="flex items-center gap-3">
@@ -974,17 +903,17 @@ export default function FicheDetailPage() {
                         <button
                           onClick={() => handleEnrich()}
                           disabled={actionLoading !== null}
-                          className="px-5 py-2.5 border border-white/10 text-white/70 rounded-full text-sm font-medium hover:bg-white/5 transition disabled:opacity-50 disabled:cursor-wait"
+                          className="px-5 py-2.5 border border-white/10 text-white/60 rounded-full text-sm font-medium hover:bg-white/5 transition disabled:opacity-50 disabled:cursor-wait"
                         >
                           {actionLoading === 'enrich' ? 'Re-enrichissement…' : 'Re-enrichir'}
                         </button>
                         <button
                           onClick={() => setShowEnrichComment(!showEnrichComment)}
                           disabled={actionLoading !== null}
-                          className="px-4 py-2.5 border border-white/10 text-white/50 rounded-full text-sm hover:bg-white/5 transition disabled:opacity-50"
+                          className="px-4 py-2.5 border border-white/10 text-white/40 rounded-full text-sm hover:bg-white/5 transition disabled:opacity-50"
                           title="Re-enrichir avec des instructions"
                         >
-                          +
+                          + commentaire
                         </button>
                       </div>
                       {showEnrichComment && (
@@ -993,7 +922,7 @@ export default function FicheDetailPage() {
                             type="text"
                             value={enrichComment}
                             onChange={(e) => setEnrichComment(e.target.value)}
-                            placeholder="Instructions pour le re-enrichissement..."
+                            placeholder="Ex: complete les metiers proches, ajoute des formations courtes..."
                             className="flex-1 px-4 py-2 bg-white/5 border border-white/10 rounded-full text-sm text-white placeholder-white/30 focus:outline-none focus:border-indigo-500"
                             onKeyDown={(e) => e.key === 'Enter' && enrichComment.trim() && handleEnrich(enrichComment.trim())}
                           />
@@ -1013,11 +942,11 @@ export default function FicheDetailPage() {
                       disabled={actionLoading !== null}
                       className="px-6 py-2.5 bg-indigo-600 text-white rounded-full text-sm font-semibold hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-wait shadow-sm"
                     >
-                      {actionLoading === 'enrich' ? 'Enrichissement…' : 'Enrichir avec l\'IA'}
+                      {actionLoading === 'enrich' ? 'Enrichissement en cours…' : 'Enrichir avec l\'IA'}
                     </button>
                   )}
                 </div>
-              </div>
+              )}
             </div>
           </div>
         );
