@@ -78,12 +78,24 @@ async def debug_enrich(code_rome: str):
     if not client:
         return results
     
-    # Step 3: try the actual enrichment
+    # Step 3: try a direct Claude call with the enrichment prompt
     try:
+        from config import get_config
+        config = get_config()
+        results["model"] = config.api.claude_model
+        
+        # Minimal test prompt
+        response = await client.messages.create(
+            model=config.api.claude_model,
+            max_tokens=200,
+            messages=[{"role": "user", "content": f"Donne 3 compétences pour le métier: {fiche.nom_masculin}. Réponds en JSON: {{\"competences\": [\"a\",\"b\",\"c\"]}}"}]
+        )
+        results["raw_response"] = response.content[0].text[:300]
+        results["stop_reason"] = response.stop_reason
+        
+        # Now try the actual enrichment
         from agents.redacteur_fiche import AgentRedacteurFiche
         agent = AgentRedacteurFiche(repository=repo, claude_client=client)
-        
-        # Call _generer_contenu directly
         contenu = await agent._generer_contenu(
             nom_masculin=fiche.nom_masculin,
             nom_feminin=fiche.nom_feminin,
@@ -93,12 +105,12 @@ async def debug_enrich(code_rome: str):
         )
         if contenu:
             results["contenu_keys"] = list(contenu.keys())
-            results["contenu_sample"] = {k: str(v)[:100] for k, v in list(contenu.items())[:5]}
+            results["nb_keys"] = len(contenu.keys())
         else:
             results["contenu"] = "None - generation failed"
     except Exception as e:
         results["enrich_error"] = f"{type(e).__name__}: {e}"
-        results["traceback"] = traceback.format_exc()[-500:]
+        results["traceback"] = traceback.format_exc()[-800:]
     
     return results
 

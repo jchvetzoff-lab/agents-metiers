@@ -654,10 +654,29 @@ Notes IMPORTANTES :
                         validation_errors.append(f"Champ obligatoire manquant: {field}")
                 if "competences" in data and not isinstance(data["competences"], list):
                     validation_errors.append("competences doit être une liste")
-                elif "competences" in data and not all(isinstance(c, str) for c in data["competences"]):
-                    validation_errors.append("competences doit contenir des strings")
+                elif "competences" in data:
+                    # Normalize: accept dicts with 'nom' key, convert to strings
+                    normalized = []
+                    for c in data["competences"]:
+                        if isinstance(c, str):
+                            normalized.append(c)
+                        elif isinstance(c, dict) and c.get("nom"):
+                            normalized.append(c["nom"])
+                        else:
+                            normalized.append(str(c))
+                    data["competences"] = normalized
                 if "formations" in data and not isinstance(data["formations"], list):
                     validation_errors.append("formations doit être une liste")
+                elif "formations" in data:
+                    normalized_f = []
+                    for f in data["formations"]:
+                        if isinstance(f, str):
+                            normalized_f.append(f)
+                        elif isinstance(f, dict) and f.get("nom"):
+                            normalized_f.append(f["nom"])
+                        else:
+                            normalized_f.append(str(f))
+                    data["formations"] = normalized_f
                 if "salaires" in data and isinstance(data["salaires"], dict):
                     for niveau in ("junior", "confirme", "senior"):
                         if niveau in data["salaires"] and isinstance(data["salaires"][niveau], dict):
