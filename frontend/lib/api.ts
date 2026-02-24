@@ -393,10 +393,10 @@ class ApiClient {
     });
   }
 
-  async enrichFiche(codeRome: string): Promise<{ message: string; code_rome: string; nom: string; version: number }> {
+  async enrichFiche(codeRome: string, instructions?: string): Promise<{ message: string; code_rome: string; nom: string; version: number }> {
     return this.request<{ message: string; code_rome: string; nom: string; version: number }>(
       `/api/fiches/${codeRome}/enrich`,
-      { method: "POST" }
+      { method: "POST", body: instructions ? JSON.stringify({ instructions }) : undefined }
     );
   }
 

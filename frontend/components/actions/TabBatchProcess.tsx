@@ -107,27 +107,8 @@ export default function TabBatchProcess() {
         const score = res.rapport.score;
         addLog({
           codeRome: code, nom, step: "Validation", status: "success",
-          message: `Score : ${score}/100`,
+          message: `Score : ${score}/100 — en attente de publication manuelle`,
         });
-
-        // Publier si score >= 60
-        if (score >= 60) {
-          addLog({ codeRome: code, nom, step: "Publication", status: "running" });
-          try {
-            await api.publishFiche(code);
-            addLog({ codeRome: code, nom, step: "Publication", status: "success" });
-          } catch (err: any) {
-            addLog({
-              codeRome: code, nom, step: "Publication", status: "error",
-              message: err.message || "Erreur",
-            });
-          }
-        } else {
-          addLog({
-            codeRome: code, nom, step: "Publication", status: "error",
-            message: `Score insuffisant (${score}/100)`,
-          });
-        }
       } catch (err: any) {
         addLog({
           codeRome: code, nom, step: "Validation", status: "error",

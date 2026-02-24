@@ -312,11 +312,16 @@ export default function FicheDetailPage() {
     setTimeout(() => setActionMessage(null), 5000);
   }
 
-  async function handleEnrich() {
+  const [enrichComment, setEnrichComment] = useState("");
+  const [showEnrichComment, setShowEnrichComment] = useState(false);
+
+  async function handleEnrich(instructions?: string) {
     setActionLoading("enrich");
     try {
-      const res = await api.enrichFiche(codeRome);
+      const res = await api.enrichFiche(codeRome, instructions || undefined);
       showActionMessage("success", `Enrichissement termine (v${res.version})`);
+      setShowEnrichComment(false);
+      setEnrichComment("");
       await reloadFiche();
     } catch (err: any) {
       showActionMessage("error", err.message || "Erreur lors de l'enrichissement");
@@ -703,7 +708,7 @@ export default function FicheDetailPage() {
                 <div className="flex flex-wrap items-center gap-2">
                   {fiche.statut === "brouillon" && (
                     <button
-                      onClick={handleEnrich}
+                      onClick={() => handleEnrich()}
                       disabled={actionLoading !== null}
                       className="inline-flex items-center gap-1.5 px-4 py-1.5 border border-indigo-300 text-indigo-600 rounded-full text-xs font-medium hover:bg-indigo-50 transition disabled:opacity-40 disabled:cursor-wait"
                     >
@@ -957,16 +962,54 @@ export default function FicheDetailPage() {
                       </button>
                     </>
                   ) : isEnrichi ? (
-                    <button
-                      onClick={handleValidate}
-                      disabled={actionLoading === 'validate'}
-                      className="px-6 py-2.5 bg-indigo-600 text-white rounded-full text-sm font-semibold hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-wait shadow-sm"
-                    >
-                      {actionLoading === 'validate' ? 'Validation…' : 'Lancer la validation IA'}
-                    </button>
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={handleValidate}
+                          disabled={actionLoading !== null}
+                          className="px-6 py-2.5 bg-indigo-600 text-white rounded-full text-sm font-semibold hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-wait shadow-sm"
+                        >
+                          {actionLoading === 'validate' ? 'Validation…' : 'Lancer la validation IA'}
+                        </button>
+                        <button
+                          onClick={() => handleEnrich()}
+                          disabled={actionLoading !== null}
+                          className="px-5 py-2.5 border border-white/10 text-white/70 rounded-full text-sm font-medium hover:bg-white/5 transition disabled:opacity-50 disabled:cursor-wait"
+                        >
+                          {actionLoading === 'enrich' ? 'Re-enrichissement…' : 'Re-enrichir'}
+                        </button>
+                        <button
+                          onClick={() => setShowEnrichComment(!showEnrichComment)}
+                          disabled={actionLoading !== null}
+                          className="px-4 py-2.5 border border-white/10 text-white/50 rounded-full text-sm hover:bg-white/5 transition disabled:opacity-50"
+                          title="Re-enrichir avec des instructions"
+                        >
+                          +
+                        </button>
+                      </div>
+                      {showEnrichComment && (
+                        <div className="flex items-center gap-2 w-full max-w-lg">
+                          <input
+                            type="text"
+                            value={enrichComment}
+                            onChange={(e) => setEnrichComment(e.target.value)}
+                            placeholder="Instructions pour le re-enrichissement..."
+                            className="flex-1 px-4 py-2 bg-white/5 border border-white/10 rounded-full text-sm text-white placeholder-white/30 focus:outline-none focus:border-indigo-500"
+                            onKeyDown={(e) => e.key === 'Enter' && enrichComment.trim() && handleEnrich(enrichComment.trim())}
+                          />
+                          <button
+                            onClick={() => enrichComment.trim() && handleEnrich(enrichComment.trim())}
+                            disabled={!enrichComment.trim() || actionLoading !== null}
+                            className="px-5 py-2 bg-indigo-600 text-white rounded-full text-sm font-semibold hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-wait"
+                          >
+                            {actionLoading === 'enrich' ? '…' : 'Envoyer'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   ) : (
                     <button
-                      onClick={handleEnrich}
+                      onClick={() => handleEnrich()}
                       disabled={actionLoading !== null}
                       className="px-6 py-2.5 bg-indigo-600 text-white rounded-full text-sm font-semibold hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-wait shadow-sm"
                     >
