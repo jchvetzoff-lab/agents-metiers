@@ -250,9 +250,7 @@ export default function FicheDetailPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  // One-click "Traitement complet" state
-  const [fullProcessing, setFullProcessing] = useState(false);
-  const [fullProcessStep, setFullProcessStep] = useState<string | null>(null);
+  // (removed: one-click traitement complet)
 
   useEffect(() => { setAuthenticated(isAuthenticated()); }, []);
 
@@ -372,29 +370,7 @@ export default function FicheDetailPage() {
     }
   }
 
-  async function handleFullProcess() {
-    setFullProcessing(true);
-    setFullProcessStep("Enrichissement en cours…");
-    try {
-      await api.enrichFiche(codeRome);
-      setFullProcessStep("Validation IA en cours…");
-      const res = await api.validateFiche(codeRome);
-      const score = res.rapport.score;
-      if (score >= 60) {
-        setFullProcessStep("Publication en cours…");
-        await api.publishFiche(codeRome);
-        showActionMessage("success", `Traitement complet terminé — score ${score}/100, fiche publiée ✓`);
-      } else {
-        showActionMessage("error", `Score de validation insuffisant (${score}/100). Fiche non publiée.`);
-      }
-      await reloadFiche();
-    } catch (err: any) {
-      showActionMessage("error", err.message || "Erreur lors du traitement complet");
-    } finally {
-      setFullProcessing(false);
-      setFullProcessStep(null);
-    }
-  }
+  // (removed: handleFullProcess)
 
   useEffect(() => {
     (async () => {
@@ -957,12 +933,7 @@ export default function FicheDetailPage() {
               </div>
               {/* CTA */}
               <div className="mt-5 flex flex-col items-center gap-3">
-                {fullProcessing && fullProcessStep && (
-                  <div className="flex items-center gap-2 px-4 py-2 bg-indigo-50 border border-indigo-200 rounded-full text-sm text-indigo-700 font-medium animate-pulse">
-                    <div className="w-4 h-4 border-2 border-indigo-300 border-t-indigo-600 rounded-full animate-spin" />
-                    {fullProcessStep}
-                  </div>
-                )}
+{/* removed: traitement complet step indicator */}
                 <div className="flex items-center gap-3">
                   {fiche.statut === 'publiee' ? (
                     <span className="inline-flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-full text-sm font-semibold border border-green-200">
@@ -994,29 +965,13 @@ export default function FicheDetailPage() {
                       {actionLoading === 'validate' ? 'Validation…' : 'Lancer la validation IA'}
                     </button>
                   ) : (
-                    <>
-                      <button
-                        onClick={handleEnrich}
-                        disabled={actionLoading !== null || fullProcessing}
-                        className="px-5 py-2.5 border border-indigo-300 text-indigo-700 rounded-full text-sm font-semibold hover:bg-indigo-50 transition disabled:opacity-50 disabled:cursor-wait"
-                      >
-                        {actionLoading === 'enrich' ? 'Enrichissement…' : 'Enrichir'}
-                      </button>
-                      <button
-                        onClick={handleFullProcess}
-                        disabled={actionLoading !== null || fullProcessing}
-                        className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-full text-sm font-bold hover:from-indigo-700 hover:to-violet-700 transition disabled:opacity-50 disabled:cursor-wait shadow-lg shadow-indigo-500/25"
-                      >
-                        {fullProcessing ? (
-                          <span className="flex items-center gap-2">
-                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                            Traitement…
-                          </span>
-                        ) : (
-                          '⚡ Traitement complet'
-                        )}
-                      </button>
-                    </>
+                    <button
+                      onClick={handleEnrich}
+                      disabled={actionLoading !== null}
+                      className="px-6 py-2.5 bg-indigo-600 text-white rounded-full text-sm font-semibold hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-wait shadow-sm"
+                    >
+                      {actionLoading === 'enrich' ? 'Enrichissement…' : 'Enrichir avec l\'IA'}
+                    </button>
                   )}
                 </div>
               </div>
