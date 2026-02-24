@@ -314,6 +314,21 @@ def _parse_json_field(value):
     return value
 
 
+def _to_string_list(items):
+    """Normalize a list of items (str or dict) to List[str]."""
+    if not items:
+        return []
+    result = []
+    for item in items:
+        if isinstance(item, str):
+            result.append(item)
+        elif isinstance(item, dict):
+            result.append(item.get('nom') or item.get('name') or item.get('label') or str(item))
+        else:
+            result.append(str(item))
+    return result
+
+
 class FicheMetierDB(Base):
     """Table des fiches métiers."""
     __tablename__ = "fiches_metiers"
@@ -395,29 +410,29 @@ class FicheMetierDB(Base):
             nom_epicene=self.nom_epicene,
             description=self.description or "",
             description_courte=self.description_courte,
-            competences=self.competences or [],
-            competences_transversales=self.competences_transversales or [],
-            formations=self.formations or [],
-            certifications=self.certifications or [],
-            conditions_travail=self.conditions_travail or [],
-            environnements=self.environnements or [],
-            metiers_proches=self.metiers_proches or [],
-            secteurs_activite=self.secteurs_activite or [],
-            missions_principales=getattr(self, 'missions_principales', None) or [],
+            competences=_to_string_list(self.competences),
+            competences_transversales=_to_string_list(self.competences_transversales),
+            formations=_to_string_list(self.formations),
+            certifications=_to_string_list(self.certifications),
+            conditions_travail=_to_string_list(self.conditions_travail),
+            environnements=_to_string_list(self.environnements),
+            metiers_proches=_to_string_list(self.metiers_proches),
+            secteurs_activite=_to_string_list(self.secteurs_activite),
+            missions_principales=_to_string_list(getattr(self, 'missions_principales', None)),
             acces_metier=getattr(self, 'acces_metier', None),
-            savoirs=getattr(self, 'savoirs', None) or [],
-            autres_appellations=getattr(self, 'autres_appellations', None) or [],
-            traits_personnalite=getattr(self, 'traits_personnalite', None) or [],
+            savoirs=_to_string_list(getattr(self, 'savoirs', None)),
+            autres_appellations=_to_string_list(getattr(self, 'autres_appellations', None)),
+            traits_personnalite=_to_string_list(getattr(self, 'traits_personnalite', None)),
             aptitudes=getattr(self, 'aptitudes', None) or [],
-            profil_riasec=getattr(self, 'profil_riasec', None),
-            competences_dimensions=getattr(self, 'competences_dimensions', None),
-            domaine_professionnel=getattr(self, 'domaine_professionnel', None),
-            preferences_interets=getattr(self, 'preferences_interets', None),
+            profil_riasec=_parse_json_field(getattr(self, 'profil_riasec', None)),
+            competences_dimensions=_parse_json_field(getattr(self, 'competences_dimensions', None)),
+            domaine_professionnel=_parse_json_field(getattr(self, 'domaine_professionnel', None)),
+            preferences_interets=_parse_json_field(getattr(self, 'preferences_interets', None)),
             sites_utiles=getattr(self, 'sites_utiles', None) or [],
-            conditions_travail_detaillees=getattr(self, 'conditions_travail_detaillees', None),
-            statuts_professionnels=getattr(self, 'statuts_professionnels', None) or [],
+            conditions_travail_detaillees=_parse_json_field(getattr(self, 'conditions_travail_detaillees', None)),
+            statuts_professionnels=_to_string_list(getattr(self, 'statuts_professionnels', None)),
             niveau_formation=getattr(self, 'niveau_formation', None),
-            types_contrats=getattr(self, 'types_contrats', None),
+            types_contrats=_parse_json_field(getattr(self, 'types_contrats', None)),
             rome_update_pending=bool(getattr(self, 'rome_update_pending', 0)),
             validation_ia_score=getattr(self, 'validation_ia_score', None),
             validation_ia_date=getattr(self, 'validation_ia_date', None),
