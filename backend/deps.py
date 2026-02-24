@@ -19,15 +19,25 @@ repo = Repository(
 repo.init_db()
 
 
+_claude_client = None
+_claude_client_initialized = False
+
+
 def get_claude_client():
-    """Get async Anthropic client if available."""
+    """Get async Anthropic client (singleton)."""
+    global _claude_client, _claude_client_initialized
+    if _claude_client_initialized:
+        return _claude_client
+
     import logging
     logger = logging.getLogger(__name__)
     try:
         import anthropic
-        client = anthropic.AsyncAnthropic()
-        logger.info(f"Claude client created successfully")
-        return client
+        _claude_client = anthropic.AsyncAnthropic()
+        logger.info("Claude client created successfully")
     except Exception as e:
         logger.error(f"Failed to create Claude client: {e}")
-        return None
+        _claude_client = None
+
+    _claude_client_initialized = True
+    return _claude_client

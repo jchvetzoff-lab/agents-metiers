@@ -23,16 +23,17 @@ class StatsResponse(BaseModel):
 
 @router.get("/stats", response_model=StatsResponse)
 async def get_stats():
-    """Récupère les statistiques globales."""
+    """Récupère les statistiques globales (1 seule requête GROUP BY)."""
     try:
+        counts = repo.count_fiches_by_statut()
         return StatsResponse(
-            total=repo.count_fiches(),
-            brouillons=repo.count_fiches(StatutFiche.BROUILLON),
-            enrichis=repo.count_fiches(StatutFiche.ENRICHI),
-            valides=repo.count_fiches(StatutFiche.VALIDE),
-            en_validation=repo.count_fiches(StatutFiche.EN_VALIDATION),
-            publiees=repo.count_fiches(StatutFiche.PUBLIEE),
-            archivees=repo.count_fiches(StatutFiche.ARCHIVEE),
+            total=sum(counts.values()),
+            brouillons=counts.get("brouillon", 0),
+            enrichis=counts.get("enrichi", 0),
+            valides=counts.get("valide", 0),
+            en_validation=counts.get("en_validation", 0),
+            publiees=counts.get("publiee", 0),
+            archivees=counts.get("archivee", 0),
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

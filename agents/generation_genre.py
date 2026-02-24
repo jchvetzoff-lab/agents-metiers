@@ -102,6 +102,8 @@ class AgentGenerationGenre(BaseAgent):
     3. Des règles grammaticales de base
     """
 
+    audit_event_type = TypeEvenement.MODIFICATION
+
     def __init__(
         self,
         repository: Repository,
@@ -111,6 +113,26 @@ class AgentGenerationGenre(BaseAgent):
         self.claude_client = claude_client
         self.config = get_config()
         self._charger_dictionnaire()
+
+    async def _call_claude(self, prompt: str, max_tokens: int = 4096) -> str:
+        """Appel Claude avec streaming et retry sur 529."""
+        max_retries = 3
+        for attempt in range(max_retries + 1):
+            try:
+                async with self.claude_client.messages.stream(
+                    model=self.config.api.claude_model,
+                    max_tokens=max_tokens,
+                    messages=[{"role": "user", "content": prompt}]
+                ) as stream:
+                    response = await stream.get_final_message()
+                return response.content[0].text
+            except Exception as e:
+                if ("529" in str(e) or "overloaded" in str(e).lower()) and attempt < max_retries:
+                    wait = 10 * (attempt + 1)
+                    self.logger.warning(f"Claude overloaded, retry {attempt+1}/{max_retries} in {wait}s...")
+                    await asyncio.sleep(wait)
+                    continue
+                raise
 
     def _charger_dictionnaire(self) -> None:
         """Charge le dictionnaire de correspondances de genre."""
@@ -397,13 +419,7 @@ Important :
 """
 
         try:
-            response = await self.claude_client.messages.create(
-                model=self.config.api.claude_model,
-                max_tokens=500,
-                messages=[{"role": "user", "content": prompt}]
-            )
-
-            content = response.content[0].text
+            content = await self._call_claude(prompt, max_tokens=500)
             # Extraire le JSON
             json_match = re.search(r'\{[\s\S]*\}', content)
             if json_match:
@@ -486,12 +502,8 @@ Retourne uniquement la description adaptée, sans explication.
 """
 
         try:
-            response = await self.claude_client.messages.create(
-                model=self.config.api.claude_model,
-                max_tokens=1000,
-                messages=[{"role": "user", "content": prompt}]
-            )
-            return response.content[0].text.strip()
+            content = await self._call_claude(prompt, max_tokens=1000)
+            return content.strip()
 
         except Exception as e:
             self.logger.error(f"Erreur adaptation description: {e}")

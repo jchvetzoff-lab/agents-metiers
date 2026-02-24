@@ -3,6 +3,7 @@ Agent de correction orthographique et grammaticale.
 """
 import asyncio
 import json
+import re
 from typing import Any, Dict, List, Optional, Tuple
 from dataclasses import dataclass
 from datetime import datetime
@@ -48,6 +49,8 @@ class AgentCorrecteurLangue(BaseAgent):
     - Vérifier la cohérence terminologique
     """
 
+    audit_event_type = TypeEvenement.CORRECTION
+
     def __init__(
         self,
         repository: Repository,
@@ -56,6 +59,26 @@ class AgentCorrecteurLangue(BaseAgent):
         super().__init__("AgentCorrecteurLangue", repository)
         self.claude_client = claude_client
         self.config = get_config()
+
+    async def _call_claude(self, prompt: str, max_tokens: int = 4096) -> str:
+        """Appel Claude avec streaming et retry sur 529."""
+        max_retries = 3
+        for attempt in range(max_retries + 1):
+            try:
+                async with self.claude_client.messages.stream(
+                    model=self.config.api.claude_model,
+                    max_tokens=max_tokens,
+                    messages=[{"role": "user", "content": prompt}]
+                ) as stream:
+                    response = await stream.get_final_message()
+                return response.content[0].text
+            except Exception as e:
+                if ("529" in str(e) or "overloaded" in str(e).lower()) and attempt < max_retries:
+                    wait = 10 * (attempt + 1)
+                    self.logger.warning(f"Claude overloaded, retry {attempt+1}/{max_retries} in {wait}s...")
+                    await asyncio.sleep(wait)
+                    continue
+                raise
 
     def get_description(self) -> str:
         return (
@@ -213,16 +236,9 @@ Texte à corriger :
 """
 
         try:
-            response = await self.claude_client.messages.create(
-                model=self.config.api.claude_model,
-                max_tokens=4096,
-                messages=[{"role": "user", "content": prompt}]
-            )
+            content = await self._call_claude(prompt, max_tokens=4096)
 
-            # Parser la réponse JSON
-            content = response.content[0].text
             # Extraire le JSON de la réponse
-            import re
             json_match = re.search(r'\{[\s\S]*\}', content)
             if json_match:
                 data = json.loads(json_match.group())

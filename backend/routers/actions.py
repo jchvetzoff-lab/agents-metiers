@@ -58,6 +58,8 @@ async def enrich_fiche(code_rome: str, req: Optional[EnrichRequest] = None, user
         instructions = req.instructions if req else None
 
         claude_client = get_claude_client()
+        if not claude_client:
+            raise HTTPException(status_code=503, detail="Service IA indisponible (clé API manquante)")
         from agents.redacteur_fiche import AgentRedacteurFiche
         agent = AgentRedacteurFiche(repository=repo, claude_client=claude_client)
         fiche_enrichie = await agent.enrichir_fiche(fiche, instructions=instructions)
@@ -90,6 +92,8 @@ async def validate_fiche(code_rome: str, user: dict = Depends(get_current_user))
             raise HTTPException(status_code=404, detail=f"Fiche {code_rome} non trouvée")
 
         claude_client = get_claude_client()
+        if not claude_client:
+            raise HTTPException(status_code=503, detail="Service IA indisponible (clé API manquante)")
 
         # Utiliser le nouvel agent validateur
         from agents.validateur_fiche import AgentValidateurFiche
@@ -302,6 +306,8 @@ async def generate_variantes(code_rome: str, req: VariantesGenerateRequest, user
             raise HTTPException(status_code=404, detail=f"Fiche {code_rome} non trouvée")
 
         claude_client = get_claude_client()
+        if not claude_client:
+            raise HTTPException(status_code=503, detail="Service IA indisponible (clé API manquante)")
         from agents.redacteur_fiche import AgentRedacteurFiche
         from database.models import LangueSupporte, TrancheAge, FormatContenu, GenreGrammatical
 

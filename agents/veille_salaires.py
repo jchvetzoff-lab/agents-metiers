@@ -45,6 +45,7 @@ class AgentVeilleSalaires(BaseAgent):
         france_travail_client: Optional[Any] = None
     ):
         super().__init__("AgentVeilleSalaires", repository)
+        self.audit_event_type = TypeEvenement.VEILLE_SALAIRES
         self.dares_client = dares_client
         self.insee_client = insee_client
         self.france_travail_client = france_travail_client

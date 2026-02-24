@@ -176,9 +176,9 @@ async def get_fiches(
             except ValueError:
                 raise HTTPException(status_code=400, detail=f"Statut invalide: {statut}")
 
-        fiches = repo.get_all_fiches(statut=statut_enum)
-
         if search:
+            # Recherche : charger TOUTES les fiches pour scoring côté Python
+            fiches = repo.get_all_fiches(statut=statut_enum, limit=10000)
             tokens = [_normalize_text(t) for t in search.strip().split() if t.strip()]
             if tokens:
                 scored_fiches = []
@@ -241,9 +241,14 @@ async def get_fiches(
                 scored_fiches.sort(key=lambda x: x[0], reverse=True)
                 fiches = [f for _, f in scored_fiches]
 
-        total = len(fiches)
-        fiches_page = fiches[offset:offset + limit]
-        results = [_fiche_to_response(f) for f in fiches_page]
+            total = len(fiches)
+            fiches_page = fiches[offset:offset + limit]
+            results = [_fiche_to_response(f) for f in fiches_page]
+        else:
+            # Pas de recherche : pagination SQL directe (performant)
+            total = repo.count_fiches(statut_enum)
+            fiches = repo.get_all_fiches(statut=statut_enum, limit=limit, offset=offset)
+            results = [_fiche_to_response(f) for f in fiches]
 
         return {"total": total, "limit": limit, "offset": offset, "results": results}
     except HTTPException:

@@ -122,7 +122,8 @@ class Repository:
             query = select(FicheMetierDB)
             if statut:
                 query = query.where(FicheMetierDB.statut == statut.value)
-            query = query.limit(limit).offset(offset)
+            # Tri déterministe pour pagination cohérente
+            query = query.order_by(FicheMetierDB.code_rome).limit(limit).offset(offset)
             results = session.execute(query).scalars().all()
             return [r.to_pydantic() for r in results]
 
@@ -178,8 +179,15 @@ class Repository:
             return db_fiche.to_pydantic()
 
     def delete_fiche(self, code_rome: str) -> bool:
-        """Supprime une fiche métier."""
+        """Supprime une fiche métier et ses données liées (salaires, variantes)."""
         with self.session() as session:
+            # Supprimer les enfants d'abord (FK sans CASCADE)
+            session.execute(
+                delete(SalaireDB).where(SalaireDB.code_rome == code_rome)
+            )
+            session.execute(
+                delete(VarianteFicheDB).where(VarianteFicheDB.code_rome == code_rome)
+            )
             result = session.execute(
                 delete(FicheMetierDB).where(FicheMetierDB.code_rome == code_rome)
             )
@@ -211,6 +219,15 @@ class Repository:
             if statut:
                 query = query.where(FicheMetierDB.statut == statut.value)
             return session.execute(query).scalar()
+
+    def count_fiches_by_statut(self) -> dict:
+        """Compte les fiches par statut en une seule requête GROUP BY."""
+        with self.session() as session:
+            results = session.execute(
+                select(FicheMetierDB.statut, func.count(FicheMetierDB.id))
+                .group_by(FicheMetierDB.statut)
+            ).all()
+            return {statut: count for statut, count in results}
 
     def get_fiches_by_codes(self, codes_rome: List[str]) -> List[FicheMetier]:
         """Récupère plusieurs fiches par leurs codes ROME."""

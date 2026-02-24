@@ -4,6 +4,7 @@ Classe abstraite de base pour tous les agents du système.
 from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+import json
 import logging
 import asyncio
 
@@ -13,6 +14,9 @@ from database.repository import Repository
 
 class BaseAgent(ABC):
     """Classe abstraite pour tous les agents du système."""
+
+    # Type d'événement audit par défaut — surcharger dans les sous-classes
+    audit_event_type: TypeEvenement = TypeEvenement.MODIFICATION
 
     def __init__(
         self,
@@ -94,9 +98,9 @@ class BaseAgent(ABC):
 
             # Log de succès
             self.log_audit(
-                type_evenement=TypeEvenement.VEILLE_METIERS,
+                type_evenement=self.audit_event_type,
                 description=f"Exécution réussie de {self.name}",
-                donnees_apres=str(result)
+                donnees_apres=json.dumps(result, ensure_ascii=False, default=str)[:2000]
             )
 
             duration = (datetime.now() - start_time).total_seconds()
@@ -117,7 +121,7 @@ class BaseAgent(ABC):
 
             # Log d'erreur
             self.log_audit(
-                type_evenement=TypeEvenement.VEILLE_METIERS,
+                type_evenement=self.audit_event_type,
                 description=f"Erreur dans {self.name}: {str(e)}"
             )
 

@@ -31,6 +31,7 @@ class AgentRedacteurFiche(BaseAgent):
     - Estimer les fourchettes salariales
     - Évaluer les perspectives d'évolution
     """
+    audit_event_type = TypeEvenement.ENRICHISSEMENT
 
     def __init__(
         self,

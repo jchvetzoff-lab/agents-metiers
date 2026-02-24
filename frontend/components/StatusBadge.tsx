@@ -12,6 +12,16 @@ const STATUS_CONFIG: Record<string, { label: string; className: string; icon: st
     className: "bg-white/[0.06] text-gray-400 border border-white/[0.1]",
     icon: "📝",
   },
+  enrichi: {
+    label: "Enrichi",
+    className: "bg-amber-500/20 text-amber-300 border border-amber-500/30",
+    icon: "⚡",
+  },
+  valide: {
+    label: "Validé",
+    className: "bg-blue-500/20 text-blue-300 border border-blue-500/30",
+    icon: "✓",
+  },
   en_validation: {
     label: "En validation",
     className: "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30",

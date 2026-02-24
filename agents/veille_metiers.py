@@ -73,6 +73,7 @@ class AgentVeilleMetiers(BaseAgent):
         rome_client: Optional[Any] = None
     ):
         super().__init__("AgentVeilleMetiers", repository)
+        self.audit_event_type = TypeEvenement.VEILLE_METIERS
         self.france_travail_client = france_travail_client
         self.rome_client = rome_client
         self.config = get_config()

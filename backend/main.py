@@ -57,116 +57,23 @@ async def health():
         return {"status": "degraded", "db": str(e)}
 
 
-@app.get("/api/debug-enrich/{code_rome}")
-async def debug_enrich(code_rome: str):
-    """Debug: test enrichment pipeline step by step."""
-    from .deps import repo, get_claude_client
-    import traceback
-    results = {}
-    
-    # Step 1: get fiche
-    try:
-        fiche = repo.get_fiche(code_rome)
-        results["fiche"] = f"{fiche.nom_masculin}" if fiche else "NOT FOUND"
-    except Exception as e:
-        results["fiche_error"] = f"{type(e).__name__}: {e}"
-        return results
-    
-    # Step 2: get claude client
-    client = get_claude_client()
-    results["claude_client"] = "OK" if client else "None"
-    if not client:
-        return results
-    
-    # Step 3: try a direct Claude call with the enrichment prompt
-    try:
-        from config import get_config
-        config = get_config()
-        results["model"] = config.api.claude_model
-        
-        # Minimal test prompt
-        response = await client.messages.create(
-            model=config.api.claude_model,
-            max_tokens=200,
-            messages=[{"role": "user", "content": f"Donne 3 compétences pour le métier: {fiche.nom_masculin}. Réponds en JSON: {{\"competences\": [\"a\",\"b\",\"c\"]}}"}]
-        )
-        results["raw_response"] = response.content[0].text[:300]
-        results["stop_reason"] = response.stop_reason
-        
-        # Now try the actual enrichment
-        from agents.redacteur_fiche import AgentRedacteurFiche
-        import io, logging as _lg
-        buf = io.StringIO()
-        handler = _lg.StreamHandler(buf)
-        handler.setLevel(_lg.DEBUG)
-        handler.setFormatter(_lg.Formatter('%(levelname)s: %(message)s'))
-        agent = AgentRedacteurFiche(repository=repo, claude_client=client)
-        agent.logger.addHandler(handler)
-        agent.logger.setLevel(_lg.DEBUG)
-        contenu = await agent._generer_contenu(
-            nom_masculin=fiche.nom_masculin,
-            nom_feminin=fiche.nom_feminin,
-            code_rome=fiche.code_rome,
-            domaine=fiche.secteurs_activite[0] if fiche.secteurs_activite else "",
-            description_existante=fiche.description if fiche.description else ""
-        )
-        if contenu:
-            results["contenu_keys"] = list(contenu.keys())
-            results["nb_keys"] = len(contenu.keys())
-        else:
-            results["contenu"] = "None - generation failed"
-            results["agent_logs"] = buf.getvalue()[-2000:] if buf else "no buffer"
-    except Exception as e:
-        results["enrich_error"] = f"{type(e).__name__}: {e}"
-        results["traceback"] = traceback.format_exc()[-1500:]
-        results["agent_logs"] = buf.getvalue()[-2000:] if 'buf' in dir() else "no buffer"
-    
-    return results
-
-
-@app.get("/api/debug-claude")
-async def debug_claude():
-    """Debug: test Claude API call."""
-    from .deps import get_claude_client
-    client = get_claude_client()
-    if not client:
-        return {"error": "Claude client is None"}
-    try:
-        response = await client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=50,
-            messages=[{"role": "user", "content": "Say 'hello' in one word."}]
-        )
-        return {"status": "ok", "response": response.content[0].text}
-    except Exception as e:
-        return {"error": str(e), "type": type(e).__name__}
-
-
-@app.get("/api/debug-env")
-async def debug_env():
-    """Debug: check if critical env vars are set."""
-    import os
-    anthropic_key = os.getenv("ANTHROPIC_API_KEY", "")
-    return {
-        "anthropic_key_set": bool(anthropic_key),
-        "anthropic_key_prefix": anthropic_key[:15] + "..." if anthropic_key else "NOT SET",
-        "anthropic_key_len": len(anthropic_key),
-        "database_url_set": bool(os.getenv("DATABASE_URL", "")),
-        "jwt_secret_set": bool(os.getenv("JWT_SECRET", "")),
-    }
-
-
-@app.get("/api/build-id")
-async def build_id():
-    return {"build": "2026-02-24-v2-fix-recursion"}
-
 @app.get("/api/git-version")
 async def git_version():
-    """Shows deployed git commit for debugging."""
-    import subprocess
+    """Shows deployed git commit."""
+    import asyncio
     try:
-        sha = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], text=True, timeout=5).strip()
-        msg = subprocess.check_output(["git", "log", "-1", "--format=%s"], text=True, timeout=5).strip()
+        proc = await asyncio.create_subprocess_exec(
+            "git", "rev-parse", "--short", "HEAD",
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+        )
+        stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=5)
+        sha = stdout.decode().strip()
+        proc2 = await asyncio.create_subprocess_exec(
+            "git", "log", "-1", "--format=%s",
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+        )
+        stdout2, _ = await asyncio.wait_for(proc2.communicate(), timeout=5)
+        msg = stdout2.decode().strip()
         return {"commit": sha, "message": msg}
     except Exception:
         return {"commit": "unknown", "message": "git not available"}

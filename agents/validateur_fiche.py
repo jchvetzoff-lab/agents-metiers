@@ -26,6 +26,8 @@ class AgentValidateurFiche(BaseAgent):
     - Générer un score global et des recommandations
     """
 
+    audit_event_type = TypeEvenement.VALIDATION_IA
+
     def __init__(
         self,
         repository: Repository,
