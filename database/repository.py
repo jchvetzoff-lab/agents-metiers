@@ -14,7 +14,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from .models import (
     Base, FicheMetierDB, SalaireDB, HistoriqueVeilleDB, AuditLogDB, DictionnaireGenreDB,
-    VarianteFicheDB,
+    VarianteFicheDB, UserDB,
     FicheMetier, Salaire, HistoriqueVeille, AuditLog, DictionnaireGenre, VarianteFiche,
     TypeEvenement, StatutFiche, NiveauExperience, LangueSupporte, TrancheAge,
     FormatContenu, GenreGrammatical
@@ -657,3 +657,49 @@ class Repository:
                 )
             )
             return result.rowcount
+
+    # ============================================================================
+    # Users (persistance en base)
+    # ============================================================================
+
+    def get_user_by_email(self, email: str) -> Optional[dict]:
+        """Retourne un user par email, ou None."""
+        with self.session() as session:
+            row = session.execute(
+                select(UserDB).where(UserDB.email == email)
+            ).scalar_one_or_none()
+            if row is None:
+                return None
+            return {
+                "id": row.id,
+                "email": row.email,
+                "name": row.name,
+                "password_hash": row.password_hash,
+            }
+
+    def get_user_by_id(self, user_id: int) -> Optional[dict]:
+        """Retourne un user par ID, ou None."""
+        with self.session() as session:
+            row = session.execute(
+                select(UserDB).where(UserDB.id == user_id)
+            ).scalar_one_or_none()
+            if row is None:
+                return None
+            return {
+                "id": row.id,
+                "email": row.email,
+                "name": row.name,
+                "password_hash": row.password_hash,
+            }
+
+    def create_user(self, email: str, name: str, password_hash: str) -> dict:
+        """Crée un nouvel utilisateur et retourne ses données."""
+        with self.session() as session:
+            user = UserDB(email=email, name=name, password_hash=password_hash)
+            session.add(user)
+            session.flush()
+            return {
+                "id": user.id,
+                "email": user.email,
+                "name": user.name,
+            }

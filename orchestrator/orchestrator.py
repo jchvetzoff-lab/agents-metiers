@@ -383,9 +383,9 @@ class Orchestrator:
             # Étape 3: Mise en validation
             if "validation" in etapes:
                 fiche = self.repository.get_fiche(code_rome)
-                fiche.metadata.statut = StatutFiche.EN_VALIDATION
+                fiche.metadata.statut = StatutFiche.VALIDE
                 self.repository.update_fiche(fiche)
-                resultats["etapes"]["validation"] = {"status": "en_validation"}
+                resultats["etapes"]["validation"] = {"status": "valide"}
 
                 # Créer le workflow de validation
                 self._creer_workflow_validation(code_rome)
@@ -550,7 +550,7 @@ class Orchestrator:
             "fiches": {
                 "total": self.repository.count_fiches(),
                 "publiees": self.repository.count_fiches(StatutFiche.PUBLIEE),
-                "en_validation": self.repository.count_fiches(StatutFiche.EN_VALIDATION),
+                "valides": self.repository.count_fiches(StatutFiche.VALIDE),
                 "brouillons": self.repository.count_fiches(StatutFiche.BROUILLON)
             },
             "workflows_validation": len(self._workflows_validation),

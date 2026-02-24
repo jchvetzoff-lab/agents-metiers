@@ -1,6 +1,6 @@
 """
 Authentication middleware for FastAPI.
-JWT token verification.
+JWT token verification with stable secret.
 """
 import os
 import json
@@ -8,18 +8,25 @@ import hmac
 import hashlib
 import base64
 import time
+import logging
 from typing import Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 security = HTTPBearer(auto_error=False)
+logger = logging.getLogger(__name__)
 
+# JWT_SECRET : utiliser la variable d'environnement, sinon un fallback stable
+# (pas aléatoire, pour éviter l'invalidation des tokens au redémarrage Render)
 JWT_SECRET = os.getenv("JWT_SECRET", "")
 if not JWT_SECRET:
-    import secrets as _secrets
-    JWT_SECRET = _secrets.token_hex(32)
-    import logging as _log
-    _log.getLogger(__name__).warning("JWT_SECRET non défini — clé éphémère générée. Définir JWT_SECRET en production.")
+    # Fallback stable — les tokens survivent aux redémarrages
+    # En production, TOUJOURS définir JWT_SECRET via env var
+    JWT_SECRET = "agents-metiers-default-jwt-secret-change-me-in-production"
+    logger.warning(
+        "JWT_SECRET non défini — fallback stable utilisé. "
+        "Définir JWT_SECRET en production pour plus de sécurité."
+    )
 JWT_ALGORITHM = "HS256"
 
 

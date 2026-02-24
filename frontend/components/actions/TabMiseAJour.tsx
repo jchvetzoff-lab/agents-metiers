@@ -25,7 +25,7 @@ export default function TabMiseAJour() {
   } | null>(null);
 
   // === Section 3: Batch re-enrichment ===
-  const [batchScope, setBatchScope] = useState<"brouillon" | "en_validation" | "all">("brouillon");
+  const [batchScope, setBatchScope] = useState<"brouillon" | "enrichi" | "all">("brouillon");
   const [batchStats, setBatchStats] = useState<Stats | null>(null);
   const [batchRunning, setBatchRunning] = useState(false);
   const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
@@ -39,8 +39,8 @@ export default function TabMiseAJour() {
   const batchCount = batchStats
     ? batchScope === "brouillon"
       ? batchStats.brouillons
-      : batchScope === "en_validation"
-        ? batchStats.en_validation
+      : batchScope === "enrichi"
+        ? batchStats.enrichis
         : batchStats.total
     : 0;
 
@@ -111,7 +111,7 @@ export default function TabMiseAJour() {
       {/* ─── Section 1: Re-enrichir une fiche ─── */}
       <SectionCard
         title="Re-enrichir une fiche"
-        subtitle="Relancez l'enrichissement Claude sur une fiche déjà enrichie. La fiche repassera en statut en_validation."
+        subtitle="Relancez l'enrichissement Claude sur une fiche. La fiche repassera en statut enrichi."
       >
         <div className="space-y-3">
           {enrichResults.length > 0 && (
@@ -123,7 +123,7 @@ export default function TabMiseAJour() {
           )}
 
           <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 text-sm text-amber-300">
-            La fiche repassera en statut <strong>en_validation</strong> après re-enrichissement.
+            La fiche repassera en statut <strong>enrichi</strong> apr&egrave;s re-enrichissement.
           </div>
 
           <SearchBar value={search} onChange={handleSearch} placeholder="Rechercher une fiche à re-enrichir..." />
@@ -141,14 +141,16 @@ export default function TabMiseAJour() {
                     <span className="text-sm text-gray-300 truncate">{fiche.nom_masculin}</span>
                     <span
                       className={`text-xs px-2 py-0.5 rounded-full ${
-                        fiche.statut === "en_validation"
-                          ? "bg-yellow-500/20 text-yellow-300"
+                        fiche.statut === "valide" || fiche.statut === "en_validation"
+                          ? "bg-cyan-500/20 text-cyan-300"
                           : fiche.statut === "publiee"
                             ? "bg-green-500/20 text-green-400"
-                            : "bg-white/[0.06] text-gray-500"
+                            : fiche.statut === "enrichi"
+                              ? "bg-amber-500/20 text-amber-300"
+                              : "bg-white/[0.06] text-gray-500"
                       }`}
                     >
-                      {fiche.statut}
+                      {fiche.statut === "valide" || fiche.statut === "en_validation" ? "Valid\u00e9 IA" : fiche.statut}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0 ml-4">
@@ -250,7 +252,7 @@ export default function TabMiseAJour() {
             <div className="flex gap-4">
               {[
                 { value: "brouillon" as const, label: "Brouillons uniquement", count: batchStats?.brouillons },
-                { value: "en_validation" as const, label: "Déjà enrichies", count: batchStats?.en_validation },
+                { value: "enrichi" as const, label: "D\u00e9j\u00e0 enrichies", count: batchStats?.enrichis },
                 { value: "all" as const, label: "Toutes les fiches", count: batchStats?.total },
               ].map((opt) => (
                 <label key={opt.value} className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
@@ -272,7 +274,7 @@ export default function TabMiseAJour() {
           <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 text-sm text-amber-300">
             <strong>{batchCount}</strong> fiche{batchCount > 1 ? "s" : ""} à enrichir. Coût estimé :{" "}
             <strong>~${(batchCount * 0.015).toFixed(2)}</strong> (~$0.015/fiche).
-            {batchScope !== "brouillon" && " Les fiches enrichies repasseront en statut en_validation."}
+            {batchScope !== "brouillon" && " Les fiches repasseront en statut enrichi."}
           </div>
 
           {/* Progress */}

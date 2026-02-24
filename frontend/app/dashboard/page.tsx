@@ -100,7 +100,7 @@ export default function DashboardPage() {
         </FadeInView>
 
         {/* Métriques */}
-        <StaggerContainer stagger={0.08} className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-4 md:gap-4 mb-16">
+        <StaggerContainer stagger={0.08} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 md:gap-4 mb-16">
           <StaggerItem>
             <MetricCard
               label="Total"
@@ -137,18 +137,7 @@ export default function DashboardPage() {
                 </svg>
               </div>
               <div className="text-2xl font-bold text-cyan-400 mb-1">{stats?.valides || 0}</div>
-              <div className="text-xs text-cyan-400">Validés</div>
-            </div>
-          </StaggerItem>
-          <StaggerItem>
-            <div className="sojai-card text-center">
-              <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-orange-500/20 flex items-center justify-center">
-                <svg className="w-6 h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
-                </svg>
-              </div>
-              <div className="text-2xl font-bold text-orange-400 mb-1">{stats?.en_validation || 0}</div>
-              <div className="text-xs text-orange-400">En validation</div>
+              <div className="text-xs text-cyan-400">Valid&eacute;s IA</div>
             </div>
           </StaggerItem>
           <StaggerItem>
@@ -159,18 +148,7 @@ export default function DashboardPage() {
                 </svg>
               </div>
               <div className="text-2xl font-bold text-emerald-400 mb-1">{stats?.publiees || 0}</div>
-              <div className="text-xs text-emerald-400">Publiées</div>
-            </div>
-          </StaggerItem>
-          <StaggerItem>
-            <div className="sojai-card text-center">
-              <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-stone-500/20 flex items-center justify-center">
-                <svg className="w-6 h-6 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8l6 6m-6 0l6-6 2-2 4-4 6 6-6 6-4 4-2 2z" />
-                </svg>
-              </div>
-              <div className="text-2xl font-bold text-stone-400 mb-1">{stats?.archivees || 0}</div>
-              <div className="text-xs text-stone-400">Archivées</div>
+              <div className="text-xs text-emerald-400">Publi&eacute;es</div>
             </div>
           </StaggerItem>
         </StaggerContainer>
@@ -245,10 +223,8 @@ export default function DashboardPage() {
                 const pieData = [
                   { name: "Brouillons", value: stats.brouillons, color: "#6B7280" },
                   { name: "Enrichis", value: stats.enrichis, color: "#3B82F6" },
-                  { name: "Validés", value: stats.valides, color: "#06B6D4" },
-                  { name: "En validation", value: stats.en_validation, color: "#F97316" },
-                  { name: "Publiées", value: stats.publiees, color: "#10B981" },
-                  { name: "Archivées", value: stats.archivees, color: "#78716C" },
+                  { name: "Valid\u00e9s IA", value: stats.valides, color: "#06B6D4" },
+                  { name: "Publi\u00e9es", value: stats.publiees, color: "#10B981" },
                 ].filter(d => d.value > 0);
                 return (
                 <ResponsiveContainer width="100%" height="100%">
@@ -292,10 +268,8 @@ export default function DashboardPage() {
                     data={[
                       { etape: "Brouillons", count: stats.brouillons, fill: "#6B7280" },
                       { etape: "Enrichis", count: stats.enrichis, fill: "#3B82F6" },
-                      { etape: "Validés", count: stats.valides, fill: "#06B6D4" },
-                      { etape: "En validation", count: stats.en_validation, fill: "#F97316" },
-                      { etape: "Publiées", count: stats.publiees, fill: "#10B981" },
-                      { etape: "Archivées", count: stats.archivees, fill: "#78716C" },
+                      { etape: "Valid\u00e9s IA", count: stats.valides, fill: "#06B6D4" },
+                      { etape: "Publi\u00e9es", count: stats.publiees, fill: "#10B981" },
                     ]}
                     margin={{ top: 10, right: 10, left: -10, bottom: 5 }}
                   >
@@ -320,9 +294,7 @@ export default function DashboardPage() {
                         { fill: "#6B7280" },
                         { fill: "#3B82F6" },
                         { fill: "#06B6D4" },
-                        { fill: "#F97316" },
                         { fill: "#10B981" },
-                        { fill: "#78716C" },
                       ].map((entry, i) => (
                         <Cell key={i} fill={entry.fill} />
                       ))}

@@ -108,7 +108,7 @@ async def validate_fiche(code_rome: str, user: dict = Depends(get_current_user))
 
         # Changer le statut selon le score
         if rapport["score"] >= 70:
-            fiche_dict["metadata"]["statut"] = StatutFiche.EN_VALIDATION.value
+            fiche_dict["metadata"]["statut"] = StatutFiche.VALIDE.value
         elif rapport["score"] < 50:
             fiche_dict["metadata"]["statut"] = StatutFiche.BROUILLON.value
         # Score entre 50-69 : garder le statut actuel
@@ -161,7 +161,7 @@ async def review_fiche(code_rome: str, req: ReviewRequest, user: dict = Depends(
         elif req.decision == "reject":
             fiche_dict["metadata"]["statut"] = StatutFiche.BROUILLON.value
         elif req.decision == "request_changes":
-            fiche_dict["metadata"]["statut"] = StatutFiche.EN_VALIDATION.value
+            fiche_dict["metadata"]["statut"] = StatutFiche.ENRICHI.value
         else:
             raise HTTPException(status_code=400, detail=f"Décision invalide: {req.decision}")
 

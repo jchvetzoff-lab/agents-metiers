@@ -203,7 +203,7 @@ def veille(veille_type: str, codes: tuple):
 # =============================================================================
 
 @cli.command("list")
-@click.option("--statut", type=click.Choice(["brouillon", "en_validation", "publiee", "archivee"]),
+@click.option("--statut", type=click.Choice(["brouillon", "enrichi", "valide", "publiee"]),
               help="Filtrer par statut")
 @click.option("--limit", default=20, help="Nombre max de résultats")
 def list_fiches(statut: Optional[str], limit: int):
@@ -420,8 +420,8 @@ def publish_all_fiches():
 
     # Récupérer les fiches non publiées
     fiches_brouillon = repo.get_all_fiches(statut=StatutFiche.BROUILLON, limit=1000)
-    fiches_validation = repo.get_all_fiches(statut=StatutFiche.EN_VALIDATION, limit=1000)
-    fiches = fiches_brouillon + fiches_validation
+    fiches_enrichi = repo.get_all_fiches(statut=StatutFiche.ENRICHI, limit=1000)
+    fiches = fiches_brouillon + fiches_enrichi
 
     if not fiches:
         console.print("[green]Toutes les fiches sont déjà publiées ![/green]")
@@ -486,7 +486,7 @@ def enrich_fiche(code_rome: str):
 
 @cli.command("enrich-batch")
 @click.option("--batch-size", default=5, help="Nombre de fiches à traiter par lot")
-@click.option("--statut", type=click.Choice(["brouillon", "en_validation"]),
+@click.option("--statut", type=click.Choice(["brouillon", "enrichi"]),
               default="brouillon", help="Statut des fiches à enrichir")
 def enrich_batch(batch_size: int, statut: str):
     """Enrichit un lot de fiches brouillon via Claude API."""

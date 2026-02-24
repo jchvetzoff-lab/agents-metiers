@@ -827,11 +827,12 @@ export default function FicheDetailPage() {
           { key: 'publiee', label: 'Publie' },
         ];
 
+        // Le stepper se base uniquement sur le statut réel de la fiche
         let currentIdx = 0;
         if (fiche.statut === 'publiee') currentIdx = 3;
-        else if (fiche.statut === 'en_validation') currentIdx = 2;
-        else if (fiche.statut === 'enrichi' || isEnrichi) currentIdx = 1;
-        else currentIdx = 0;
+        else if (fiche.statut === 'valide' || fiche.statut === 'en_validation') currentIdx = 2;
+        else if (fiche.statut === 'enrichi') currentIdx = 1;
+        else currentIdx = 0;  // brouillon
 
         return (
           <div className="max-w-7xl mx-auto px-4 md:px-8 pt-6">
@@ -872,7 +873,7 @@ export default function FicheDetailPage() {
                         Fiche publiee
                       </span>
                     </div>
-                  ) : fiche.statut === 'en_validation' ? (
+                  ) : (fiche.statut === 'valide' || fiche.statut === 'en_validation') ? (
                     <div className="space-y-4">
                       <div className="text-center text-sm text-white/50">Validation IA terminee. Relisez la fiche puis publiez-la.</div>
                       <div className="flex items-center justify-center gap-3">
@@ -892,7 +893,7 @@ export default function FicheDetailPage() {
                         </button>
                       </div>
                     </div>
-                  ) : isEnrichi ? (
+                  ) : fiche.statut === 'enrichi' ? (
                     <div className="space-y-4">
                       <div className="flex items-center justify-center gap-3">
                         <button

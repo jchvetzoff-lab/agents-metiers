@@ -15,7 +15,10 @@ interface FicheListItemProps {
 }
 
 const statutStyles: Record<string, string> = {
-  en_validation: "bg-yellow-500/20 text-yellow-300",
+  brouillon: "bg-white/[0.06] text-gray-500",
+  enrichi: "bg-amber-500/20 text-amber-300",
+  valide: "bg-cyan-500/20 text-cyan-300",
+  en_validation: "bg-cyan-500/20 text-cyan-300",
   publiee: "bg-green-500/20 text-green-400",
 };
 

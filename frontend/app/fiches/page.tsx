@@ -289,10 +289,8 @@ export default function FichesPage() {
                 <option value="">Tous les statuts</option>
                 <option value="brouillon">Brouillon</option>
                 <option value="enrichi">Enrichi</option>
-                <option value="en_validation">En validation</option>
-                <option value="valide">Validé</option>
-                <option value="publiee">Publiée</option>
-                <option value="archivee">Archivée</option>
+                <option value="valide">Valid&eacute; IA</option>
+                <option value="publiee">Publi&eacute;e</option>
               </select>
             </div>
           </div>

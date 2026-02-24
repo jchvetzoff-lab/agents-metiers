@@ -10,33 +10,34 @@ const STATUS_CONFIG: Record<string, { label: string; className: string; icon: st
   brouillon: {
     label: "Brouillon",
     className: "bg-white/[0.06] text-gray-400 border border-white/[0.1]",
-    icon: "📝",
+    icon: "\u{1F4DD}",
   },
   enrichi: {
     label: "Enrichi",
     className: "bg-amber-500/20 text-amber-300 border border-amber-500/30",
-    icon: "⚡",
+    icon: "\u26A1",
   },
   valide: {
-    label: "Validé",
-    className: "bg-blue-500/20 text-blue-300 border border-blue-500/30",
-    icon: "✓",
+    label: "Valid\u00e9 IA",
+    className: "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30",
+    icon: "\u2713",
   },
+  // Legacy: en_validation -> afficher comme "Valide IA"
   en_validation: {
-    label: "En validation",
-    className: "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30",
-    icon: "🔍",
-    pulse: true,
+    label: "Valid\u00e9 IA",
+    className: "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30",
+    icon: "\u2713",
   },
   publiee: {
-    label: "Publiée",
+    label: "Publi\u00e9e",
     className: "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30",
-    icon: "✅",
+    icon: "\u2705",
   },
+  // Legacy: archivee -> afficher comme "Publiee"
   archivee: {
-    label: "Archivée",
-    className: "bg-white/[0.06] text-gray-500 border border-white/[0.1]",
-    icon: "📦",
+    label: "Publi\u00e9e",
+    className: "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30",
+    icon: "\u2705",
   },
 };
 

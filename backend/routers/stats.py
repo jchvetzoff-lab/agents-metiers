@@ -16,9 +16,7 @@ class StatsResponse(BaseModel):
     brouillons: int
     enrichis: int
     valides: int
-    en_validation: int
     publiees: int
-    archivees: int
 
 
 @router.get("/stats", response_model=StatsResponse)
@@ -30,10 +28,8 @@ async def get_stats():
             total=sum(counts.values()),
             brouillons=counts.get("brouillon", 0),
             enrichis=counts.get("enrichi", 0),
-            valides=counts.get("valide", 0),
-            en_validation=counts.get("en_validation", 0),
-            publiees=counts.get("publiee", 0),
-            archivees=counts.get("archivee", 0),
+            valides=counts.get("valide", 0) + counts.get("en_validation", 0),
+            publiees=counts.get("publiee", 0) + counts.get("archivee", 0),
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

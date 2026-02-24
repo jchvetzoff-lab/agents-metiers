@@ -59,9 +59,7 @@ export interface Stats {
   brouillons: number;
   enrichis: number;
   valides: number;
-  en_validation: number;
   publiees: number;
-  archivees: number;
 }
 
 export interface SalaireNiveau {

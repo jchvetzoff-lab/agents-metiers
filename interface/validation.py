@@ -106,8 +106,8 @@ class ValidationSystem:
 
         self._demandes[demande_id] = demande
 
-        # Mettre la fiche en statut validation
-        fiche.metadata.statut = StatutFiche.EN_VALIDATION
+        # Mettre la fiche en statut valide
+        fiche.metadata.statut = StatutFiche.VALIDE
         self.repository.update_fiche(fiche)
 
         return demande

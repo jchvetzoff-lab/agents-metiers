@@ -156,7 +156,7 @@ export default function TabValider() {
             { label: "Total", value: stats.total, color: "#4F46E5" },
             { label: "Brouillons", value: stats.brouillons, color: "#6B7280" },
             { label: "Enrichis", value: stats.enrichis, color: "#EAB308" },
-            { label: "En validation", value: stats.en_validation, color: "#F97316" },
+            { label: "Valid\u00e9s IA", value: stats.valides, color: "#06B6D4" },
           ].map((s) => (
             <div key={s.label} className="bg-[#0c0c1a] rounded-xl border border-white/[0.08] p-4 text-center">
               <div className="text-2xl font-bold" style={{ color: s.color }}>
@@ -172,8 +172,8 @@ export default function TabValider() {
       <div className="bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 rounded-xl p-5">
         <h3 className="text-sm font-bold text-white mb-1">✅ Validation</h3>
         <p className="text-sm text-gray-400">
-          Sélectionnez les fiches enrichies à valider. L'IA analyse la qualité de chaque fiche et les fait passer
-          en statut "en_validation" prêtes pour publication.
+          S&eacute;lectionnez les fiches enrichies &agrave; valider. L'IA analyse la qualit&eacute; de chaque fiche et les fait passer
+          en statut "Valid&eacute; IA" pr&ecirc;tes pour publication.
         </p>
       </div>
 

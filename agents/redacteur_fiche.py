@@ -259,7 +259,7 @@ class AgentRedacteurFiche(BaseAgent):
         # Métadonnées
         fiche_data["metadata"]["date_maj"] = datetime.now()
         fiche_data["metadata"]["auteur"] = self.name
-        fiche_data["metadata"]["statut"] = StatutFiche.EN_VALIDATION.value
+        fiche_data["metadata"]["statut"] = StatutFiche.ENRICHI.value
 
         return FicheMetier(**fiche_data)
 
@@ -339,7 +339,7 @@ class AgentRedacteurFiche(BaseAgent):
                 evolution_5ans=persp.get("evolution_5ans")
             ),
             metadata=MetadataFiche(
-                statut=StatutFiche.EN_VALIDATION,
+                statut=StatutFiche.ENRICHI,
                 source="AgentRedacteurFiche (Claude API)",
                 auteur=self.name,
                 tags=["genere-par-ia"]

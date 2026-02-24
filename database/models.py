@@ -59,9 +59,7 @@ class StatutFiche(str, Enum):
     BROUILLON = "brouillon"
     ENRICHI = "enrichi"
     VALIDE = "valide"
-    EN_VALIDATION = "en_validation"
     PUBLIEE = "publiee"
-    ARCHIVEE = "archivee"
 
 
 class TypeEvenement(str, Enum):
@@ -702,6 +700,17 @@ class AuditLogDB(Base):
     donnees_avant = Column(Text, nullable=True)
     donnees_apres = Column(Text, nullable=True)
     validateur = Column(String(100), nullable=True)
+
+
+class UserDB(Base):
+    """Table des utilisateurs."""
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    name = Column(String(255), nullable=False)
+    password_hash = Column(String(255), nullable=False)
+    created_at = Column(DateTime, default=datetime.now)
 
 
 class DictionnaireGenreDB(Base):

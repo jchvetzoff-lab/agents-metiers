@@ -65,7 +65,7 @@ export default function WorkflowBar({ active, onChange }: WorkflowBarProps) {
   const stepCounts: Record<WorkflowStep, number | null> = {
     enrichir: stats ? stats.brouillons : null,
     valider: stats ? (stats.enrichis ?? 0) : null,
-    publier: stats ? ((stats.valides ?? 0) + (stats.en_validation ?? 0)) : null,
+    publier: stats ? (stats.valides ?? 0) : null,
     variantes: stats ? (stats.publiees ?? 0) : null,
   };
 

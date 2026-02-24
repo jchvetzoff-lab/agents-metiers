@@ -39,7 +39,7 @@ export default function TabPublier() {
     setLoading(true);
     try {
       const res = await api.getFiches({
-        statut: "en_validation",
+        statut: "valide",
         limit: ITEMS_PER_PAGE,
         offset: (currentPage - 1) * ITEMS_PER_PAGE,
         search: search || undefined
@@ -155,8 +155,8 @@ export default function TabPublier() {
           {[
             { label: "Total", value: stats.total ?? 0, color: "#4F46E5" },
             { label: "Enrichis", value: stats.enrichis ?? 0, color: "#EAB308" },
-            { label: "Valides", value: (stats.valides ?? 0) + (stats.en_validation ?? 0), color: "#F97316" },
-            { label: "Publiees", value: stats.publiees ?? 0, color: "#16A34A" },
+            { label: "Valid\u00e9s IA", value: stats.valides ?? 0, color: "#06B6D4" },
+            { label: "Publi\u00e9es", value: stats.publiees ?? 0, color: "#16A34A" },
           ].map((s) => (
             <div key={s.label} className="bg-[#0c0c1a] rounded-xl border border-white/[0.08] p-4 text-center">
               <div className="text-2xl font-bold" style={{ color: s.color }}>
@@ -222,7 +222,7 @@ export default function TabPublier() {
         <div className="px-6 py-4 border-b border-white/[0.06] bg-[#0c0c1a]/[0.02] space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold text-white">
-              Fiches en validation ({total})
+              Fiches valid&eacute;es IA ({total})
             </h2>
             <div className="flex items-center gap-3">
               {fiches.length > 0 && (
@@ -274,8 +274,8 @@ export default function TabPublier() {
           {loading ? (
             <LoadingState />
           ) : filteredFiches.length === 0 ? (
-            <EmptyState 
-              message={search ? `Aucune fiche en validation pour "${search}"` : "Aucune fiche en validation"} 
+            <EmptyState
+              message={search ? `Aucune fiche valid\u00e9e IA pour "${search}"` : "Aucune fiche valid\u00e9e IA \u00e0 publier"}
             />
           ) : (
             filteredFiches.map((fiche) => (
