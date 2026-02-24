@@ -12,7 +12,9 @@ import json
 class TendanceMetier(str, Enum):
     """Tendance d'évolution d'un métier."""
     EMERGENCE = "emergence"
+    HAUSSE = "hausse"
     STABLE = "stable"
+    BAISSE = "baisse"
     DISPARITION = "disparition"
 
 
@@ -314,6 +316,45 @@ def _parse_json_field(value):
     return value
 
 
+def _safe_salaires(data):
+    """Parse salaires with fallback."""
+    if not data:
+        return SalairesMetier()
+    if isinstance(data, str):
+        try:
+            data = json.loads(data)
+        except (json.JSONDecodeError, ValueError):
+            return SalairesMetier()
+    try:
+        return SalairesMetier(**data)
+    except Exception:
+        return SalairesMetier()
+
+
+def _safe_perspectives(data):
+    """Parse perspectives with fallback for unknown tendance values."""
+    if not data:
+        return PerspectivesMetier()
+    if isinstance(data, str):
+        try:
+            data = json.loads(data)
+        except (json.JSONDecodeError, ValueError):
+            return PerspectivesMetier()
+    try:
+        return PerspectivesMetier(**data)
+    except Exception:
+        # Fallback: normalize tendance
+        tendance = data.get('tendance', 'stable')
+        try:
+            TendanceMetier(tendance)
+        except ValueError:
+            data = {**data, 'tendance': 'stable'}
+        try:
+            return PerspectivesMetier(**data)
+        except Exception:
+            return PerspectivesMetier()
+
+
 def _to_string_list(items):
     """Normalize a list of items (str or dict) to List[str]."""
     if not items:
@@ -437,8 +478,8 @@ class FicheMetierDB(Base):
             validation_ia_score=getattr(self, 'validation_ia_score', None),
             validation_ia_date=getattr(self, 'validation_ia_date', None),
             validation_ia_details=_parse_json_field(getattr(self, 'validation_ia_details', None)),
-            salaires=SalairesMetier(**self.salaires) if self.salaires else SalairesMetier(),
-            perspectives=PerspectivesMetier(**self.perspectives) if self.perspectives else PerspectivesMetier(),
+            salaires=_safe_salaires(self.salaires),
+            perspectives=_safe_perspectives(self.perspectives),
             metadata=MetadataFiche(
                 date_creation=self.date_creation,
                 date_maj=self.date_maj,
