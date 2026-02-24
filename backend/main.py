@@ -57,6 +57,52 @@ async def health():
         return {"status": "degraded", "db": str(e)}
 
 
+@app.get("/api/debug-enrich/{code_rome}")
+async def debug_enrich(code_rome: str):
+    """Debug: test enrichment pipeline step by step."""
+    from .deps import repo, get_claude_client
+    import traceback
+    results = {}
+    
+    # Step 1: get fiche
+    try:
+        fiche = repo.get_fiche(code_rome)
+        results["fiche"] = f"{fiche.nom_masculin}" if fiche else "NOT FOUND"
+    except Exception as e:
+        results["fiche_error"] = f"{type(e).__name__}: {e}"
+        return results
+    
+    # Step 2: get claude client
+    client = get_claude_client()
+    results["claude_client"] = "OK" if client else "None"
+    if not client:
+        return results
+    
+    # Step 3: try the actual enrichment
+    try:
+        from agents.redacteur_fiche import AgentRedacteurFiche
+        agent = AgentRedacteurFiche(repository=repo, claude_client=client)
+        
+        # Call _generer_contenu directly
+        contenu = await agent._generer_contenu(
+            nom_masculin=fiche.nom_masculin,
+            nom_feminin=fiche.nom_feminin,
+            code_rome=fiche.code_rome,
+            domaine=fiche.secteurs_activite[0] if fiche.secteurs_activite else "",
+            description_existante=fiche.description if fiche.description else ""
+        )
+        if contenu:
+            results["contenu_keys"] = list(contenu.keys())
+            results["contenu_sample"] = {k: str(v)[:100] for k, v in list(contenu.items())[:5]}
+        else:
+            results["contenu"] = "None - generation failed"
+    except Exception as e:
+        results["enrich_error"] = f"{type(e).__name__}: {e}"
+        results["traceback"] = traceback.format_exc()[-500:]
+    
+    return results
+
+
 @app.get("/api/debug-claude")
 async def debug_claude():
     """Debug: test Claude API call."""
