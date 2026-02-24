@@ -94,10 +94,9 @@ export default function WorkflowBar({ active, onChange }: WorkflowBarProps) {
 
   return (
     <div className="relative">
-      {/* Connector line */}
-      <div className="absolute top-6 left-0 right-0 hidden md:block" style={{ paddingLeft: "10%", paddingRight: "10%" }}>
+      {/* Connector line — behind circles (z-0) */}
+      <div className="absolute top-6 left-0 right-0 hidden md:block z-0" style={{ paddingLeft: "8%", paddingRight: "8%" }}>
         <div className="h-0.5 bg-white/[0.06] w-full rounded-full" />
-        {/* Filled portion */}
         <motion.div
           className="h-0.5 bg-gradient-to-r from-indigo-600 to-indigo-400 rounded-full -mt-0.5"
           initial={false}
@@ -147,9 +146,9 @@ export default function WorkflowBar({ active, onChange }: WorkflowBarProps) {
               </div>
 
               {/* Label */}
-              <div className="text-center">
+              <div className="text-center w-full px-1">
                 <span
-                  className={`text-xs font-semibold transition-colors hidden md:block ${
+                  className={`text-[11px] font-semibold transition-colors hidden md:block leading-tight ${
                     isActive ? "text-indigo-400" : isPast ? "text-gray-400" : "text-gray-500 group-hover:text-gray-300"
                   }`}
                 >

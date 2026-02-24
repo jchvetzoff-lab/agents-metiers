@@ -131,7 +131,7 @@ export default function TabBatchProcess() {
       <div className="bg-gradient-to-r from-indigo-600/10 to-violet-600/10 border border-indigo-500/20 rounded-2xl p-6">
         <h2 className="text-xl font-bold text-white mb-1">⚡ Traitement en lot</h2>
         <p className="text-gray-400 text-sm">
-          Sélectionnez des fiches brouillon pour les enrichir, valider et publier automatiquement.
+          Selectionnez des fiches brouillon pour les enrichir et valider par l'IA.
         </p>
       </div>
 
@@ -217,7 +217,7 @@ export default function TabBatchProcess() {
               Traitement en cours…
             </span>
           ) : (
-            `⚡ Enrichir et publier (${selected.size} fiche${selected.size > 1 ? "s" : ""})`
+            `⚡ Enrichir et valider (${selected.size} fiche${selected.size > 1 ? "s" : ""})`
           )}
         </button>
 

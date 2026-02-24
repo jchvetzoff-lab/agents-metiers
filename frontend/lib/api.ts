@@ -56,6 +56,8 @@ export interface RomeVeilleStatus {
 export interface Stats {
   total: number;
   brouillons: number;
+  enrichis: number;
+  valides: number;
   en_validation: number;
   publiees: number;
   archivees: number;
