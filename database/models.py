@@ -302,6 +302,18 @@ from sqlalchemy.orm import declarative_base, relationship
 Base = declarative_base()
 
 
+def _parse_json_field(value):
+    """Parse a JSON field that might be stored as string in SQLite."""
+    if value is None:
+        return None
+    if isinstance(value, str):
+        try:
+            return json.loads(value)
+        except (json.JSONDecodeError, ValueError):
+            return None
+    return value
+
+
 class FicheMetierDB(Base):
     """Table des fiches métiers."""
     __tablename__ = "fiches_metiers"
@@ -409,7 +421,7 @@ class FicheMetierDB(Base):
             rome_update_pending=bool(getattr(self, 'rome_update_pending', 0)),
             validation_ia_score=getattr(self, 'validation_ia_score', None),
             validation_ia_date=getattr(self, 'validation_ia_date', None),
-            validation_ia_details=getattr(self, 'validation_ia_details', None),
+            validation_ia_details=_parse_json_field(getattr(self, 'validation_ia_details', None)),
             salaires=SalairesMetier(**self.salaires) if self.salaires else SalairesMetier(),
             perspectives=PerspectivesMetier(**self.perspectives) if self.perspectives else PerspectivesMetier(),
             metadata=MetadataFiche(
