@@ -70,10 +70,12 @@ class TypeEvenement(str, Enum):
     MODIFICATION = "modification"
     CORRECTION = "correction"
     VALIDATION = "validation"
+    VALIDATION_IA = "validation_ia"
     PUBLICATION = "publication"
     ARCHIVAGE = "archivage"
     VEILLE_SALAIRES = "veille_salaires"
     VEILLE_METIERS = "veille_metiers"
+    ENRICHISSEMENT = "enrichissement"
 
 
 # ============================================================================

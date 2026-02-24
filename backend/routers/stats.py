@@ -67,7 +67,7 @@ async def get_audit_logs(
             "logs": [
                 {
                     "id": log.id,
-                    "type_evenement": log.type_evenement.value,
+                    "type_evenement": log.type_evenement.value if hasattr(log.type_evenement, 'value') else str(log.type_evenement),
                     "description": log.description,
                     "code_rome": log.code_rome,
                     "agent": log.agent,
