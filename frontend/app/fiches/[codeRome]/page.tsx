@@ -313,14 +313,13 @@ export default function FicheDetailPage() {
   }
 
   const [enrichComment, setEnrichComment] = useState("");
-  const [showEnrichComment, setShowEnrichComment] = useState(false);
+  // showEnrichComment removed — comment box always visible when enriched
 
   async function handleEnrich(instructions?: string) {
     setActionLoading("enrich");
     try {
       const res = await api.enrichFiche(codeRome, instructions || undefined);
       showActionMessage("success", `Enrichissement termine (v${res.version})`);
-      setShowEnrichComment(false);
       setEnrichComment("");
       await reloadFiche();
     } catch (err: any) {
@@ -866,84 +865,92 @@ export default function FicheDetailPage() {
 
               {/* CTA */}
               {authenticated && (
-                <div className="mt-6 flex flex-col items-center gap-3">
+                <div className="mt-6">
                   {fiche.statut === 'publiee' ? (
-                    <span className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-500/10 text-green-400 rounded-full text-sm font-semibold border border-green-500/20">
-                      Fiche publiee
-                    </span>
+                    <div className="flex justify-center">
+                      <span className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-500/10 text-green-400 rounded-full text-sm font-semibold border border-green-500/20">
+                        Fiche publiee
+                      </span>
+                    </div>
                   ) : fiche.statut === 'en_validation' ? (
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="flex items-center gap-3">
+                    <div className="space-y-4">
+                      <div className="text-center text-sm text-white/50">Validation IA terminee. Relisez la fiche puis publiez-la.</div>
+                      <div className="flex items-center justify-center gap-3">
                         <button
                           onClick={handlePublish}
                           disabled={actionLoading !== null}
-                          className="px-6 py-2.5 bg-green-600 text-white rounded-full text-sm font-semibold hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-wait shadow-sm"
+                          className="px-7 py-3 bg-green-600 text-white rounded-xl text-sm font-semibold hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-wait shadow-lg shadow-green-600/20"
                         >
                           {actionLoading === 'publish' ? 'Publication…' : 'Publier la fiche'}
                         </button>
                         <button
                           onClick={() => handleEnrich()}
                           disabled={actionLoading !== null}
-                          className="px-5 py-2.5 border border-white/10 text-white/60 rounded-full text-sm font-medium hover:bg-white/5 transition disabled:opacity-50 disabled:cursor-wait"
+                          className="px-5 py-3 border border-white/10 text-white/60 rounded-xl text-sm font-medium hover:bg-white/5 transition disabled:opacity-50 disabled:cursor-wait"
                         >
                           {actionLoading === 'enrich' ? 'Re-enrichissement…' : 'Re-enrichir'}
                         </button>
                       </div>
                     </div>
                   ) : isEnrichi ? (
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="flex items-center gap-3">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-center gap-3">
                         <button
                           onClick={handleValidate}
                           disabled={actionLoading !== null}
-                          className="px-6 py-2.5 bg-indigo-600 text-white rounded-full text-sm font-semibold hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-wait shadow-sm"
+                          className="px-7 py-3 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-wait shadow-lg shadow-indigo-600/20"
                         >
                           {actionLoading === 'validate' ? 'Validation…' : 'Lancer la validation IA'}
                         </button>
                         <button
                           onClick={() => handleEnrich()}
                           disabled={actionLoading !== null}
-                          className="px-5 py-2.5 border border-white/10 text-white/60 rounded-full text-sm font-medium hover:bg-white/5 transition disabled:opacity-50 disabled:cursor-wait"
+                          className="px-5 py-3 border border-white/10 text-white/60 rounded-xl text-sm font-medium hover:bg-white/5 transition disabled:opacity-50 disabled:cursor-wait"
                         >
                           {actionLoading === 'enrich' ? 'Re-enrichissement…' : 'Re-enrichir'}
                         </button>
-                        <button
-                          onClick={() => setShowEnrichComment(!showEnrichComment)}
-                          disabled={actionLoading !== null}
-                          className="px-4 py-2.5 border border-white/10 text-white/40 rounded-full text-sm hover:bg-white/5 transition disabled:opacity-50"
-                          title="Re-enrichir avec des instructions"
-                        >
-                          + commentaire
-                        </button>
                       </div>
-                      {showEnrichComment && (
-                        <div className="flex items-center gap-2 w-full max-w-lg">
-                          <input
-                            type="text"
+
+                      {/* Re-enrichir avec commentaire */}
+                      <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+                        <div className="flex items-start gap-3 mb-3">
+                          <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                            <svg className="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" /></svg>
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium text-white/80">Re-enrichir avec des instructions</div>
+                            <div className="text-xs text-white/40 mt-0.5">Dites a l&apos;IA ce qu&apos;il faut corriger ou completer. Ex: &quot;ajoute des formations courtes&quot;, &quot;les salaires sont trop bas&quot;, &quot;complete les metiers proches&quot;</div>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <textarea
                             value={enrichComment}
                             onChange={(e) => setEnrichComment(e.target.value)}
-                            placeholder="Ex: complete les metiers proches, ajoute des formations courtes..."
-                            className="flex-1 px-4 py-2 bg-white/5 border border-white/10 rounded-full text-sm text-white placeholder-white/30 focus:outline-none focus:border-indigo-500"
-                            onKeyDown={(e) => e.key === 'Enter' && enrichComment.trim() && handleEnrich(enrichComment.trim())}
+                            placeholder="Vos instructions pour l'IA..."
+                            rows={3}
+                            className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder-white/25 focus:outline-none focus:border-indigo-500 resize-none"
+                            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && enrichComment.trim() && (e.preventDefault(), handleEnrich(enrichComment.trim()))}
                           />
                           <button
                             onClick={() => enrichComment.trim() && handleEnrich(enrichComment.trim())}
                             disabled={!enrichComment.trim() || actionLoading !== null}
-                            className="px-5 py-2 bg-indigo-600 text-white rounded-full text-sm font-semibold hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-wait"
+                            className="px-5 self-end py-3 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition disabled:opacity-30 disabled:cursor-not-allowed"
                           >
                             {actionLoading === 'enrich' ? '…' : 'Envoyer'}
                           </button>
                         </div>
-                      )}
+                      </div>
                     </div>
                   ) : (
-                    <button
-                      onClick={() => handleEnrich()}
-                      disabled={actionLoading !== null}
-                      className="px-6 py-2.5 bg-indigo-600 text-white rounded-full text-sm font-semibold hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-wait shadow-sm"
-                    >
-                      {actionLoading === 'enrich' ? 'Enrichissement en cours…' : 'Enrichir avec l\'IA'}
-                    </button>
+                    <div className="flex justify-center">
+                      <button
+                        onClick={() => handleEnrich()}
+                        disabled={actionLoading !== null}
+                        className="px-8 py-3 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-wait shadow-lg shadow-indigo-600/20"
+                      >
+                        {actionLoading === 'enrich' ? 'Enrichissement en cours…' : 'Enrichir avec l\'IA'}
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
