@@ -1301,7 +1301,12 @@ export default function FicheDetailPage() {
                                 <Cell key={idx} fill={color} />
                               ))}
                             </Pie>
-                            <Tooltip formatter={(val: number) => `${val}%`} />
+                            <Tooltip
+                              formatter={(val: number) => `${val}%`}
+                              contentStyle={{ borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", backgroundColor: "#0c0c1a", fontSize: 13 }}
+                              labelStyle={{ color: "#e5e7eb", fontWeight: 600, marginBottom: 4 }}
+                              itemStyle={{ color: "#9ca3af" }}
+                            />
                           </PieChart>
                         </ResponsiveContainer>
                       </div>
@@ -1344,9 +1349,14 @@ export default function FicheDetailPage() {
                           ]}>
                             <PolarGrid stroke="rgba(99,102,241,0.3)" />
                             <PolarAngleAxis dataKey="subject" tick={{ fontSize: 12, fill: "#4F46E5", fontWeight: 600 }} />
-                            <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 9 }} />
+                            <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 9, fill: "#9ca3af" }} />
                             <Radar name="RIASEC" dataKey="value" stroke={PURPLE} fill={PURPLE} fillOpacity={0.25} strokeWidth={2} />
-                            <Tooltip formatter={(val: number) => `${val}/100`} />
+                            <Tooltip
+                              formatter={(val: number) => `${val}/100`}
+                              contentStyle={{ borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", backgroundColor: "#0c0c1a", fontSize: 13 }}
+                              labelStyle={{ color: "#e5e7eb", fontWeight: 600, marginBottom: 4 }}
+                              itemStyle={{ color: "#9ca3af" }}
+                            />
                           </RadarChart>
                         </ResponsiveContainer>
                       </div>
@@ -1677,10 +1687,10 @@ export default function FicheDetailPage() {
                       )}
                       <ResponsiveContainer key={`sal-${chartKey}`} width="100%" height={240}>
                         <BarChart data={salaryData} barCategoryGap="20%">
-                          <XAxis dataKey="niveau" tick={{ fontSize: 12, fill: "#6B7280" }} axisLine={false} tickLine={false} />
-                          <YAxis tick={{ fontSize: 11, fill: "#9CA3AF" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k€`} />
-                          <Tooltip content={<ChartTooltip locale={t.locale} />} />
-                          <Bar dataKey="min" name={t.min} fill="#C7D2FE" radius={[4, 4, 0, 0]} />
+                          <XAxis dataKey="niveau" tick={{ fontSize: 12, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+                          <YAxis tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k€`} />
+                          <Tooltip content={<ChartTooltip locale={t.locale} />} cursor={{ fill: "rgba(255,255,255,0.04)" }} />
+                          <Bar dataKey="min" name={t.min} fill="rgba(99,102,241,0.3)" radius={[4, 4, 0, 0]} />
                           <Bar dataKey="median" name={t.median} fill={PURPLE} radius={[4, 4, 0, 0]} />
                           <Bar dataKey="max" name={t.max} fill={LIGHT_PURPLE} radius={[4, 4, 0, 0]} />
                         </BarChart>
@@ -1729,7 +1739,12 @@ export default function FicheDetailPage() {
                             label={renderPieLabel} labelLine={false}>
                             {contractData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
                           </Pie>
-                          <Tooltip formatter={(val: number) => `${val}%`} />
+                          <Tooltip
+                            formatter={(val: number) => `${val}%`}
+                            contentStyle={{ borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", backgroundColor: "#0c0c1a", fontSize: 13 }}
+                            labelStyle={{ color: "#e5e7eb", fontWeight: 600, marginBottom: 4 }}
+                            itemStyle={{ color: "#9ca3af" }}
+                          />
                           <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} formatter={(value: string) => <span className="text-gray-400">{value}</span>} />
                         </PieChart>
                       </ResponsiveContainer>
@@ -1850,8 +1865,8 @@ export default function FicheDetailPage() {
                                   </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
-                                <XAxis dataKey="annee" tick={{ fontSize: 12, fill: "#9CA3AF" }} axisLine={false} tickLine={false} />
-                                <YAxis tick={{ fontSize: 11, fill: "#D1D5DB" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}k`} domain={["dataMin - 1", "dataMax + 1"]} width={40} />
+                                <XAxis dataKey="annee" tick={{ fontSize: 12, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+                                <YAxis tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}k`} domain={["dataMin - 1", "dataMax + 1"]} width={40} />
                                 <Tooltip
                                   contentStyle={{ borderRadius: 12, border: "1px solid rgba(255,255,255,0.1)", backgroundColor: "#0c0c1a", boxShadow: "0 4px 12px rgba(0,0,0,.08)", fontSize: 13 }}
                                   formatter={(v: number) => [`${v} k€/an`, t.medianSalaryK]}
@@ -1888,8 +1903,8 @@ export default function FicheDetailPage() {
                                   </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
-                                <XAxis dataKey="annee" tick={{ fontSize: 12, fill: "#9CA3AF" }} axisLine={false} tickLine={false} />
-                                <YAxis tick={{ fontSize: 11, fill: "#D1D5DB" }} axisLine={false} tickLine={false} domain={["dataMin * 0.9", "dataMax * 1.1"]} width={45} />
+                                <XAxis dataKey="annee" tick={{ fontSize: 12, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+                                <YAxis tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} domain={["dataMin * 0.9", "dataMax * 1.1"]} width={45} />
                                 <Tooltip
                                   contentStyle={{ borderRadius: 12, border: "1px solid rgba(255,255,255,0.1)", backgroundColor: "#0c0c1a", boxShadow: "0 4px 12px rgba(0,0,0,.08)", fontSize: 13 }}
                                   formatter={(v: number) => [v.toLocaleString(t.locale), t.estimatedOffers]}
@@ -1960,8 +1975,8 @@ export default function FicheDetailPage() {
                       const label = new Date(Number(y), Number(m) - 1).toLocaleDateString(t.locale, { month: "short" });
                       return { mois: r.mois, label, offres: r.nb_offres };
                     })} barCategoryGap="12%">
-                      <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#6B7280" }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fontSize: 11, fill: "#9CA3AF" }} axisLine={false} tickLine={false} tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)} />
+                      <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)} />
                       <Tooltip
                         formatter={(value: number) => [value.toLocaleString(t.locale), t.offers]}
                         labelFormatter={(label: string, payload) => {
@@ -1970,10 +1985,13 @@ export default function FicheDetailPage() {
                           return new Date(Number(y), Number(m) - 1).toLocaleDateString(t.locale, { month: "long", year: "numeric" });
                         }}
                         contentStyle={{ borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", backgroundColor: "#0c0c1a", fontSize: 13 }}
+                        labelStyle={{ color: "#e5e7eb", fontWeight: 600, marginBottom: 4 }}
+                        itemStyle={{ color: "#9ca3af" }}
+                        cursor={{ fill: "rgba(255,255,255,0.04)" }}
                       />
                       <Bar dataKey="offres" radius={[6, 6, 0, 0]}>
                         {recrutements.recrutements.map((r) => (
-                          <Cell key={r.mois} fill={r.mois === selectedMonth ? PURPLE : "#C7D2FE"} cursor="pointer" onClick={() => setSelectedMonth(r.mois)} />
+                          <Cell key={r.mois} fill={r.mois === selectedMonth ? PURPLE : "#6366f1"} cursor="pointer" onClick={() => setSelectedMonth(r.mois)} />
                         ))}
                       </Bar>
                     </BarChart>
