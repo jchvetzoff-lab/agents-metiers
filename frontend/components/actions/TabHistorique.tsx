@@ -12,7 +12,9 @@ const TYPE_BADGES: Record<string, { label: string; color: string; bg: string }> 
   publication: { label: "Publication", color: "text-green-400", bg: "bg-green-500/20" },
   correction: { label: "Correction", color: "text-violet-400", bg: "bg-violet-500/20" },
   creation: { label: "Création", color: "text-indigo-400", bg: "bg-indigo-500/20" },
-  modification: { label: "Modification", color: "text-gray-400", bg: "bg-white/[0.06]" },
+  modification: { label: "Enrichissement IA", color: "text-blue-400", bg: "bg-blue-500/20" },
+  modification_humaine: { label: "Modification", color: "text-orange-400", bg: "bg-orange-500/20" },
+  suppression: { label: "Suppression", color: "text-red-400", bg: "bg-red-500/20" },
   archivage: { label: "Archivage", color: "text-slate-400", bg: "bg-slate-500/20" },
   veille_salaires: { label: "Veille salaires", color: "text-teal-400", bg: "bg-teal-500/20" },
   veille_metiers: { label: "Veille métiers", color: "text-cyan-400", bg: "bg-cyan-500/20" },
@@ -29,8 +31,8 @@ const LIMITS = [5, 10, 20, 50];
 
 function isHuman(log: AuditLog): boolean {
   const t = log.type_evenement;
-  if (t === "validation_humaine" || t === "creation" || t === "publication") return true;
-  if (t === "enrichissement" && log.description?.toLowerCase().includes("commentaire")) return true;
+  const humanTypes = ["validation_humaine", "creation", "publication", "modification_humaine", "suppression"];
+  if (humanTypes.includes(t)) return true;
   return false;
 }
 

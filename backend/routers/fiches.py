@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 from ..deps import repo
 from ..auth_middleware import get_current_user
-from database.models import StatutFiche, FicheMetier, MetadataFiche
+from database.models import StatutFiche, FicheMetier, MetadataFiche, TypeEvenement, AuditLog
 
 router = APIRouter(prefix="/api", tags=["fiches"])
 
@@ -412,6 +412,19 @@ async def create_fiche(fiche_data: FicheMetierCreate, user: dict = Depends(get_c
 
         fiche_creee = repo.create_fiche(nouvelle_fiche)
 
+        # Audit log — action humaine
+        try:
+            user_name = user.get("name") or user.get("email", "inconnu")
+            repo.add_audit_log(AuditLog(
+                type_evenement=TypeEvenement.CREATION,
+                code_rome=fiche_creee.code_rome,
+                agent=user_name,
+                description=f"Création de la fiche {fiche_creee.nom_masculin} ({fiche_creee.code_rome})",
+                validateur=user_name,
+            ))
+        except Exception:
+            pass
+
         return {
             "message": "Fiche créée avec succès",
             "code_rome": fiche_creee.code_rome,
@@ -449,6 +462,20 @@ async def update_fiche(code_rome: str, update_data: FicheMetierUpdate, user: dic
         updated_fiche = FicheMetier(**fiche_dict)
         repo.update_fiche(updated_fiche)
 
+        # Audit log — modification humaine
+        try:
+            user_name = user.get("name") or user.get("email", "inconnu")
+            champs = ", ".join(update_dict.keys())
+            repo.add_audit_log(AuditLog(
+                type_evenement=TypeEvenement.MODIFICATION_HUMAINE,
+                code_rome=code_rome,
+                agent=user_name,
+                description=f"Modification manuelle de la fiche {code_rome} — champs: {champs}",
+                validateur=user_name,
+            ))
+        except Exception:
+            pass
+
         return {
             "message": "Fiche mise à jour",
             "code_rome": code_rome,
@@ -468,7 +495,21 @@ async def delete_fiche(code_rome: str, user: dict = Depends(get_current_user)):
         if not fiche:
             raise HTTPException(status_code=404, detail=f"Fiche {code_rome} non trouvée")
 
+        nom = fiche.nom_masculin
         repo.delete_fiche(code_rome)
+
+        # Audit log — suppression humaine
+        try:
+            user_name = user.get("name") or user.get("email", "inconnu")
+            repo.add_audit_log(AuditLog(
+                type_evenement=TypeEvenement.SUPPRESSION,
+                code_rome=code_rome,
+                agent=user_name,
+                description=f"Suppression de la fiche {nom} ({code_rome})",
+                validateur=user_name,
+            ))
+        except Exception:
+            pass
 
         return {
             "message": f"Fiche {code_rome} supprimée",

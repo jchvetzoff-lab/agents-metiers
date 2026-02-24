@@ -169,6 +169,25 @@ async def review_fiche(code_rome: str, req: ReviewRequest, user: dict = Depends(
         updated = FicheMetier(**fiche_dict)
         repo.update_fiche(updated)
 
+        # Audit log — revue humaine
+        try:
+            from database.models import AuditLog
+            user_name = user.get("name") or user.get("email", "inconnu")
+            decisions_labels = {"approve": "Approuvée", "reject": "Rejetée", "request_changes": "Modifications demandées"}
+            label = decisions_labels.get(req.decision, req.decision)
+            desc = f"Revue humaine : {label}"
+            if req.commentaire:
+                desc += f" — {req.commentaire[:100]}"
+            repo.add_audit_log(AuditLog(
+                type_evenement=TypeEvenement.VALIDATION_HUMAINE,
+                code_rome=code_rome,
+                agent=user_name,
+                description=desc,
+                validateur=user_name,
+            ))
+        except Exception as e:
+            logger.warning(f"Audit log failed (review): {e}")
+
         return {
             "message": f"Fiche {req.decision}",
             "code_rome": code_rome,
@@ -283,6 +302,20 @@ async def publish_fiche(code_rome: str, user: dict = Depends(get_current_user)):
         updated = FicheMetier(**fiche_dict)
         repo.update_fiche(updated)
 
+        # Audit log — publication humaine
+        try:
+            from database.models import AuditLog
+            user_name = user.get("name") or user.get("email", "inconnu")
+            repo.add_audit_log(AuditLog(
+                type_evenement=TypeEvenement.PUBLICATION,
+                code_rome=code_rome,
+                agent=user_name,
+                description=f"Publication de la fiche {fiche.nom_masculin} ({code_rome})",
+                validateur=user_name,
+            ))
+        except Exception as e:
+            logger.warning(f"Audit log failed (publish): {e}")
+
         return {
             "message": "Fiche publiée",
             "code_rome": code_rome
@@ -360,6 +393,21 @@ async def publish_batch(req: PublishBatchRequest, user: dict = Depends(get_curre
             fiche_dict["metadata"]["date_maj"] = datetime.now()
             updated = FicheMetier(**fiche_dict)
             repo.update_fiche(updated)
+
+            # Audit log — publication batch humaine
+            try:
+                from database.models import AuditLog
+                user_name = user.get("name") or user.get("email", "inconnu")
+                repo.add_audit_log(AuditLog(
+                    type_evenement=TypeEvenement.PUBLICATION,
+                    code_rome=code_rome,
+                    agent=user_name,
+                    description=f"Publication en lot de la fiche {fiche.nom_masculin} ({code_rome})",
+                    validateur=user_name,
+                ))
+            except Exception:
+                pass
+
             results.append({"code_rome": code_rome, "status": "published", "message": "Publiée"})
         except Exception as e:
             results.append({"code_rome": code_rome, "status": "error", "message": str(e)})

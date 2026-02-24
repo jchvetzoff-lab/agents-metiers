@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api, Stats, AuditLog } from "@/lib/api";
-import MetricCard from "@/components/MetricCard";
 import SectionHeader from "@/components/SectionHeader";
 import { FadeInView, StaggerContainer, StaggerItem } from "@/components/motion";
 import {
@@ -102,10 +101,15 @@ export default function DashboardPage() {
         {/* Métriques */}
         <StaggerContainer stagger={0.08} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 md:gap-4 mb-16">
           <StaggerItem>
-            <MetricCard
-              label="Total"
-              value={stats?.total || 0}
-            />
+            <div className="sojai-card text-center">
+              <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-indigo-500/20 flex items-center justify-center">
+                <svg className="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+              </div>
+              <div className="text-2xl font-bold text-indigo-400 mb-1">{stats?.total || 0}</div>
+              <div className="text-xs text-indigo-400">Total</div>
+            </div>
           </StaggerItem>
           <StaggerItem>
             <div className="sojai-card text-center">
@@ -323,9 +327,14 @@ export default function DashboardPage() {
               const icons: Record<string, string> = {
                 creation: "N",
                 modification: "E",
+                enrichissement: "E",
                 correction: "C",
                 validation: "V",
+                validation_ia: "V",
+                validation_humaine: "H",
+                modification_humaine: "M",
                 publication: "P",
+                suppression: "X",
                 archivage: "A",
                 veille_salaires: "S",
                 veille_metiers: "M",
@@ -333,14 +342,19 @@ export default function DashboardPage() {
               const icon = icons[log.type_evenement] || "•";
 
               const typeLabels: Record<string, string> = {
-                creation: "CREATION",
+                creation: "CRÉATION",
                 modification: "ENRICHISSEMENT IA",
+                enrichissement: "ENRICHISSEMENT IA",
                 correction: "CORRECTION",
-                validation: "VALIDATION",
+                validation: "VALIDATION IA",
+                validation_ia: "VALIDATION IA",
+                validation_humaine: "VALIDATION HUMAINE",
+                modification_humaine: "MODIFICATION",
                 publication: "PUBLICATION",
+                suppression: "SUPPRESSION",
                 archivage: "ARCHIVAGE",
                 veille_salaires: "VEILLE SALAIRES",
-                veille_metiers: "VEILLE METIERS",
+                veille_metiers: "VEILLE MÉTIERS",
               };
 
               const card = (
