@@ -105,9 +105,14 @@ class FranceTravailClient:
         method: str,
         endpoint: str,
         params: Optional[Dict] = None,
-        scope: str = "api_offresdemploiv2 o2dsoffre"
+        scope: str = "api_offresdemploiv2 o2dsoffre",
+        return_headers: bool = False
     ) -> Any:
-        """Effectue une requête authentifiée."""
+        """Effectue une requête authentifiée.
+
+        Args:
+            return_headers: Si True, retourne (json, headers) au lieu de json seul
+        """
         token = await self._get_access_token(scope)
 
         async with httpx.AsyncClient() as client:
@@ -122,6 +127,8 @@ class FranceTravailClient:
                 timeout=self.timeout
             )
             response.raise_for_status()
+            if return_headers:
+                return response.json(), dict(response.headers)
             return response.json()
 
     # =========================================================================
@@ -194,6 +201,8 @@ class FranceTravailClient:
         """
         Compte le nombre d'offres pour un métier/région.
 
+        Le total est dans le header HTTP Content-Range: offres X-Y/TOTAL
+
         Args:
             code_rome: Code ROME
             region: Code région
@@ -208,8 +217,25 @@ class FranceTravailClient:
             params["region"] = region
 
         try:
-            data = await self._request("GET", "offresdemploi/v2/offres/search", params)
-            return data.get("contentRange", {}).get("maxResults", 0)
+            data, headers = await self._request(
+                "GET", "offresdemploi/v2/offres/search", params,
+                return_headers=True
+            )
+            # Parse Content-Range header: "offres 0-0/612"
+            content_range = headers.get("content-range", "")
+            if "/" in content_range:
+                total_str = content_range.split("/")[-1]
+                try:
+                    return int(total_str)
+                except ValueError:
+                    pass
+            # Fallback: count resultats
+            return len(data.get("resultats", []))
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 204:
+                return 0
+            self.logger.error(f"Erreur comptage offres: {e}")
+            return 0
         except Exception as e:
             self.logger.error(f"Erreur comptage offres: {e}")
             return 0
@@ -539,6 +565,268 @@ class FranceTravailClient:
             }
         except Exception as e:
             self.logger.error(f"Erreur calcul salaires offres {code_rome}: {e}")
+            return None
+
+    # =========================================================================
+    # Méthodes de haut niveau pour les routers
+    # =========================================================================
+
+    async def get_offres(
+        self,
+        code_rome: str,
+        region: Optional[str] = None,
+        limit: int = 10
+    ) -> Optional[Dict]:
+        """
+        Récupère les offres d'emploi pour un métier, filtrées par région.
+
+        Args:
+            code_rome: Code ROME du métier
+            region: Code région (optionnel)
+            limit: Nombre max d'offres
+
+        Returns:
+            Dict avec total, offres[], et metadata
+        """
+        cache_key = f"offres:{code_rome}:{region}:{limit}"
+        cached = self._response_cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+        try:
+            offres = await self.search_offres(
+                code_rome=code_rome,
+                region=region,
+                limit=limit
+            )
+
+            # Normaliser les offres pour le frontend
+            # Le frontend attend: offre_id, titre, entreprise, lieu,
+            # type_contrat, salaire, experience, date_publication, url
+            normalized = []
+            for offre in offres:
+                salaire = offre.get("salaire", {})
+                lieu = offre.get("lieuTravail", {})
+                entreprise = offre.get("entreprise", {})
+
+                # Mapper le type de contrat vers des valeurs que le frontend
+                # peut filtrer (CDI, CDD, Intérim via .includes())
+                type_contrat_raw = offre.get("typeContrat", "")
+                type_contrat_map = {
+                    "CDI": "CDI",
+                    "CDD": "CDD",
+                    "MIS": "Intérim",
+                    "INT": "Intérim",
+                    "SAI": "CDD saisonnier",
+                    "LIB": "Profession libérale",
+                    "REP": "Reprise d'entreprise",
+                    "FRA": "Franchise",
+                    "CCE": "Profession commerciale",
+                    "DIN": "CDI intérimaire",
+                    "DDI": "CDD d'insertion",
+                    "CNE": "CDD",
+                    "TTI": "Intérim d'insertion",
+                }
+                type_contrat = type_contrat_map.get(type_contrat_raw, offre.get("typeContratLibelle", type_contrat_raw))
+
+                normalized.append({
+                    "offre_id": offre.get("id", ""),
+                    "titre": offre.get("intitule", ""),
+                    "entreprise": entreprise.get("nom") if isinstance(entreprise, dict) else None,
+                    "lieu": lieu.get("libelle") if isinstance(lieu, dict) else None,
+                    "type_contrat": type_contrat,
+                    "salaire": salaire.get("libelle") if isinstance(salaire, dict) else None,
+                    "experience": offre.get("experienceLibelle") or offre.get("experienceExige") or None,
+                    "date_publication": offre.get("dateCreation", None),
+                    "url": f"https://candidat.francetravail.fr/offres/recherche/detail/{offre.get('id', '')}",
+                })
+
+            total = await self.count_offres(code_rome=code_rome, region=region)
+
+            result = {
+                "code_rome": code_rome,
+                "region": region,
+                "total": total,
+                "offres": normalized,
+                "source": "France Travail",
+                "from_cache": False,
+            }
+            self._response_cache.set(cache_key, result)
+            return result
+
+        except Exception as e:
+            self.logger.error(f"Erreur get_offres {code_rome} region={region}: {e}")
+            return None
+
+    async def get_recrutements(
+        self,
+        code_rome: str,
+        region: Optional[str] = None
+    ) -> Optional[Dict]:
+        """
+        Récupère les tendances de recrutement pour un métier.
+
+        Le frontend attend: { mois: string, nb_offres: number }[]
+        L'API France Travail ne fournit pas d'historique mensuel directement,
+        donc on retourne le snapshot actuel comme seul point de données.
+
+        Args:
+            code_rome: Code ROME du métier
+            region: Code région (optionnel)
+
+        Returns:
+            Dict avec tendances de recrutement au format frontend
+        """
+        cache_key = f"recrutements:{code_rome}:{region}"
+        cached = self._response_cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+        try:
+            # Compter les offres (filtrées par région si fournie)
+            nb_offres = await self.count_offres(
+                code_rome=code_rome,
+                region=region
+            )
+
+            # Le frontend attend un tableau avec {mois, nb_offres}
+            # On fournit le mois courant comme point de données
+            now = datetime.now()
+            recrutements = []
+            if nb_offres > 0:
+                recrutements.append({
+                    "mois": now.strftime("%Y-%m"),
+                    "nb_offres": nb_offres,
+                })
+
+            result = {
+                "code_rome": code_rome,
+                "region": region,
+                "region_name": None,  # sera rempli par le router
+                "recrutements": recrutements,
+                "source": "France Travail",
+            }
+            self._response_cache.set(cache_key, result)
+            return result
+
+        except Exception as e:
+            self.logger.error(f"Erreur get_recrutements {code_rome} region={region}: {e}")
+            return None
+
+    async def get_regional_data(
+        self,
+        code_rome: str,
+        region: str
+    ) -> Optional[Dict]:
+        """
+        Récupère toutes les données régionales pour un métier.
+
+        Combine offres, salaires, contrats pour une région donnée.
+
+        Args:
+            code_rome: Code ROME du métier
+            region: Code région
+
+        Returns:
+            Dict complet de données régionales
+        """
+        cache_key = f"regional:{code_rome}:{region}"
+        cached = self._response_cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+        try:
+            # Compter les offres régionales
+            nb_offres = await self.count_offres(code_rome=code_rome, region=region)
+
+            # Récupérer la répartition des contrats depuis les offres régionales
+            offres = await self.search_offres(code_rome=code_rome, region=region, limit=150)
+
+            # Calculer répartition des types de contrats
+            types_contrats = None
+            if offres:
+                counts = {"CDI": 0, "CDD": 0, "MIS": 0, "autre": 0}
+                for offre in offres:
+                    tc = offre.get("typeContrat", "").upper()
+                    if tc == "CDI":
+                        counts["CDI"] += 1
+                    elif tc == "CDD":
+                        counts["CDD"] += 1
+                    elif tc in ("MIS", "INT"):
+                        counts["MIS"] += 1
+                    else:
+                        counts["autre"] += 1
+                total = sum(counts.values())
+                if total > 0:
+                    types_contrats = {k: round(v / total, 2) for k, v in counts.items()}
+
+            # Calculer répartition de l'expérience
+            experience_distribution = None
+            if offres:
+                exp_counts = {"debutant": 0, "1_3_ans": 0, "3_5_ans": 0, "5_plus": 0}
+                for offre in offres:
+                    exp = offre.get("experienceExige", "").upper()
+                    if exp in ("D", "S"):  # D=Débutant, S=Souhaité
+                        exp_counts["debutant"] += 1
+                    elif exp == "E":  # E=Exigé
+                        duree = offre.get("experienceLibelle", "")
+                        if "1" in duree or "2" in duree:
+                            exp_counts["1_3_ans"] += 1
+                        elif "3" in duree or "4" in duree:
+                            exp_counts["3_5_ans"] += 1
+                        else:
+                            exp_counts["5_plus"] += 1
+                    else:
+                        exp_counts["debutant"] += 1
+                total = sum(exp_counts.values())
+                if total > 0:
+                    experience_distribution = {k: round(v / total, 2) for k, v in exp_counts.items()}
+
+            # Extraire les salaires des offres régionales
+            salaires = None
+            sal_values = []
+            for offre in offres:
+                sal = offre.get("salaire", {})
+                min_val = sal.get("minimum")
+                max_val = sal.get("maximum")
+                if isinstance(min_val, (int, float)):
+                    val = min_val * 12 if min_val < 10000 else min_val
+                    sal_values.append(val)
+                if isinstance(max_val, (int, float)):
+                    val = max_val * 12 if max_val < 10000 else max_val
+                    sal_values.append(val)
+
+            if sal_values:
+                sal_values.sort()
+                salaires = {
+                    "nb_offres_avec_salaire": len(sal_values) // 2,
+                    "min": int(sal_values[0]),
+                    "max": int(sal_values[-1]),
+                    "median": int(sal_values[len(sal_values) // 2]),
+                    "moyenne": int(sum(sal_values) / len(sal_values)),
+                }
+
+            # Tension (estimer depuis le ratio offres/demande)
+            tension = None
+            if nb_offres > 0:
+                # Plus il y a d'offres, plus il y a de tension
+                tension = min(nb_offres / 500, 1.0)
+
+            result = {
+                "code_rome": code_rome,
+                "region": region,
+                "nb_offres": nb_offres,
+                "salaires": salaires,
+                "types_contrats": types_contrats,
+                "experience_distribution": experience_distribution,
+                "tension_regionale": tension,
+                "source": "France Travail",
+            }
+            self._response_cache.set(cache_key, result)
+            return result
+
+        except Exception as e:
+            self.logger.error(f"Erreur get_regional_data {code_rome} region={region}: {e}")
             return None
 
     # =========================================================================

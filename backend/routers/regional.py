@@ -54,14 +54,15 @@ async def get_regional_data(code_rome: str, region: str = Query(...)):
         # Try France Travail API for real data
         try:
             ft_client = get_france_travail_client()
-            data = await ft_client.get_regional_data(code_rome, region) if ft_client else None
-            if data:
-                data["region"] = region
-                data["region_name"] = region_name
-                data["code_rome"] = code_rome
-                return data
+            if ft_client:
+                data = await ft_client.get_regional_data(code_rome, region)
+                if data:
+                    data["region"] = region
+                    data["region_name"] = region_name
+                    data["code_rome"] = code_rome
+                    return data
         except Exception as e:
-            logger.debug(f"France Travail API unavailable: {e}")
+            logger.warning(f"France Travail regional data unavailable for {code_rome} region={region}: {e}")
 
         # Fallback: estimation from fiche salaires
         salaires = None
@@ -111,11 +112,14 @@ async def get_recrutements(code_rome: str, region: Optional[str] = Query(None)):
         # Try real API
         try:
             ft_client = get_france_travail_client()
-            data = await ft_client.get_recrutements(code_rome, region) if ft_client else None
-            if data:
-                return data
-        except Exception:
-            pass
+            if ft_client:
+                data = await ft_client.get_recrutements(code_rome, region)
+                if data:
+                    # Enrichir avec le nom de la région
+                    data["region_name"] = region_name
+                    return data
+        except Exception as e:
+            logger.warning(f"France Travail recrutements unavailable for {code_rome}: {e}")
 
         return {
             "code_rome": code_rome,
@@ -149,11 +153,14 @@ async def get_offres(
         # Try real API
         try:
             ft_client = get_france_travail_client()
-            data = await ft_client.get_offres(code_rome, region, limit) if ft_client else None
-            if data:
-                return data
-        except Exception:
-            pass
+            if ft_client:
+                data = await ft_client.get_offres(code_rome, region, limit)
+                if data:
+                    # Enrichir avec le nom de la région
+                    data["region_name"] = region_name
+                    return data
+        except Exception as e:
+            logger.warning(f"France Travail offres unavailable for {code_rome}: {e}")
 
         return {
             "code_rome": code_rome,
