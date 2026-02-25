@@ -27,7 +27,24 @@ export default function AlternanceSection({ data, loading, t }: AlternanceSectio
   }
 
   if (!data || (data.nb_formations === 0 && data.nb_offres_alternance === 0)) {
-    return null;
+    return (
+      <SectionAnchor id="alternance" title="Alternance" icon="🎓" accentColor="#8B5CF6">
+        <div className="text-center py-8">
+          <div className="text-4xl mb-3">🎓</div>
+          <p className="text-sm text-gray-500">
+            Aucune donnée d{"'"}alternance disponible pour ce métier.
+          </p>
+          <a
+            href="https://labonnealternance.apprentissage.beta.gouv.fr"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 mt-4 text-sm text-violet-400 hover:text-violet-300 transition"
+          >
+            Rechercher sur La Bonne Alternance →
+          </a>
+        </div>
+      </SectionAnchor>
+    );
   }
 
   const diplomaData = Object.entries(data.niveaux_diplomes)
