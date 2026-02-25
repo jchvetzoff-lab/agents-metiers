@@ -5,7 +5,7 @@ import logging
 from typing import Optional
 from fastapi import APIRouter, HTTPException, Query
 
-from ..deps import repo, config
+from ..deps import repo, config, get_france_travail_client, get_lba_client
 
 logger = logging.getLogger(__name__)
 
@@ -53,9 +53,8 @@ async def get_regional_data(code_rome: str, region: str = Query(...)):
 
         # Try France Travail API for real data
         try:
-            from sources.france_travail import FranceTravailClient
-            ft_client = FranceTravailClient()
-            data = await ft_client.get_regional_data(code_rome, region)
+            ft_client = get_france_travail_client()
+            data = await ft_client.get_regional_data(code_rome, region) if ft_client else None
             if data:
                 data["region"] = region
                 data["region_name"] = region_name
@@ -111,9 +110,8 @@ async def get_recrutements(code_rome: str, region: Optional[str] = Query(None)):
 
         # Try real API
         try:
-            from sources.france_travail import FranceTravailClient
-            ft_client = FranceTravailClient()
-            data = await ft_client.get_recrutements(code_rome, region)
+            ft_client = get_france_travail_client()
+            data = await ft_client.get_recrutements(code_rome, region) if ft_client else None
             if data:
                 return data
         except Exception:
@@ -150,9 +148,8 @@ async def get_offres(
 
         # Try real API
         try:
-            from sources.france_travail import FranceTravailClient
-            ft_client = FranceTravailClient()
-            data = await ft_client.get_offres(code_rome, region, limit)
+            ft_client = get_france_travail_client()
+            data = await ft_client.get_offres(code_rome, region, limit) if ft_client else None
             if data:
                 return data
         except Exception:
@@ -180,8 +177,9 @@ async def get_imt_stats(code_rome: str):
         if not fiche:
             raise HTTPException(status_code=404, detail=f"Fiche {code_rome} non trouvée")
 
-        from sources.france_travail import FranceTravailClient
-        ft_client = FranceTravailClient()
+        ft_client = get_france_travail_client()
+        if not ft_client:
+            raise HTTPException(status_code=503, detail="France Travail API unavailable")
 
         salaires = None
         contrats = None
@@ -244,8 +242,9 @@ async def get_alternance(code_rome: str):
         if not fiche:
             raise HTTPException(status_code=404, detail=f"Fiche {code_rome} non trouvée")
 
-        from sources.la_bonne_alternance import LaBonneAlternanceClient
-        lba_client = LaBonneAlternanceClient()
+        lba_client = get_lba_client()
+        if not lba_client:
+            raise HTTPException(status_code=503, detail="La Bonne Alternance API unavailable")
         data = await lba_client.get_alternance_data(code_rome)
         return data
     except HTTPException:
@@ -267,6 +266,13 @@ async def get_alternance(code_rome: str):
 def _get_regional_coefficient(region_code: str) -> float:
     """Coefficient régional pour estimer les salaires."""
     coefficients = {
+        # DOM-TOM
+        "01": 0.75,   # Guadeloupe
+        "02": 0.75,   # Martinique
+        "03": 0.70,   # Guyane
+        "04": 0.80,   # La Réunion
+        "06": 0.65,   # Mayotte
+        # Métropole
         "11": 1.15,   # Île-de-France
         "84": 1.02,   # Auvergne-Rhône-Alpes
         "93": 1.00,   # PACA

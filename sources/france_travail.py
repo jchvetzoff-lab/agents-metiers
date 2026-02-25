@@ -3,6 +3,7 @@ Client pour l'API France Travail (ex Pôle Emploi).
 """
 import asyncio
 import json
+import time
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 import logging
@@ -11,6 +12,28 @@ import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from config import get_config
+
+
+class TTLCache:
+    """Simple in-memory TTL cache for API responses."""
+
+    def __init__(self, ttl_seconds: int = 3600):
+        self._cache: Dict[str, tuple] = {}  # key -> (timestamp, value)
+        self._ttl = ttl_seconds
+
+    def get(self, key: str) -> Optional[Any]:
+        if key in self._cache:
+            ts, value = self._cache[key]
+            if time.time() - ts < self._ttl:
+                return value
+            del self._cache[key]
+        return None
+
+    def set(self, key: str, value: Any) -> None:
+        self._cache[key] = (time.time(), value)
+
+    def clear(self) -> None:
+        self._cache.clear()
 
 
 class FranceTravailClient:
@@ -49,6 +72,8 @@ class FranceTravailClient:
         self._token_expiries: Dict[str, datetime] = {}
         # Cache for IMT resource IDs (discovered at runtime)
         self._imt_resources: Optional[Dict[str, str]] = None
+        # TTL cache for API responses (1 hour)
+        self._response_cache = TTLCache(ttl_seconds=3600)
 
     async def _get_access_token(self, scope: str = "api_offresdemploiv2 o2dsoffre") -> str:
         """Obtient un token d'accès OAuth2 pour le scope donné."""
@@ -311,6 +336,10 @@ class FranceTravailClient:
 
     async def get_statistiques_offres(self, code_rome: str) -> Optional[Dict]:
         """Récupère les vrais stats d'offres depuis IMT (types de contrats)."""
+        cache_key = f"stats_offres:{code_rome}"
+        cached = self._response_cache.get(cache_key)
+        if cached is not None:
+            return cached
         try:
             resources = await self._discover_imt_resources()
             contrats_id = resources.get("contrats")
@@ -348,13 +377,15 @@ class FranceTravailClient:
             if not repartition:
                 repartition = await self._compute_contract_distribution_from_offres(code_rome)
 
-            return {
+            result = {
                 "code_rome": code_rome,
                 "nb_offres_actuelles": nb_actuel,
                 "repartition_contrat": repartition or {"cdi": 0.4, "cdd": 0.35, "interim": 0.15, "autre": 0.1},
                 "date": datetime.now().isoformat(),
                 "source": "France Travail IMT" if contrats_id and repartition else "France Travail offres"
             }
+            self._response_cache.set(cache_key, result)
+            return result
         except Exception as e:
             self.logger.error(f"Erreur statistiques offres {code_rome}: {e}")
             return None
@@ -387,6 +418,10 @@ class FranceTravailClient:
 
     async def get_statistiques_salaires(self, code_rome: str) -> Optional[Dict]:
         """Récupère les vrais salaires depuis IMT."""
+        cache_key = f"stats_salaires:{code_rome}"
+        cached = self._response_cache.get(cache_key)
+        if cached is not None:
+            return cached
         try:
             resources = await self._discover_imt_resources()
             salaires_id = resources.get("salaires")
@@ -412,7 +447,7 @@ class FranceTravailClient:
                         q1_sal = sal_fields.get("SALAIRE_1ER_QUARTILE")
                         q3_sal = sal_fields.get("SALAIRE_3EME_QUARTILE")
 
-                        return {
+                        result = {
                             "code_rome": code_rome,
                             "source": "France Travail IMT",
                             "nb_offres_avec_salaire": rec.get("NB_OFFRES", rec.get("NOMBRE_OFFRES", len(records))),
@@ -436,9 +471,14 @@ class FranceTravailClient:
                             "raw_fields": sal_fields,
                             "date": datetime.now().isoformat()
                         }
+                        self._response_cache.set(cache_key, result)
+                        return result
 
             # Fallback: extraire les salaires depuis les offres
-            return await self._compute_salary_stats_from_offres(code_rome)
+            result = await self._compute_salary_stats_from_offres(code_rome)
+            if result:
+                self._response_cache.set(cache_key, result)
+            return result
 
         except Exception as e:
             self.logger.error(f"Erreur statistiques salaires {code_rome}: {e}")

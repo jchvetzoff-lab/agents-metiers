@@ -23,17 +23,13 @@ _ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 
 if not JWT_SECRET:
     if _ENVIRONMENT == "production":
-        # In production, JWT_SECRET MUST be set — refuse to start with weak secret
-        logger.critical(
-            "JWT_SECRET not set in production! Set it via environment variable. "
-            "Using emergency fallback — CHANGE THIS IMMEDIATELY."
+        # In production, JWT_SECRET MUST be set — refuse to start
+        raise RuntimeError(
+            "JWT_SECRET environment variable is not set! "
+            "This is REQUIRED in production. Set it before starting the app."
         )
-        # Use a long, stable fallback rather than crashing the app
-        JWT_SECRET = "agents-metiers-prod-emergency-fallback-CHANGE-THIS-" + hashlib.sha256(
-            b"agents-metiers-render-2026"
-        ).hexdigest()[:32]
     else:
-        # Development fallback — stable so tokens survive restarts
+        # Development/test fallback — stable so tokens survive restarts
         JWT_SECRET = "agents-metiers-dev-secret-local-only-2026"
         logger.warning("JWT_SECRET not set — using development fallback (not for production)")
 JWT_ALGORITHM = "HS256"

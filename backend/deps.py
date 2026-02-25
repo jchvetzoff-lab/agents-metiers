@@ -41,3 +41,53 @@ def get_claude_client():
 
     _claude_client_initialized = True
     return _claude_client
+
+
+# ---------- France Travail client singleton ----------
+_ft_client = None
+_ft_client_initialized = False
+
+
+def get_france_travail_client():
+    """Get FranceTravailClient (singleton — preserves OAuth token cache)."""
+    global _ft_client, _ft_client_initialized
+    if _ft_client_initialized:
+        return _ft_client
+
+    import logging
+    logger = logging.getLogger(__name__)
+    try:
+        from sources.france_travail import FranceTravailClient
+        _ft_client = FranceTravailClient()
+        logger.info("FranceTravailClient created (singleton)")
+    except Exception as e:
+        logger.error(f"Failed to create FranceTravailClient: {e}")
+        _ft_client = None
+
+    _ft_client_initialized = True
+    return _ft_client
+
+
+# ---------- La Bonne Alternance client singleton ----------
+_lba_client = None
+_lba_client_initialized = False
+
+
+def get_lba_client():
+    """Get LaBonneAlternanceClient (singleton)."""
+    global _lba_client, _lba_client_initialized
+    if _lba_client_initialized:
+        return _lba_client
+
+    import logging
+    logger = logging.getLogger(__name__)
+    try:
+        from sources.la_bonne_alternance import LaBonneAlternanceClient
+        _lba_client = LaBonneAlternanceClient()
+        logger.info("LaBonneAlternanceClient created (singleton)")
+    except Exception as e:
+        logger.error(f"Failed to create LaBonneAlternanceClient: {e}")
+        _lba_client = None
+
+    _lba_client_initialized = True
+    return _lba_client

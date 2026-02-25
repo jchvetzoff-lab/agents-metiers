@@ -317,6 +317,68 @@ class FicheMetier(BaseModel):
                 return PerspectivesMetier()
         return PerspectivesMetier()
 
+    def compute_completeness_score(self) -> int:
+        """Calcule le score de complétude (0-100). 13+ critères pondérés."""
+        score = 0
+        # Infos clés (description + missions)
+        if self.description and self.description.strip():
+            score += 8
+        if self.missions_principales:
+            score += 8
+        # Compétences
+        if self.competences:
+            score += 8
+        if self.competences_transversales:
+            score += 3
+        if self.savoirs:
+            score += 3
+        # Formations
+        if self.formations:
+            score += 8
+        # Statistiques (salaires + perspectives)
+        if self.salaires and (self.salaires.junior.median or self.salaires.confirme.median):
+            score += 8
+        if self.perspectives and self.perspectives.tendance:
+            score += 5
+        # Conditions de travail
+        if self.conditions_travail:
+            score += 4
+        ctd = self.conditions_travail_detaillees
+        if ctd:
+            horaires = ctd.get('horaires') if isinstance(ctd, dict) else getattr(ctd, 'horaires', None)
+            if horaires:
+                score += 3
+        # Mobilité
+        if self.metiers_proches and len(self.metiers_proches) > 0:
+            score += 8
+        # Profil (RIASEC + traits + aptitudes)
+        if self.profil_riasec and len(self.profil_riasec) >= 4:
+            score += 6
+        if self.traits_personnalite:
+            score += 4
+        if self.aptitudes:
+            score += 4
+        # Domaine
+        if self.domaine_professionnel:
+            domaine = self.domaine_professionnel.get('domaine') if isinstance(self.domaine_professionnel, dict) else getattr(self.domaine_professionnel, 'domaine', None)
+            if domaine:
+                score += 5
+        # Sites utiles
+        if self.sites_utiles:
+            score += 5
+        # Autres appellations
+        if self.autres_appellations:
+            score += 3
+        # Types contrats
+        if self.types_contrats:
+            cdi = self.types_contrats.get('cdi') if isinstance(self.types_contrats, dict) else getattr(self.types_contrats, 'cdi', None)
+            if cdi:
+                score += 3
+        # Compétences dimensions
+        if self.competences_dimensions and len(self.competences_dimensions) >= 4:
+            score += 4
+        return min(score, 100)
+
     def to_dict(self) -> Dict[str, Any]:
         """Convertit la fiche en dictionnaire."""
         return self.model_dump(mode="json")

@@ -81,62 +81,8 @@ def _normalize_text(text: str) -> str:
 
 
 def _compute_score(fiche) -> int:
-    """Calcule le score de complétude d'une fiche (0-100). 13 critères = 13 sections frontend."""
-    score = 0
-    # Section Infos clés (description + description_courte + missions)
-    if fiche.description and fiche.description.strip():
-        score += 8
-    if hasattr(fiche, 'missions_principales') and fiche.missions_principales:
-        score += 8
-    # Section Compétences (competences + savoirs + competences_transversales)
-    if fiche.competences:
-        score += 8
-    if fiche.competences_transversales:
-        score += 3
-    if hasattr(fiche, 'savoirs') and fiche.savoirs:
-        score += 3
-    # Section Formations
-    if fiche.formations:
-        score += 8
-    # Section Statistiques (salaires + perspectives)
-    if fiche.salaires and (fiche.salaires.junior.median or fiche.salaires.confirme.median):
-        score += 8
-    if fiche.perspectives and fiche.perspectives.tendance:
-        score += 5
-    # Section Conditions de travail
-    if fiche.conditions_travail:
-        score += 4
-    ctd = getattr(fiche, 'conditions_travail_detaillees', None)
-    if ctd:
-        horaires = ctd.get('horaires') if isinstance(ctd, dict) else getattr(ctd, 'horaires', None)
-        if horaires:
-            score += 3
-    # Section Mobilité (le modèle utilise metiers_proches: List[str])
-    if fiche.metiers_proches and len(fiche.metiers_proches) > 0:
-        score += 8
-    # Section Profil (RIASEC + traits + aptitudes)
-    if hasattr(fiche, 'profil_riasec') and fiche.profil_riasec and len(getattr(fiche.profil_riasec, '__dict__', fiche.profil_riasec if isinstance(fiche.profil_riasec, dict) else {})) >= 4:
-        score += 6
-    if hasattr(fiche, 'traits_personnalite') and fiche.traits_personnalite:
-        score += 4
-    if hasattr(fiche, 'aptitudes') and fiche.aptitudes:
-        score += 4
-    # Section Domaine
-    if hasattr(fiche, 'domaine_professionnel') and fiche.domaine_professionnel and (getattr(fiche.domaine_professionnel, 'domaine', None) if not isinstance(fiche.domaine_professionnel, dict) else fiche.domaine_professionnel.get('domaine')):
-        score += 5
-    # Section Sites utiles
-    if hasattr(fiche, 'sites_utiles') and fiche.sites_utiles:
-        score += 5
-    # Section Autres appellations
-    if hasattr(fiche, 'autres_appellations') and fiche.autres_appellations:
-        score += 3
-    # Types contrats
-    if hasattr(fiche, 'types_contrats') and fiche.types_contrats and (getattr(fiche.types_contrats, 'cdi', None) if not isinstance(fiche.types_contrats, dict) else fiche.types_contrats.get('cdi')):
-        score += 3
-    # Competences dimensions
-    if hasattr(fiche, 'competences_dimensions') and fiche.competences_dimensions and len(getattr(fiche.competences_dimensions, '__dict__', fiche.competences_dimensions if isinstance(fiche.competences_dimensions, dict) else {})) >= 4:
-        score += 4
-    return min(score, 100)
+    """Calcule le score de complétude. Délègue au modèle FicheMetier."""
+    return fiche.compute_completeness_score()
 
 
 def _fiche_to_response(fiche, nb_variantes: int = 0) -> FicheMetierResponse:

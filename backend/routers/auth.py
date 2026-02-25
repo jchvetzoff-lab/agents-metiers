@@ -26,12 +26,13 @@ def _hash_password(password: str) -> str:
 
 
 def _verify_password(password: str, password_hash: str) -> bool:
-    """Verify a password against its hash."""
-    if password_hash.startswith("$2"):
-        return bcrypt.checkpw(password.encode(), password_hash.encode())
-    # Legacy SHA-256 check (auto-migrated to bcrypt on successful login)
-    import hashlib
-    return hashlib.sha256(password.encode()).hexdigest() == password_hash
+    """Verify a password against its bcrypt hash."""
+    if not password_hash.startswith("$2"):
+        # Legacy SHA-256 hashes are no longer supported.
+        # Users must reset their password.
+        logger.warning("Rejected login attempt with legacy SHA-256 hash — user must reset password")
+        return False
+    return bcrypt.checkpw(password.encode(), password_hash.encode())
 
 
 def _validate_password(password: str) -> None:
@@ -80,22 +81,6 @@ async def login(req: LoginRequest, request: Request):
 
         if not _verify_password(req.password, user["password_hash"]):
             raise HTTPException(status_code=401, detail="Email ou mot de passe incorrect")
-
-        # Auto-migrate legacy SHA-256 hashes to bcrypt
-        if not user["password_hash"].startswith("$2"):
-            try:
-                new_hash = _hash_password(req.password)
-                from database.models import UserDB
-                from sqlalchemy import update
-                with repo.session() as session:
-                    session.execute(
-                        update(UserDB)
-                        .where(UserDB.id == user["id"])
-                        .values(password_hash=new_hash)
-                    )
-                logger.info(f"Password hash migrated to bcrypt for user {user['email']}")
-            except Exception as e:
-                logger.warning(f"Failed to migrate password hash: {e}")
 
         token = create_jwt({
             "sub": user["id"],

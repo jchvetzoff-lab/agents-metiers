@@ -22,6 +22,7 @@ import {
   toStringItem, toStringArray, getItemLevel,
   PURPLE, PINK, CYAN,
 } from "@/components/FicheHelpers";
+import { useFicheData, useRegionalData, useExternalData, useFicheActions, useVarianteFilters } from "@/hooks/useFicheDetail";
 import dynamic from "next/dynamic";
 
 const CareerMap = dynamic(() => import("@/components/CareerMap"), { ssr: false });
@@ -34,263 +35,43 @@ export default function FicheDetailPage() {
   const params = useParams();
   const codeRome = params.codeRome as string;
 
-  const [fiche, setFiche] = useState<FicheDetail | null>(null);
-  const [variantes, setVariantes] = useState<Variante[]>([]);
-  const [loading, setLoading] = useState(true);
+  // ── Custom hooks for state management ──
+  const { fiche, setFiche, variantes, loading, reload: reloadFiche } = useFicheData(codeRome);
+  const { regions, selectedRegion, setSelectedRegion, regionalData, regionalLoading } = useRegionalData(codeRome, !!fiche);
+  const {
+    recrutements, recrutementsLoading, selectedMonth, setSelectedMonth,
+    offres, offresLoading, offresContractFilter, setOffresContractFilter,
+    imtStats,
+    alternanceData, alternanceLoading,
+  } = useExternalData(codeRome, !!fiche, selectedRegion);
+  const { actionLoading, actionMessage, dismissActionMessage, handleEnrich: _handleEnrich, handlePublish, handleValidate, handleGenerateVariantes } = useFicheActions(codeRome, reloadFiche);
+
+  // UI state (local to the page)
   const [activeTab, setActiveTab] = useState<"sf" | "se" | "sa">("sf");
   const [activeSection, setActiveSection] = useState("infos");
   const [pdfLoading, setPdfLoading] = useState(false);
-
-  // Variante filters
-  const [filterGenre, setFilterGenre] = useState("masculin");
-  const [filterTranche, setFilterTranche] = useState("18+");
-  const [filterFormat, setFilterFormat] = useState("standard");
-  const [filterLangue, setFilterLangue] = useState("fr");
-  const [appliedVariante, setAppliedVariante] = useState<VarianteDetail | null>(null);
-  const [filterLoading, setFilterLoading] = useState(false);
-  const [filterError, setFilterError] = useState<string | null>(null);
-  const [variantesOpen, setVariantesOpen] = useState(false);
-
-  // Regional data
-  const [regions, setRegions] = useState<Region[]>([]);
-  const [selectedRegion, setSelectedRegion] = useState<string>("");
-  const [regionalData, setRegionalData] = useState<RegionalData | null>(null);
-  const [regionalLoading, setRegionalLoading] = useState(false);
-
-  // Recrutements data
-  const [recrutements, setRecrutements] = useState<RecrutementsData | null>(null);
-  const [recrutementsLoading, setRecrutementsLoading] = useState(false);
-  const [selectedMonth, setSelectedMonth] = useState<string>("");
-
-  // Offres d'emploi
-  const [offres, setOffres] = useState<import("@/lib/api").OffresData | null>(null);
-  const [offresLoading, setOffresLoading] = useState(false);
-  const [offresContractFilter, setOffresContractFilter] = useState<string>("all");
-
-  // IMT real stats (salaires + contrats from France Travail)
-  const [imtStats, setImtStats] = useState<ImtStatsData | null>(null);
-
-  // Alternance data (La Bonne Alternance)
-  const [alternanceData, setAlternanceData] = useState<AlternanceData | null>(null);
-  const [alternanceLoading, setAlternanceLoading] = useState(false);
-
-  // Action buttons (authenticated only)
   const [authenticated, setAuthenticated] = useState(false);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [actionMessage, setActionMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
-
-  // (removed: one-click traitement complet)
+  const [enrichComment, setEnrichComment] = useState("");
 
   useEffect(() => { setAuthenticated(isAuthenticated()); }, []);
 
   // ── i18n: derive language from applied variante ──
+  const {
+    filterGenre, setFilterGenre, filterTranche, setFilterTranche,
+    filterFormat, setFilterFormat, filterLangue, setFilterLangue,
+    appliedVariante, setAppliedVariante, filterLoading, filterError,
+    variantesOpen, setVariantesOpen,
+    handleApplyFilter, handleResetFilter,
+  } = useVarianteFilters(codeRome, variantes, getTranslations("fr"));
+
   const lang = appliedVariante?.langue || "fr";
   const t = getTranslations(lang);
 
-  async function handleApplyFilter() {
-    // If filters match the original fiche defaults, just show the original fiche
-    if (filterLangue === "fr" && filterTranche === "18+" && filterFormat === "standard" && filterGenre === "masculin") {
-      setAppliedVariante(null);
-      setFilterError(null);
-      return;
-    }
-    setFilterLoading(true);
-    setFilterError(null);
-    const match = variantes.find(
-      v => v.genre === filterGenre && v.tranche_age === filterTranche && v.format_contenu === filterFormat && v.langue === filterLangue
-    );
-    if (!match) {
-      setFilterError(t.noVariante);
-      setAppliedVariante(null);
-      setFilterLoading(false);
-      return;
-    }
-    try {
-      const detail = await api.getVarianteDetail(codeRome, match.id);
-      setAppliedVariante(detail);
-    } catch (e: any) {
-      setFilterError(e.message || t.varianteError);
-      setAppliedVariante(null);
-    } finally {
-      setFilterLoading(false);
-    }
-  }
-
-  function handleResetFilter() {
-    setAppliedVariante(null);
-    setFilterError(null);
-    setFilterGenre("masculin");
-    setFilterTranche("18+");
-    setFilterFormat("standard");
-    setFilterLangue("fr");
-  }
-
-  async function reloadFiche() {
-    try {
-      const ficheData = await api.getFicheDetail(codeRome);
-      setFiche(ficheData);
-    } catch (e) { console.error("Erreur rechargement fiche:", e); }
-    try {
-      const variantesData = await api.getVariantes(codeRome);
-      setVariantes(variantesData.variantes);
-    } catch (e) { console.error("Erreur rechargement variantes:", e); }
-  }
-
-  const actionMsgTimer = useRef<ReturnType<typeof setTimeout>>(null);
-  function showActionMessage(type: "success" | "error", text: string) {
-    if (actionMsgTimer.current) clearTimeout(actionMsgTimer.current);
-    setActionMessage({ type, text });
-    actionMsgTimer.current = setTimeout(() => setActionMessage(null), 5000);
-  }
-  // Cleanup on unmount
-  useEffect(() => () => { if (actionMsgTimer.current) clearTimeout(actionMsgTimer.current); }, []);
-
-  const [enrichComment, setEnrichComment] = useState("");
-  // showEnrichComment removed — comment box always visible when enriched
-
+  // Wrap handleEnrich to clear comment
   async function handleEnrich(instructions?: string) {
-    setActionLoading("enrich");
-    try {
-      const res = await api.enrichFiche(codeRome, instructions || undefined);
-      showActionMessage("success", `Enrichissement termine (v${res.version})`);
-      setEnrichComment("");
-      await reloadFiche();
-    } catch (err: any) {
-      showActionMessage("error", err.message || "Erreur lors de l'enrichissement");
-    } finally {
-      setActionLoading(null);
-    }
+    await _handleEnrich(instructions);
+    setEnrichComment("");
   }
-
-  async function handlePublish() {
-    if (!confirm("Publier cette fiche ? Elle sera visible publiquement.")) return;
-    setActionLoading("publish");
-    try {
-      await api.publishFiche(codeRome);
-      showActionMessage("success", "Fiche publiee avec succes");
-      await reloadFiche();
-    } catch (err: any) {
-      showActionMessage("error", err.message || "Erreur lors de la publication");
-    } finally {
-      setActionLoading(null);
-    }
-  }
-
-  async function handleValidate() {
-    setActionLoading("validate");
-    try {
-      await api.validateFiche(codeRome);
-      showActionMessage("success", "Validation terminee");
-      await reloadFiche();
-    } catch (err: any) {
-      showActionMessage("error", err.message || "Erreur lors de la validation");
-    } finally {
-      setActionLoading(null);
-    }
-  }
-
-  async function handleGenerateVariantes() {
-    setActionLoading("variantes");
-    try {
-      const res = await api.generateVariantes(codeRome, {
-        langues: ["fr"],
-        genres: ["masculin", "feminin", "epicene"],
-        tranches_age: ["18+", "15-18", "11-15"],
-        formats: ["standard", "falc"],
-      });
-      showActionMessage("success", `${res.variantes_generees} variantes generees`);
-      await reloadFiche();
-    } catch (err: any) {
-      showActionMessage("error", err.message || "Erreur lors de la generation de variantes");
-    } finally {
-      setActionLoading(null);
-    }
-  }
-
-  // (removed: handleFullProcess)
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const [ficheData, variantesData] = await Promise.all([
-          api.getFicheDetail(codeRome),
-          api.getVariantes(codeRome),
-        ]);
-        setFiche(ficheData);
-        setVariantes(variantesData.variantes);
-        // Load regions list (non-blocking)
-        api.getRegions().then(r => setRegions(r.regions)).catch(() => {});
-      } catch (e) { console.error(e); }
-      finally { setLoading(false); }
-    })();
-  }, [codeRome]);
-
-  // Fetch regional data when region changes
-  useEffect(() => {
-    if (!selectedRegion) {
-      setRegionalData(null);
-      return;
-    }
-    let cancelled = false;
-    setRegionalLoading(true);
-    api.getRegionalData(codeRome, selectedRegion)
-      .then(data => { if (!cancelled) setRegionalData(data); })
-      .catch(() => { if (!cancelled) setRegionalData(null); })
-      .finally(() => { if (!cancelled) setRegionalLoading(false); });
-    return () => { cancelled = true; };
-  }, [codeRome, selectedRegion]);
-
-  // Fetch recrutements data when fiche or region changes
-  useEffect(() => {
-    if (!fiche) return;
-    let cancelled = false;
-    setRecrutementsLoading(true);
-    api.getRecrutements(codeRome, selectedRegion || undefined)
-      .then(data => {
-        if (!cancelled) {
-          setRecrutements(data);
-          if (data.recrutements.length > 0) setSelectedMonth(data.recrutements[data.recrutements.length - 1].mois);
-        }
-      })
-      .catch(() => { if (!cancelled) setRecrutements(null); })
-      .finally(() => { if (!cancelled) setRecrutementsLoading(false); });
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [codeRome, selectedRegion, !!fiche]);
-
-  // Fetch offres d'emploi when fiche or region changes
-  useEffect(() => {
-    if (!fiche) return;
-    let cancelled = false;
-    setOffresLoading(true);
-    setOffresContractFilter("all");
-    api.getOffres(codeRome, selectedRegion || undefined, 30)
-      .then(data => { if (!cancelled) setOffres(data); })
-      .catch(() => { if (!cancelled) setOffres(null); })
-      .finally(() => { if (!cancelled) setOffresLoading(false); });
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [codeRome, selectedRegion, !!fiche]);
-
-  // Fetch IMT real stats (non-blocking, fires once)
-  useEffect(() => {
-    if (!fiche) return;
-    api.getImtStats(codeRome)
-      .then(data => setImtStats(data))
-      .catch(() => setImtStats(null));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [codeRome, !!fiche]);
-
-  // Fetch alternance data (non-blocking, fires once)
-  useEffect(() => {
-    if (!fiche) return;
-    setAlternanceLoading(true);
-    api.getAlternanceData(codeRome)
-      .then(data => setAlternanceData(data))
-      .catch(() => setAlternanceData(null))
-      .finally(() => setAlternanceLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [codeRome, !!fiche]);
 
   // Scroll spy
   useEffect(() => {
@@ -564,7 +345,7 @@ export default function FicheDetailPage() {
               )}
               <span className={actionMessage.type === "success" ? "text-green-800" : "text-red-800"}>{actionMessage.text}</span>
             </div>
-            <button onClick={() => setActionMessage(null)} className="text-gray-400 hover:text-gray-400">
+            <button onClick={() => dismissActionMessage()} className="text-gray-400 hover:text-gray-400">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
           </div>

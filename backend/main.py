@@ -4,15 +4,26 @@ App setup, CORS, and router registration.
 """
 import os
 import logging
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 logger = logging.getLogger(__name__)
 from fastapi.middleware.cors import CORSMiddleware
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan: startup and shutdown."""
+    await _startup()
+    yield
+    # Shutdown: nothing to clean up
+
+
 app = FastAPI(
     title="Agents Métiers API",
     description="API REST pour la gestion des fiches métiers avec IA",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan,
 )
 
 # CORS configuration — restricted methods and headers for security
@@ -48,8 +59,7 @@ app.include_router(veille_router)
 app.include_router(regional_router)
 
 
-@app.on_event("startup")
-async def startup_event():
+async def _startup():
     """Ensure all DB tables exist at startup, with column migration."""
     from .deps import repo
     try:

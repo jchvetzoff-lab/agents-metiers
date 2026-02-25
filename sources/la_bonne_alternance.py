@@ -4,6 +4,7 @@ Client pour l'API La Bonne Alternance.
 Fournit les données sur les formations et offres en alternance par code ROME.
 API publique : https://labonnealternance.apprentissage.beta.gouv.fr/api
 """
+import time
 import logging
 from typing import Any, Dict, List, Optional
 
@@ -19,6 +20,9 @@ class LaBonneAlternanceClient:
     def __init__(self, logger: Optional[logging.Logger] = None):
         self.logger = logger or logging.getLogger("LaBonneAlternanceClient")
         self.timeout = 30
+        # TTL cache for API responses (1 hour)
+        self._cache: Dict[str, tuple] = {}
+        self._cache_ttl = 3600
 
     async def _request(
         self,
@@ -127,6 +131,19 @@ class LaBonneAlternanceClient:
             self.logger.error(f"Erreur LBA jobs {code_rome}: {e}")
             return []
 
+    def _cache_get(self, key: str) -> Optional[Any]:
+        """Get from TTL cache."""
+        if key in self._cache:
+            ts, value = self._cache[key]
+            if time.time() - ts < self._cache_ttl:
+                return value
+            del self._cache[key]
+        return None
+
+    def _cache_set(self, key: str, value: Any) -> None:
+        """Set in TTL cache."""
+        self._cache[key] = (time.time(), value)
+
     async def get_alternance_data(
         self,
         code_rome: str,
@@ -143,6 +160,11 @@ class LaBonneAlternanceClient:
         Returns:
             Résumé avec formations, offres, et stats agrégées
         """
+        cache_key = f"alternance:{code_rome}:{latitude}:{longitude}:{radius}"
+        cached = self._cache_get(cache_key)
+        if cached is not None:
+            return cached
+
         params: Dict[str, Any] = {
             "caller": self.CALLER,
             "romes": code_rome,
@@ -192,7 +214,7 @@ class LaBonneAlternanceClient:
                 level = f.get("niveau_diplome", "Autre")
                 diploma_levels[level] = diploma_levels.get(level, 0) + 1
 
-            return {
+            result = {
                 "code_rome": code_rome,
                 "nb_formations": len(formations),
                 "nb_offres_alternance": len(pe_jobs) + len(matchas),
@@ -202,6 +224,8 @@ class LaBonneAlternanceClient:
                 "niveaux_diplomes": diploma_levels,
                 "source": "La Bonne Alternance",
             }
+            self._cache_set(cache_key, result)
+            return result
 
         except httpx.HTTPStatusError as e:
             self.logger.error(f"Erreur LBA alternance {code_rome}: {e.response.status_code}")

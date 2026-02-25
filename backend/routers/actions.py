@@ -258,9 +258,27 @@ Retourne un JSON avec les champs corrigés: description, competences, formations
 
         import json, re
         content = response.content[0].text.strip()
-        json_match = re.search(r'\{[\s\S]*\}', content)
-        if json_match:
-            corrections = json.loads(json_match.group())
+        # Try direct JSON parse first, then extract from markdown/text
+        corrections = None
+        try:
+            corrections = json.loads(content)
+        except (json.JSONDecodeError, ValueError):
+            # Find matching braces: first { to its matching }
+            start = content.find('{')
+            if start != -1:
+                depth = 0
+                for i in range(start, len(content)):
+                    if content[i] == '{':
+                        depth += 1
+                    elif content[i] == '}':
+                        depth -= 1
+                        if depth == 0:
+                            try:
+                                corrections = json.loads(content[start:i + 1])
+                            except (json.JSONDecodeError, ValueError):
+                                pass
+                            break
+        if corrections and isinstance(corrections, dict):
             fiche_dict = fiche.model_dump()
             for key in ("description", "competences", "formations", "competences_transversales"):
                 if key in corrections:
@@ -379,7 +397,9 @@ publish_batch_router = APIRouter(prefix="/api/fiches", tags=["actions"])
 
 @publish_batch_router.post("/publish-batch")
 async def publish_batch(req: PublishBatchRequest, user: dict = Depends(get_current_user)):
-    """Publie plusieurs fiches en batch."""
+    """Publie plusieurs fiches en batch (max 50)."""
+    if len(req.codes_rome) > 50:
+        raise HTTPException(status_code=400, detail="Maximum 50 fiches par batch")
     results = []
     for code_rome in req.codes_rome:
         try:
