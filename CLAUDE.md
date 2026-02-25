@@ -1,653 +1,571 @@
-# Agents Métiers - Système Multi-Agents pour Fiches Métiers
+# Agents Métiers — Documentation Technique Complète
 
-## Description du Projet
+> Dernière mise à jour : 25 février 2026
 
-Système multi-agents autonome pour la création et maintenance automatique de fiches métiers en France. Le système collecte des données depuis des sources officielles (ROME, France Travail, INSEE, DARES), génère des versions genrées (masculin, féminin, épicène), et corrige automatiquement l'orthographe.
+## 1. Vue d'ensemble
 
-## État Actuel
+Système multi-agents pour la création, enrichissement et maintenance automatique de fiches métiers françaises. L'application collecte des données depuis des sources officielles (ROME, France Travail, INSEE, DARES, La Bonne Alternance), enrichit les fiches via Claude IA, et expose le tout via un frontend Next.js et un backend FastAPI.
 
-### ✅ Composants Terminés
-
-| Composant | Fichier | Statut |
-|-----------|---------|--------|
-| Orchestrateur | `orchestrator/orchestrator.py` | ✅ Fonctionnel |
-| AgentCorrecteurLangue | `agents/correcteur_langue.py` | ✅ Fonctionnel (Claude API) |
-| AgentGenerationGenre | `agents/generation_genre.py` | ✅ Fonctionnel (Claude API) |
-| AgentRedacteurFiche | `agents/redacteur_fiche.py` | ✅ Fonctionnel (Claude API + Variantes) |
-| AgentVeilleSalaires | `agents/veille_salaires.py` | ⏸️ Code prêt, attend credentials |
-| AgentVeilleMetiers | `agents/veille_metiers.py` | ⏸️ Code prêt, attend credentials |
-| Base de données | `database/` | ✅ SQLite fonctionnel + table variantes |
-| Sources de données | `sources/` | ⏸️ Code prêt, attend credentials |
-| Interface CLI | `interface/cli.py` | ✅ Fonctionnel |
-| Système de journalisation | `logging_system/journal.py` | ✅ Fonctionnel |
-| Interface Streamlit | `streamlit_app.py` + `pages/` | ✅ Fonctionnel + sélecteurs variantes |
-| **Système Variantes** | `database/models.py` + `repository.py` | ✅ Fonctionnel (90 variantes/fiche) |
-| **Export PDF** | `utils/pdf_generator.py` | ✅ Fonctionnel (fpdf2) |
-| **Déploiement Cloud** | `.streamlit/` + guides | ✅ Configuré pour Streamlit Cloud |
-| **Design System SOJAI** | `.streamlit/style.css` + `utils/ui_helpers.py` | ✅ Appliqué sur toutes les pages (2 fév. 2026) |
-
-### ✅ Design System SOJAI (2 fév. 2026)
-
-Transformation complète de l'interface Streamlit avec le design system professionnel inspiré de [Diagnocat.com](https://diagnocat.com/en).
-
-**Design System Implémenté** :
-- **Palette de couleurs** : Violet principal (#4A39C0), Rose accent (#FF3254), Fond violet clair (#F9F8FF)
-- **Typographie** : Inter (corps), Playfair Display (titres), hiérarchie typographique professionnelle
-- **Espacements** : 60-100px verticaux, 24-40px padding cards, 24px border-radius
-- **Animations** : fadeIn, float, shimmer, hover effects (+8px translateY)
-- **Composants** : Cards stylées, badges pill, gradients violet-rose, listes à coches
-
-**Fichiers créés** :
-- `.streamlit/style.css` (1 121 lignes) — CSS complet avec variables, animations, composants
-- `utils/ui_helpers.py` (220 lignes) — 9 helpers réutilisables (sojai_card, metric_card, gradient_text, section_header, etc.)
-- `pages/4_📖_Guide.py` (450 lignes) — Page de documentation complète avec tutoriels, FAQ, workflow recommandé
-
-**Pages refactorisées** :
-- ✅ `streamlit_app.py` — Page d'accueil avec hero section, métriques stylées, navigation cards
-- ✅ `pages/1_📊_Dashboard.py` — Graphiques avec palette SOJAI, métriques stylées, logs élégants
-- ✅ `pages/2_📋_Fiches.py` — Badges de statut, indicateurs de tension, cards élégantes, sélecteurs variantes
-- ✅ `pages/3_🔧_Actions.py` — Onglets stylés + **NOUVEAU tab "🆕 Créer une fiche"**
-- ✅ `pages/4_📖_Guide.py` — **NOUVELLE page** documentation complète
-
-**Commits** :
-- `e83cf5f` — Ajout design system SOJAI + Page Guide
-- `b39dcb4` — Dashboard + Fiches refactorisés
-- `c03a4f6` — Actions + Page d'accueil + finalisations
-
-**Résultat** : Interface 100% professionnelle, fluide et cohérente visuellement.
-
-### ✅ Backend API Déployé sur Render.com (3 fév. 2026)
-
-Déploiement réussi du backend FastAPI en production sur Render.com après plusieurs tentatives infructueuses (Fly.io bloqué, Railway avec problèmes de cache).
-
-**Configuration finale** :
-- **Plateforme** : Render.com
-- **Région** : Frankfurt (EU Central)
-- **URL Production** : https://agents-metiers.onrender.com
-- **Environment** : Docker (Dockerfile + docker-entrypoint.sh)
-- **Variables** : ANTHROPIC_API_KEY configurée
-- **Branch déployée** : `backend-api`
-
-**Endpoints fonctionnels** :
-- `/` — API root (version, docs link)
-- `/health` — Health check (retourne `{"status":"healthy"}`)
-- `/docs` — Documentation Swagger UI interactive
-- `/redoc` — Documentation ReDoc
-- `/api/fiches` — CRUD fiches métiers
-- `/api/variantes` — Gestion des variantes multilingues
-- `/api/stats` — Statistiques système
-- `/api/actions` — Actions (enrichissement, correction, publication, génération variantes)
-- `/api/export` — Export PDF/JSON
-
-**Problèmes résolus** :
-- Port dynamique géré via script `docker-entrypoint.sh` (utilise `$PORT` de Render)
-- Suppression des fichiers `railway.toml`, `railway.json`, `nixpacks.toml` qui overridaient le Dockerfile
-- Configuration Docker explicite au lieu des buildpacks Python auto-détectés
-
-**Performance** :
-- ✅ Build time : ~6-10 secondes (cache Docker)
-- ✅ Cold start : ~10-15 secondes
-- ✅ Latence EU : <100ms depuis la France
-
-**Coût** : Plan gratuit Render (750h/mois, suffisant pour 24/7)
-
-**Repository branche API** : https://github.com/jchvetzoff-lab/agents-metiers/tree/backend-api
-
-**Commits clés** :
-- `368a7af` — Remove railway config files to use Dockerfile ENTRYPOINT
-- `7855830` — Fix: Use entrypoint script for proper PORT variable handling
-- `226d8c9` — Force rebuild with Dockerfile
-
-### ✅ Données ROME Importées (27 janv. 2026)
-
-Import du référentiel ROME complet depuis data.gouv.fr (sept. 2025) :
-- **1 584 fiches métiers** avec noms masculin/féminin/épicène
-- **13 120 appellations** de métiers
-- **507 macro-compétences** (référence)
-- **15 354 savoirs** (référence)
-- **14 grands domaines**, **110 sous-domaines**
-- Script : `scripts/import_rome.py`
-- Source : https://www.data.gouv.fr/datasets/repertoire-operationnel-des-metiers-et-des-emplois-rome
-
-### ✅ Système de Variantes Multilingues (30 janv. 2026)
-
-Génération automatique de variantes adaptées pour chaque fiche métier :
-
-**Axes de variation** :
-- **5 langues** : FR, EN, ES, DE, IT
-- **3 tranches d'âge** : 11-15 ans, 15-18 ans, Adultes (18+)
-- **2 formats** : Standard, FALC (Facile À Lire et à Comprendre)
-- **3 genres** : Masculin, Féminin, Épicène
-
-**Capacités** :
-- Jusqu'à **90 variantes** par fiche (5×3×2×3)
-- Génération en **1 seul appel API** Claude (optimisé)
-- Adaptations intelligentes (diplômes par pays, vocabulaire par âge)
-- Respect strict des règles FALC (phrases <15 mots)
-
-**Architecture** :
-- Table `variantes_fiches` avec index composite unique
-- Repository : CRUD complet (save, get, count, delete)
-- Interface Streamlit : sélecteurs visuels + génération batch
-
-**Coût estimé** :
-- ~$0.002 par variante
-- ~$0.19 pour 90 variantes complètes d'une fiche
-- ~$0.08 pour 36 variantes (FR+EN, 3 âges, 2 formats, 3 genres)
-
-**Tests** :
-- ✅ Tests unitaires (CRUD, upsert, contrainte unique)
-- ✅ Test E2E (génération + sauvegarde + récupération)
-- ✅ Mode simulation fonctionnel
-
-Documentation : `VARIANTES_README.md`
-
-### ✅ Déploiement Streamlit Cloud (30 janv. 2026)
-
-Configuration complète pour déploiement automatique :
-
-**Fichiers de configuration** :
-- `.streamlit/config.toml` — Thème violet personnalisé
-- `.streamlit/secrets.toml.example` — Template pour clés API
-- `STREAMLIT_CLOUD_DEPLOY.md` — Guide complet de déploiement
-- `QUICKSTART.md` — 4 étapes essentielles
-
-**Déploiement automatique activé** :
-- ✅ Chaque `git push origin main` déclenche un redéploiement
-- ✅ Mise à jour en ~2-3 minutes
-- ✅ Repository GitHub : https://github.com/jchvetzoff-lab/agents-metiers
-
-**Guide rapide** :
-1. Créer compte sur https://streamlit.io/cloud
-2. Déployer depuis GitHub (`jchvetzoff-lab/agents-metiers`)
-3. Configurer secrets (ANTHROPIC_API_KEY)
-4. App en ligne !
-
-Documentation : `QUICKSTART.md` et `STREAMLIT_CLOUD_DEPLOY.md`
-
-### ✅ Export PDF des Fiches (30 janv. 2026)
-
-Génération automatique de fiches métiers au format PDF professionnel :
-
-**Caractéristiques** :
-- Design professionnel avec thème violet (#4A39C0)
-- En-tête et pied de page personnalisés
-- Mise en page structurée (sections, listes, métadonnées)
-- Support complet des variantes (langue, âge, format, genre)
-- Export direct depuis l'interface Streamlit
-
-**Fonctionnalités** :
-- **PDF Variante** : Génère le PDF de la variante sélectionnée
-  - Nom adapté selon langue et genre
-  - Contenu traduit et adapté au public cible
-  - Labels multilingues (FR, EN, ES, DE, IT)
-  - Informations de la variante (langue, public, format, genre)
-- **PDF Fiche Originale** : Génère le PDF de la fiche française complète
-  - Version adulte, standard, masculin
-  - Toutes les sections (description, compétences, salaires, perspectives)
-
-**Architecture** :
-- Module `utils/pdf_generator.py` avec fpdf2
-- Classe `FichePDF` pour mise en page cohérente
-- Encodage latin-1 pour compatibilité maximale
-- Génération à la volée (pas de stockage)
-
-**Interface Streamlit** :
-- Bouton "📥 Télécharger PDF" pour chaque variante
-- Bouton "📥 Télécharger PDF" pour la fiche originale
-- Nom de fichier structuré : `CODE_ROME_langue_age_format_genre.pdf`
-
-**Librairie** : fpdf2 (pure Python, sans dépendances système)
-
-### ⏸️ En Attente de Credentials
-
-- **France Travail API** : francetravail.io inaccessible
-  - Alternative : https://api.gouv.fr/producteurs/france-travail
-  - Nécessaire pour : AgentVeilleSalaires, AgentVeilleMetiers
-- **INSEE API** : Non configuré
-  - Nécessaire pour : Données salariales nationales
-
-### 🔧 Configuration Actuelle
-
-```bash
-# Fichier .env (créé et configuré)
-ANTHROPIC_API_KEY=sk-ant-xxx  # ✅ Configuré
-FRANCE_TRAVAIL_CLIENT_ID=     # ❌ À obtenir
-FRANCE_TRAVAIL_CLIENT_SECRET= # ❌ À obtenir
-INSEE_API_KEY=                # ❌ À obtenir
-```
+**Repository** : https://github.com/jchvetzoff-lab/agents-metiers
+**Branche principale** : `main`
 
 ---
 
-## ✅ Fonctionnalités Majeures Terminées
+## 2. Stack Technique
 
-### 1. ✅ Interface Streamlit (Terminée - 29 janv. 2026)
-Interface web complète avec :
-- **Dashboard** : Graphiques camembert statuts, barres tendances, jauge progression, top 10 tension
-- **Fiches** : Tableau paginé, recherche textuelle, filtres par statut, vue détail complète
-- **Actions** : Enrichissement batch, correction, publication en 1 clic
-
-Lancer l'interface :
-```bash
-streamlit run streamlit_app.py
-```
-
-### 2. ✅ AgentRédacteurFiche (Terminé - 27 janv. 2026)
-Agent fonctionnel : enrichit les fiches ROME ou crée des fiches depuis un nom de métier.
-- `python main.py enrich <CODE_ROME>` — enrichir une fiche
-- `python main.py enrich-batch --batch-size 10` — enrichir un lot
-- `python main.py create-fiche "Prompt Engineer"` — créer de zéro
-
-### 3. ✅ Système de Variantes Multilingues (Terminé - 30 janv. 2026)
-Génération automatique de 90 variantes par fiche (5 langues × 3 âges × 2 formats × 3 genres).
-
-**Migration base de données** :
-```bash
-python scripts/migrate_add_variantes.py
-```
-
-**Via interface Streamlit** :
-- Page **Fiches** : Sélecteurs pour choisir la variante à afficher
-- Page **Actions** > Tab **Variantes** : Générer les variantes en batch
-
-**Tests** :
-```bash
-python tests/test_variantes.py        # Tests unitaires
-python tests/test_e2e_variantes.py    # Test de bout en bout
-```
-
-### 4. ✅ Déploiement Streamlit Cloud (Terminé - 30 janv. 2026)
-Configuration complète pour déploiement automatique.
-
-**Guide rapide** : Voir `QUICKSTART.md` (4 étapes, 15 minutes)
-**Guide complet** : Voir `STREAMLIT_CLOUD_DEPLOY.md`
-
-### 5. ✅ Export PDF des Fiches (Terminé - 30 janv. 2026)
-Téléchargement direct des fiches au format PDF professionnel.
-
-**Depuis l'interface Streamlit** :
-- Page **Fiches** > Sélectionner une fiche > Bouton "📥 Télécharger PDF"
-- Téléchargement de la **variante sélectionnée** (langue, âge, format, genre)
-- Téléchargement de la **fiche originale** (FR, adulte, standard, masculin)
-
-**Caractéristiques des PDFs** :
-- Design professionnel avec thème violet
-- Toutes les sections : description, compétences, formations, salaires, perspectives
-- En-tête et pied de page avec date de génération
-- Nom de fichier structuré : `CODE_ROME_langue_age_format_genre.pdf`
-
-**Module** : `utils/pdf_generator.py` (fpdf2, pure Python)
-
-### 6. ✅ Design System SOJAI (Terminé - 2 fév. 2026)
-Transformation complète de l'interface avec design professionnel inspiré de Diagnocat.
-
-**Implémentation** :
-- `.streamlit/style.css` — 1 121 lignes de CSS avec variables, animations, composants
-- `utils/ui_helpers.py` — 9 helpers réutilisables (sojai_card, metric_card, gradient_text, etc.)
-- `pages/4_📖_Guide.py` — Nouvelle page de documentation complète
-
-**Design System** :
-- **Couleurs** : Violet #4A39C0, Rose #FF3254, Fond violet clair #F9F8FF
-- **Typographie** : Inter (corps), Playfair Display (titres)
-- **Animations** : fadeIn, float, shimmer, hover effects
-- **Composants** : Cards (24px radius), badges pill (100px), gradients, listes à coches
-
-**Pages refactorisées** : Accueil, Dashboard, Fiches, Actions, Guide (5 pages)
-
-**Lancer l'interface** :
-```bash
-streamlit run streamlit_app.py
-```
+| Couche | Technologies |
+|--------|-------------|
+| **Frontend** | Next.js 16.1.5 (Turbopack), React 19, TypeScript 5.7, Tailwind CSS 3.4, Recharts, Framer Motion, jsPDF |
+| **Backend** | FastAPI, Python 3.14, SQLAlchemy, Pydantic |
+| **Base de données** | SQLite (dev local), PostgreSQL (production Render) |
+| **IA** | Claude API (Anthropic) — modèle `claude-sonnet-4-20250514` |
+| **APIs externes** | France Travail (Offres + IMT), La Bonne Alternance, INSEE, DARES, ROME data.gouv.fr |
+| **Tests** | Jest 30 (52 tests frontend), pytest (66 tests backend) — 118 tests total |
+| **CI** | GitHub Actions (4 jobs : backend-tests, frontend-tests, frontend-build, python-lint) |
+| **Déploiement** | Backend : Render.com (Docker) / Frontend : Netlify (auto-deploy) |
 
 ---
 
-## 🚧 Migration Next.js Planifiée (Février 2026)
-
-**Objectif** : Transformer l'interface Streamlit en application web Next.js professionnelle pour remplacer l'aspect "cheap" de Streamlit.
-
-### Architecture Proposée
-
-**Frontend** : Next.js 15 + React 19 + TypeScript
-- Framework : Next.js avec App Router
-- Styling : Tailwind CSS 4 (design system SOJAI déjà prêt)
-- Animations : Framer Motion + GSAP
-- Graphiques : Recharts ou Plotly.js
-- État : Zustand (si nécessaire)
-
-**Backend** : FastAPI (Python)
-- API REST pour exposer la base de données SQLite
-- Endpoints : `/api/fiches`, `/api/stats`, `/api/enrichir`, `/api/variantes`
-- Conservation de tous les agents existants (aucune modification)
-- Migration simple du code existant
-
-**Avantages vs Streamlit** :
-- ✅ Design 100% personnalisable, professionnel
-- ✅ Animations fluides (Framer Motion, transitions)
-- ✅ Navigation SPA instantanée (pas de rechargements)
-- ✅ UX moderne et interactive
-- ✅ SEO optimisé (SSR)
-- ✅ Déploiement gratuit sur Vercel (auto-deploy)
-
-**Structure planifiée** :
-```
-agents-metiers-web/
-├── frontend/              # Next.js app
-│   ├── src/
-│   │   ├── app/          # Pages (dashboard, fiches, actions, guide)
-│   │   ├── components/   # Composants React réutilisables
-│   │   ├── lib/          # API client, utils
-│   │   └── styles/       # Tailwind + design system SOJAI
-│   └── package.json
-│
-└── backend/               # FastAPI (code Python actuel)
-    ├── main.py           # FastAPI app avec routes
-    ├── agents/           # Agents existants (inchangés)
-    ├── database/         # Repository existant
-    └── requirements.txt
-```
-
-**Durée estimée** : ~2 jours
-- Backend API (FastAPI) : 2-3h
-- Frontend Next.js (4 pages) : 1-2 jours
-- Tests + déploiement : 2-3h
-
-**Statut** : ⏳ En attente de validation utilisateur
-
----
-
-## À FAIRE (Prochaines Étapes)
-
-### 1. 🔗 Obtenir Credentials France Travail (Priorité Moyenne)
-Réessayer la création d'application sur https://francetravail.io :
-- URL de redirection : `https://localhost`
-- APIs à sélectionner : "API Offres d'emploi", "API ROME"
-
-### 2. 📊 Améliorations Futures (Priorité Basse)
-- **AgentAnalyseCompetences** : Compétences transférables entre métiers
-- **AgentScrapingOffres** : Scraper Indeed/LinkedIn pour salaires
-- **API REST (FastAPI)** : Exposer les fiches à d'autres apps
-- **Alertes email** : Notifier quand un métier évolue
-- **Base externe** : PostgreSQL via Supabase pour Streamlit Cloud
-
----
-
-## Stack Technique
-
-- **Langage** : Python 3.11+
-- **Base de données** : SQLite (via SQLAlchemy)
-- **Validation** : Pydantic
-- **CLI** : Click + Rich
-- **Interface Web** : Streamlit + Plotly
-- **HTTP** : httpx (async)
-- **Scraping** : BeautifulSoup
-- **Planification** : APScheduler
-- **IA** : API Claude (Anthropic)
-- **Export PDF** : fpdf2
-
-## Structure du Projet
+## 3. Structure du Projet
 
 ```
 agents-metiers/
-├── main.py                 # Point d'entrée CLI
-├── streamlit_app.py        # Interface web Streamlit (accueil)
-├── pages/                  # Pages Streamlit (design SOJAI)
-│   ├── 1_📊_Dashboard.py   # Stats et graphiques stylés
-│   ├── 2_📋_Fiches.py      # Tableau des fiches + recherche + sélecteurs variantes
-│   ├── 3_🔧_Actions.py     # Enrichissement, correction, publication, variantes + création
-│   └── 4_📖_Guide.py       # Guide complet d'utilisation (NOUVEAU - 2 fév. 2026)
-├── config.py               # Configuration globale
-├── requirements.txt        # Dépendances
-├── .env                    # Variables d'environnement (API keys)
-├── orchestrator/           # Coordination des agents
-├── agents/                 # Les 5 agents du système
-│   ├── base_agent.py
-│   ├── correcteur_langue.py   # ✅ Utilise Claude
-│   ├── redacteur_fiche.py     # ✅ Utilise Claude (enrichissement)
-│   ├── veille_salaires.py     # ⏸️ Attend France Travail
-│   ├── veille_metiers.py      # ⏸️ Attend France Travail
-│   └── generation_genre.py    # ✅ Utilise Claude
-├── database/               # Modèles et accès données
-├── sources/                # Clients APIs externes
-├── interface/              # CLI et validation
-├── logging_system/         # Journalisation
-├── scripts/
-│   ├── demo_data.py               # Créer données de test
-│   ├── import_rome.py             # Import référentiel ROME depuis XLSX
-│   └── migrate_add_variantes.py  # Migration : ajout table variantes
-├── tests/
-│   ├── test_variantes.py          # Tests unitaires variantes
-│   └── test_e2e_variantes.py      # Test de bout en bout variantes
+├── .env                          # Variables d'environnement (API keys)
+├── .github/workflows/ci.yml     # CI GitHub Actions
+├── .gitignore
+├── config.py                     # Configuration globale (DB, APIs, Veille, Logging)
+├── main.py                       # Point d'entrée CLI (Click)
+├── requirements.txt              # Dépendances Python (root)
+├── Dockerfile                    # Build production (Render)
+├── docker-entrypoint.sh          # Script entrypoint ($PORT dynamique)
+├── nixpacks.toml                 # Config nixpacks
+├── netlify.toml                  # Config Netlify
+│
+├── backend/                      # API FastAPI
+│   ├── main.py                   # App FastAPI + CORS + registration routers
+│   ├── deps.py                   # Dépendances injectées (repo, config)
+│   ├── requirements.txt          # Dépendances backend spécifiques
+│   └── routers/
+│       ├── auth.py               # Auth JWT (login, register, me)
+│       ├── fiches.py             # CRUD fiches + enrichissement + validation
+│       ├── actions.py            # Actions batch (publish-batch, auto-correct)
+│       ├── regional.py           # Données régionales + IMT + alternance
+│       ├── stats.py              # Statistiques globales
+│       └── veille.py             # Veille ROME (sync, changes, review)
+│
+├── frontend/                     # App Next.js
+│   ├── package.json              # Dépendances (next, react, recharts, framer-motion, jspdf)
+│   ├── next.config.ts
+│   ├── tailwind.config.ts
+│   ├── jest.config.ts
+│   ├── jest.setup.ts
+│   ├── app/
+│   │   ├── layout.tsx            # Layout racine
+│   │   ├── page.tsx              # Page d'accueil (hero, stats, navigation)
+│   │   ├── globals.css           # Styles globaux
+│   │   ├── error.tsx             # Error boundary global
+│   │   ├── global-error.tsx      # Global error
+│   │   ├── login/page.tsx        # Page de connexion
+│   │   ├── dashboard/page.tsx    # Dashboard (stats, graphiques)
+│   │   ├── fiches/page.tsx       # Liste des fiches (recherche, filtres, pagination)
+│   │   ├── fiches/[codeRome]/page.tsx      # ⭐ Page fiche détail (la plus grosse)
+│   │   ├── fiches/[codeRome]/carte/page.tsx # Carte des métiers (React Flow)
+│   │   ├── actions/page.tsx      # Actions (enrichir, valider, publier, variantes, veille)
+│   │   └── guide/page.tsx        # Guide d'utilisation
+│   ├── components/
+│   │   ├── AlternanceSection.tsx  # Section alternance (La Bonne Alternance)
+│   │   ├── AuthGuard.tsx         # Protection de routes auth
+│   │   ├── BackgroundAnimation.tsx
+│   │   ├── CareerMap.tsx         # Carte parcours métier (React Flow)
+│   │   ├── FicheHelpers.tsx      # Helpers fiche (PDF download, section components)
+│   │   ├── FormationPathway.tsx  # Parcours de formation
+│   │   ├── LayoutShell.tsx       # Shell layout
+│   │   ├── MetricCard.tsx        # Card métrique
+│   │   ├── Navbar.tsx            # Barre de navigation
+│   │   ├── OffresSection.tsx     # Section offres d'emploi
+│   │   ├── ProfileCharts.tsx     # Charts RIASEC radar + Compétences dimensions
+│   │   ├── RecrutementsSection.tsx # Section recrutements (graphe temporel)
+│   │   ├── ScrollToTop.tsx
+│   │   ├── SectionErrorBoundary.tsx # Error boundary par section
+│   │   ├── SectionHeader.tsx
+│   │   ├── StatsSection.tsx      # ⭐ Section statistiques (salaires, contrats, badges IMT)
+│   │   ├── StatusBadge.tsx       # Badge de statut
+│   │   ├── ValidationIAPanel.tsx  # Panel de validation IA
+│   │   ├── ValidationIASummary.tsx # Résumé validation IA
+│   │   ├── actions/              # Composants page Actions
+│   │   │   ├── SearchBar.tsx
+│   │   │   ├── TabBatchProcess.tsx
+│   │   │   ├── TabEnrichir.tsx
+│   │   │   ├── TabExporter.tsx
+│   │   │   ├── TabHistorique.tsx
+│   │   │   ├── TabMiseAJour.tsx
+│   │   │   ├── TabPublier.tsx
+│   │   │   ├── TabSynchronisation.tsx
+│   │   │   ├── TabValider.tsx
+│   │   │   ├── TabVariantes.tsx
+│   │   │   ├── TabVariantesExport.tsx
+│   │   │   ├── TabVeilleRome.tsx
+│   │   │   ├── VariantesCheckboxes.tsx
+│   │   │   └── WorkflowBar.tsx
+│   │   ├── fiches/               # Composants fiche détail
+│   │   │   ├── ChartHelpers.tsx
+│   │   │   ├── ListComponents.tsx
+│   │   │   ├── SectionAnchor.tsx
+│   │   │   ├── StatCard.tsx
+│   │   │   └── TensionGauge.tsx
+│   │   ├── motion/               # Animations Framer Motion
+│   │   │   ├── AnimatedCounter.tsx
+│   │   │   ├── FadeInView.tsx
+│   │   │   ├── PageTransition.tsx
+│   │   │   ├── StaggerContainer.tsx
+│   │   │   ├── TiltCard.tsx
+│   │   │   └── index.ts
+│   │   └── ui/                   # Composants UI génériques
+│   │       ├── BackgroundOrbs.tsx
+│   │       ├── EmptyState.tsx
+│   │       ├── FicheListItem.tsx
+│   │       ├── LoadingState.tsx
+│   │       ├── ResultBanner.tsx
+│   │       └── SectionCard.tsx
+│   ├── hooks/
+│   │   └── useSearchFiches.ts    # Hook recherche avec debounce
+│   ├── lib/
+│   │   ├── api.ts                # ⭐ Client API (types + ApiClient class)
+│   │   ├── auth.ts               # Token JWT (get/set/remove)
+│   │   ├── career-graph.ts       # Données graphe parcours
+│   │   ├── formation-levels.ts   # Niveaux de formation
+│   │   ├── generateFichePdf.ts   # Génération PDF via jsPDF
+│   │   └── translations.ts       # Traductions FR/EN (93KB)
+│   └── __tests__/
+│       ├── FicheHelpers.test.tsx
+│       ├── OffresSection.test.tsx
+│       ├── SectionErrorBoundary.test.tsx
+│       ├── StatusBadge.test.tsx
+│       ├── ValidationIASummary.test.tsx
+│       └── translations.test.ts
+│
+├── agents/                       # Agents IA (Claude API)
+│   ├── base_agent.py             # Classe de base des agents
+│   ├── redacteur_fiche.py        # ⭐ Rédaction/enrichissement de fiches
+│   ├── validateur_fiche.py       # Validation IA des fiches
+│   ├── correcteur_langue.py      # Correction orthographique
+│   ├── generation_genre.py       # Génération genrée (masc/fem/épicène)
+│   ├── veille_metiers.py         # Veille métiers (France Travail)
+│   └── veille_salaires.py        # Veille salariale (France Travail)
+│
+├── sources/                      # Clients APIs externes
+│   ├── __init__.py
+│   ├── france_travail.py         # ⭐ Client France Travail (Offres + IMT) — OAuth2
+│   ├── france_travail_rome.py    # Client ROME France Travail
+│   ├── la_bonne_alternance.py    # Client La Bonne Alternance (alternance)
+│   ├── dares_client.py           # Client DARES (données emploi)
+│   ├── insee_client.py           # Client INSEE
+│   └── rome_client.py            # Client ROME (data.gouv.fr)
+│
+├── database/
+│   ├── __init__.py
+│   ├── models.py                 # Modèles Pydantic/SQLAlchemy (FicheMetier, Variante, AuditLog, User)
+│   ├── repository.py             # Repository CRUD (get, save, search, variantes, audit)
+│   └── fiches_metiers.db         # Base SQLite locale (~2 Mo)
+│
+├── orchestrator/
+│   └── orchestrator.py           # Orchestrateur des agents
+│
+├── interface/
+│   ├── cli.py                    # Interface CLI (Click + Rich)
+│   └── validation.py             # Validation des données
+│
+├── scheduler/
+│   └── monthly_update.py         # Planificateur de mises à jour
+│
+├── logging_system/               # Système de journalisation
+│
 ├── utils/
-│   ├── __init__.py                # Exports module utilitaire
-│   ├── ui_helpers.py              # 9 helpers UI SOJAI (NOUVEAU - 2 fév. 2026)
-│   └── pdf_generator.py           # Génération PDF (fpdf2)
-├── .streamlit/
-│   ├── config.toml                # Configuration Streamlit (thème violet)
-│   ├── secrets.toml.example       # Template pour secrets
-│   └── style.css                  # Design system SOJAI complet (NOUVEAU - 2 fév. 2026)
-├── VARIANTES_README.md            # Documentation système variantes
-├── STREAMLIT_CLOUD_DEPLOY.md      # Guide complet déploiement Cloud
-├── QUICKSTART.md                  # Guide rapide déploiement (4 étapes)
+│   ├── ui_helpers.py             # Helpers UI Streamlit (design SOJAI)
+│   └── pdf_generator.py          # Générateur PDF (fpdf2)
+│
+├── scripts/                      # Scripts utilitaires
+│   ├── import_rome.py            # Import référentiel ROME depuis XLSX
+│   ├── create_test_fiches.py     # Créer des fiches de test
+│   ├── demo_data.py              # Données de démonstration
+│   ├── migrate_add_variantes.py  # Migration : table variantes
+│   ├── migrate_enriched_fields.py # Migration : champs enrichis
+│   ├── fix_permissions.py
+│   ├── start_scheduler.py
+│   └── test_*.py                 # Scripts de test manuels (ROME API)
+│
+├── tests/                        # Tests backend (pytest)
+│   ├── conftest.py               # Fixtures pytest (TestClient, DB en mémoire)
+│   ├── test_api_auth.py          # Tests auth (login, register, JWT)
+│   ├── test_api_fiches.py        # Tests CRUD fiches
+│   ├── test_api_actions.py       # Tests actions (enrich, publish, validate)
+│   ├── test_api_misc.py          # Tests misc (stats, regions, health)
+│   ├── test_variantes.py         # Tests unitaires variantes
+│   ├── test_e2e_variantes.py     # Test E2E variantes
+│   └── test_scheduler.py         # Tests scheduler
+│
 └── data/
-    ├── rome/               # Fichiers XLSX ROME (data.gouv.fr)
-    ├── fiches/             # Fiches exportées
-    └── rapports/           # Logs et rapports
+    ├── rome/                     # Fichiers XLSX ROME (data.gouv.fr sept. 2025)
+    ├── fiches/                   # Fiches exportées
+    └── rapports/                 # Logs et rapports
 ```
-
-## Commandes Disponibles
-
-```bash
-# Interface Web Streamlit
-streamlit run streamlit_app.py         # Lancer l'interface web (http://localhost:8501)
-
-# Initialisation
-python main.py init                    # Créer la base de données
-python scripts/demo_data.py            # Créer 8 fiches de test
-
-# Gestion des fiches
-python main.py list                    # Lister les fiches
-python main.py list --statut publiee   # Filtrer par statut
-python main.py show <CODE_ROME>        # Afficher une fiche (ex: M1805)
-python main.py search "mot-clé"        # Rechercher
-
-# Enrichissement avec Claude
-python main.py enrich <CODE_ROME>      # Enrichir 1 fiche (description, compétences, salaires)
-python main.py enrich-batch            # Enrichir un lot de fiches brouillon (--batch-size 5)
-python main.py create-fiche "Prompt Engineer"  # Créer une fiche complète depuis un nom
-
-# Correction avec Claude
-python main.py check <CODE_ROME>       # Corriger + générer genre (1 fiche)
-python main.py check-all               # Traiter toutes les fiches
-
-# Publication
-python main.py publish <CODE_ROME>     # Publier 1 fiche
-python main.py publish-all             # Publier toutes les fiches
-
-# Administration
-python main.py stats                   # Statistiques
-python main.py export -o ./export      # Exporter en JSON
-
-# Veille (quand credentials dispo)
-python main.py veille                  # Veille complète
-python main.py veille --type salaires  # Veille salariale
-python main.py veille --type metiers   # Veille métiers
-python main.py import-rome             # Importer référentiel ROME
-
-# Variantes (nouveau - 30 janv. 2026)
-python scripts/migrate_add_variantes.py  # Migration : créer table variantes
-python tests/test_variantes.py           # Tests unitaires variantes
-python tests/test_e2e_variantes.py       # Test E2E : génération + sauvegarde
-
-# Utiliser l'interface Streamlit pour générer les variantes :
-# → Page "Actions" > Tab "Variantes"
-```
-
-## Données Actuelles
-
-- **1 584 fiches ROME** importées depuis data.gouv.fr (sept. 2025)
-- Toutes en statut `brouillon` — nécessitent enrichissement par AgentRédacteurFiche
-- Données XLSX dans `data/rome/` (arborescence principale, compétences, savoirs)
-
-## Coût Estimé API Claude
-
-### Enrichissement de fiches
-
-| Usage | Coût/mois |
-|-------|-----------|
-| Test léger (10-20 fiches) | < $0.50 |
-| Usage normal (50-100 fiches) | $1-2 |
-| Usage intensif (500+ fiches) | $5-10 |
-
-### Génération de variantes
-
-| Scénario | Variantes/fiche | Coût/fiche | 100 fiches |
-|----------|-----------------|------------|------------|
-| Complètes (90) | 5 lang × 3 âges × 2 fmt × 3 genres | ~$0.19 | ~$19 |
-| FR + EN (36) | 2 lang × 3 âges × 2 fmt × 3 genres | ~$0.08 | ~$8 |
-| FR uniquement (18) | 1 lang × 3 âges × 2 fmt × 3 genres | ~$0.05 | ~$5 |
-| Minimaliste (6) | FR × adulte × std+FALC × 3 genres | ~$0.02 | ~$2 |
-
-**Recommandation** : FR + EN pour ~$8 par 100 fiches
 
 ---
 
-## Pour Reprendre le Développement
+## 4. Endpoints API Backend
 
-1. Ouvrir VSCode : `code agents-metiers`
-2. Terminal : `Ctrl + ù`
-3. Tester : `python main.py stats`
+### Auth (`/api/auth/`)
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| POST | `/api/auth/login` | Connexion (email + password → JWT) |
+| POST | `/api/auth/register` | Inscription |
+| GET | `/api/auth/me` | Utilisateur courant (Bearer token) |
 
-### Prochaines actions recommandées :
+### Fiches (`/api/fiches/`)
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| GET | `/api/fiches` | Liste fiches (pagination, search, filtre statut) |
+| GET | `/api/fiches/autocomplete?q=` | Autocomplete recherche |
+| GET | `/api/fiches/{code_rome}` | Détail d'une fiche |
+| POST | `/api/fiches` | Créer une fiche |
+| PATCH | `/api/fiches/{code_rome}` | Modifier une fiche |
+| DELETE | `/api/fiches/{code_rome}` | Supprimer une fiche |
+| POST | `/api/fiches/{code_rome}/enrich` | Enrichir via Claude IA |
+| POST | `/api/fiches/{code_rome}/publish` | Publier une fiche |
+| POST | `/api/fiches/publish-batch` | Publier en lot |
+| POST | `/api/fiches/{code_rome}/validate` | Validation IA |
+| POST | `/api/fiches/{code_rome}/review` | Review humaine |
+| POST | `/api/fiches/{code_rome}/auto-correct` | Auto-correction IA |
+| GET | `/api/fiches/{code_rome}/variantes` | Liste variantes |
+| GET | `/api/fiches/{code_rome}/variantes/{id}` | Détail variante |
+| POST | `/api/fiches/{code_rome}/variantes/generate` | Générer variantes |
 
-**Option 1 : Utilisation locale**
+### Données Régionales & Marché (`/api/`)
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| GET | `/api/regions` | Liste des 18 régions françaises |
+| GET | `/api/fiches/{code_rome}/regional?region=` | Données régionales (salaires, contrats, tension) |
+| GET | `/api/fiches/{code_rome}/recrutements` | Historique recrutements (12 mois) |
+| GET | `/api/fiches/{code_rome}/offres` | Offres d'emploi France Travail |
+| GET | `/api/fiches/{code_rome}/imt-stats` | Stats IMT (salaires + contrats réels) |
+| GET | `/api/fiches/{code_rome}/alternance` | Données alternance (La Bonne Alternance) |
+
+### Veille ROME (`/api/veille/`)
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| POST | `/api/veille/rome` | Lancer veille ROME |
+| GET | `/api/veille/rome/changes` | Liste des changements détectés |
+| POST | `/api/veille/rome/changes/{id}/review` | Reviewer un changement |
+| GET | `/api/veille/rome/status` | Statut de la veille |
+
+### Stats & Logs
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| GET | `/api/stats` | Statistiques globales |
+| GET | `/api/audit-logs` | Logs d'audit (filtrables) |
+
+---
+
+## 5. Sources de Données Externes
+
+### France Travail (OAuth2) — `sources/france_travail.py`
+- **Auth** : OAuth2 client_credentials, tokens par scope (`api_offresdemploiv2`, `api_infotravailv1`)
+- **Format scope** : `application_{client_id} {scope}`
+- **Offres d'emploi** : `GET /offresdemploi/v2/offres/search` (par code ROME, région)
+- **IMT (Infotravail)** : Découverte de ressources via `organization_show` → `package_show` → `datastore_search`
+- **Fallback 3 niveaux** : IMT datastore → analyse offres réelles → estimation IA
+- **Salaires depuis offres** : Extraction quartiles depuis `salaire.libelle` des offres
+- **Contrats depuis offres** : Comptage CDI/CDD/MIS dans les résultats
+
+### La Bonne Alternance — `sources/la_bonne_alternance.py`
+- **API publique** : `https://labonnealternance.apprentissage.beta.gouv.fr/api`
+- **Endpoint** : `GET /v1/jobsEtFormations`
+- **Params** : `caller`, `romes`, `latitude`, `longitude`, `radius`
+- **Retourne** : formations, offres alternance, entreprises accueillantes, niveaux diplômes
+- **Coordonnées par défaut** : Paris (48.8566, 2.3522), rayon 100km
+
+### Autres sources
+- **ROME data.gouv.fr** — `sources/rome_client.py` : Référentiel ROME complet (1584 fiches)
+- **DARES** — `sources/dares_client.py` : Données emploi/marché du travail
+- **INSEE** — `sources/insee_client.py` : Données salariales nationales
+
+---
+
+## 6. Agents IA
+
+| Agent | Fichier | Rôle | API |
+|-------|---------|------|-----|
+| **RedacteurFiche** | `agents/redacteur_fiche.py` | Enrichir une fiche ROME avec tous les champs | Claude |
+| **ValidateurFiche** | `agents/validateur_fiche.py` | Valider la qualité d'une fiche (score, critères) | Claude |
+| **CorrecteurLangue** | `agents/correcteur_langue.py` | Corriger orthographe/grammaire | Claude |
+| **GenerationGenre** | `agents/generation_genre.py` | Générer variantes genrées (masc/fem/épicène) | Claude |
+| **VeilleMetiers** | `agents/veille_metiers.py` | Surveiller évolutions métiers | France Travail |
+| **VeilleSalaires** | `agents/veille_salaires.py` | Surveiller évolutions salaires | France Travail |
+
+---
+
+## 7. Modèle de Données
+
+### Fiche Métier (table `fiches_metiers`)
+Champs principaux :
+- **Identité** : `code_rome`, `nom_masculin`, `nom_feminin`, `nom_epicene`, `autres_appellations`
+- **Contenu** : `description`, `description_courte`, `missions_principales`, `acces_metier`
+- **Compétences** : `competences`, `competences_transversales`, `savoirs`, `traits_personnalite`, `aptitudes`
+- **Profil** : `profil_riasec` (6 axes 0-1), `competences_dimensions` (7+ axes), `preferences_interets`
+- **Formation** : `formations`, `certifications`, `niveau_formation`
+- **Marché** : `salaires` (junior/confirmé/senior), `perspectives` (tension, tendance, offres), `types_contrats`
+- **Contexte** : `conditions_travail`, `conditions_travail_detaillees`, `environnements`, `secteurs_activite`, `statuts_professionnels`
+- **Mobilité** : `mobilite` (métiers_proches + évolutions)
+- **Validation** : `validation_ia_score`, `validation_ia_date`, `validation_ia_details`
+- **Méta** : `statut`, `version`, `date_creation`, `date_maj`, `score_completude`, `domaine_professionnel`, `sites_utiles`
+
+### Statuts d'une fiche
+```
+brouillon → enrichi → valide → publiee
+```
+
+### Variante (table `variantes_fiches`)
+- 5 langues (FR, EN, ES, DE, IT) × 3 tranches d'âge (11-15, 15-18, 18+) × 2 formats (standard, FALC) × 3 genres = **90 variantes max/fiche**
+- Index composite unique : `(code_rome, langue, tranche_age, format_contenu, genre)`
+
+### User (table `users`)
+- `id`, `email`, `name`, `password_hash`, `created_at`
+- Auth JWT (python-jose)
+
+### AuditLog (table `audit_logs`)
+- Trace toutes les actions (création, enrichissement, validation, publication, etc.)
+
+---
+
+## 8. Frontend — Pages
+
+| Route | Fichier | Description |
+|-------|---------|-------------|
+| `/` | `app/page.tsx` | Accueil (hero, stats animées, navigation) |
+| `/login` | `app/login/page.tsx` | Connexion |
+| `/dashboard` | `app/dashboard/page.tsx` | Dashboard (graphiques stats, répartition) |
+| `/fiches` | `app/fiches/page.tsx` | Liste fiches (recherche, filtres, pagination) |
+| `/fiches/[codeRome]` | `app/fiches/[codeRome]/page.tsx` | ⭐ Fiche détail complète |
+| `/fiches/[codeRome]/carte` | `app/fiches/[codeRome]/carte/page.tsx` | Carte parcours métier (React Flow) |
+| `/actions` | `app/actions/page.tsx` | Actions (tabs enrichir/valider/publier/variantes/veille) |
+| `/guide` | `app/guide/page.tsx` | Guide d'utilisation |
+
+### Page Fiche Détail (`/fiches/[codeRome]`)
+La plus grosse page de l'app. Sections :
+1. **En-tête** : Nom, statut, score complétude, domaine, autres appellations
+2. **Sidebar sticky** : Navigation scroll spy vers toutes les sections
+3. **StatsSection** : Salaires (BarChart), contrats (PieChart), tension — avec badges source (Régional / France Travail / IA)
+4. **RecrutementsSection** : Graphe recrutements 12 mois
+5. **OffresSection** : Liste offres d'emploi réelles
+6. **AlternanceSection** : Formations, offres alternance, répartition diplômes (PieChart)
+7. **Compétences** : 3 tabs (compétences, savoirs, transversales) + ProfileCharts (RIASEC radar, dimensions)
+8. **Contexte** : Conditions travail, environnements, secteurs
+9. **Mobilité** : Métiers proches, évolutions possibles (liens croisés)
+10. **Validation IA** : Score, critères, problèmes, suggestions
+
+### Chaîne de priorité des données
+```
+Données régionales (France Travail offres) > IMT réel (France Travail Infotravail) > Estimation IA
+```
+Badges verts "France Travail" quand les données viennent de l'IMT réel.
+
+---
+
+## 9. Tests
+
+### Backend (66 tests — pytest)
+| Fichier | Tests |
+|---------|-------|
+| `tests/test_api_auth.py` | Auth JWT (login, register, token, me) |
+| `tests/test_api_fiches.py` | CRUD fiches (list, detail, create, update, delete) |
+| `tests/test_api_actions.py` | Actions (enrich, publish, validate, auto-correct) |
+| `tests/test_api_misc.py` | Stats, régions, health, audit logs |
+| `tests/test_variantes.py` | Variantes CRUD |
+| `tests/test_e2e_variantes.py` | E2E variantes |
+| `tests/test_scheduler.py` | Scheduler |
+
+### Frontend (52 tests — Jest 30)
+| Fichier | Tests |
+|---------|-------|
+| `__tests__/FicheHelpers.test.tsx` | Helpers fiche |
+| `__tests__/OffresSection.test.tsx` | Section offres |
+| `__tests__/SectionErrorBoundary.test.tsx` | Error boundaries |
+| `__tests__/StatusBadge.test.tsx` | Badge statut |
+| `__tests__/ValidationIASummary.test.tsx` | Résumé validation |
+| `__tests__/translations.test.ts` | Traductions |
+
+### Commandes
 ```bash
-# 1. Migrer la base de données pour ajouter les variantes
+# Backend
+cd /Users/jeremie/Desktop/Projets/agents-metiers
+source venv/bin/activate
+python -m pytest tests/ -v
+
+# Frontend
+cd frontend
+npx jest
+
+# Build
+cd frontend
+npx next build
+```
+
+---
+
+## 10. Configuration & Environnement
+
+### Variables d'environnement (.env)
+```bash
+ANTHROPIC_API_KEY=sk-ant-...              # API Claude (enrichissement IA)
+FRANCE_TRAVAIL_CLIENT_ID=PAR_...          # OAuth2 France Travail
+FRANCE_TRAVAIL_CLIENT_SECRET=bdc6...      # OAuth2 France Travail
+AUTH_EMAIL=admin@agents-metiers.fr        # Auth admin
+AUTH_PASSWORD=enrichment2026              # Auth admin
+DATABASE_URL=                             # PostgreSQL (prod seulement)
+JWT_SECRET=                               # Secret JWT (prod)
+NEXT_PUBLIC_API_URL=                      # URL backend pour le frontend
+```
+
+### France Travail OAuth2
+- **Portal** : https://francetravail.io
+- **Scopes nécessaires** : `api_offresdemploiv2`, `api_infotravailv1`
+- Le scope IMT (`api_infotravailv1`) doit être activé manuellement sur le portail développeur
+
+### Config Python (`config.py`)
+- `DatabaseConfig` : SQLite local / PostgreSQL prod (auto-detect via DATABASE_URL)
+- `APIConfig` : Clés APIs, modèle Claude, timeouts, retries
+- `VeilleConfig` : Fréquences de veille, seuils tension, batch size
+- `LoggingConfig` : Niveaux, format, rotation fichiers
+
+---
+
+## 11. Déploiement
+
+### Production actuelle
+
+| Service | Plateforme | URL | Config |
+|---------|-----------|-----|--------|
+| **Backend** | Render.com | https://agents-metiers.onrender.com | Docker, PostgreSQL, plan gratuit |
+| **Frontend** | Netlify | Auto-deploy depuis `main` | NEXT_PUBLIC_API_URL configuré |
+| **Frontend (alt)** | Vercel | https://frontend-seven-neon-32.vercel.app | — |
+
+### Branches Git
+| Branche | Usage |
+|---------|-------|
+| `main` | Production (déploie auto backend + frontend) |
+| `backend-api` | Backend standalone (Render) |
+| `frontend-nextjs` | Archive ancien frontend |
+
+### Docker (Backend)
+```bash
+# docker-entrypoint.sh utilise $PORT de Render
+uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+```
+
+### CORS autorisés
+- `https://frontend-seven-neon-32.vercel.app`
+- `https://agents-metiersjae.fr`
+- `https://www.agents-metiersjae.fr`
+- `http://localhost:3000` (dev seulement)
+
+---
+
+## 12. Commandes de Développement
+
+```bash
+# === BACKEND ===
+cd /Users/jeremie/Desktop/Projets/agents-metiers
+source venv/bin/activate
+
+# Lancer le backend
+uvicorn backend.main:app --reload --port 8000
+
+# Tests backend
+python -m pytest tests/ -v
+python -m pytest tests/test_api_fiches.py -v  # Spécifique
+
+# CLI (Streamlit legacy)
+python main.py stats
+python main.py enrich M1805
+python main.py enrich-batch --batch-size 10
+
+# === FRONTEND ===
+cd frontend
+
+# Dev
+npm run dev                    # http://localhost:3000 (Turbopack)
+
+# Build
+npm run build
+
+# Tests
+npm test                       # Jest (52 tests)
+npm run test:watch             # Mode watch
+npm run test:ci                # CI + coverage
+
+# === BASE DE DONNÉES ===
+# Migration variantes
 python scripts/migrate_add_variantes.py
 
-# 2. Lancer l'interface Streamlit
-streamlit run streamlit_app.py
+# Migration champs enrichis
+python scripts/migrate_enriched_fields.py
 
-# 3. Enrichir des fiches (page Actions > Enrichissement)
-# 4. Générer des variantes (page Actions > Variantes)
-# 5. Consulter les variantes (page Fiches > sélecteurs)
+# Import ROME
+python scripts/import_rome.py
+
+# Données de test
+python scripts/demo_data.py
 ```
 
-**Option 2 : Déploiement Streamlit Cloud**
+---
+
+## 13. Données
+
+- **1 584 fiches ROME** importées depuis data.gouv.fr (sept. 2025)
+- Source XLSX dans `data/rome/`
+- Base SQLite locale : `database/fiches_metiers.db` (~2 Mo)
+- Production : PostgreSQL sur Render
+
+---
+
+## 14. Historique des Évolutions Majeures
+
+| Date | Évolution |
+|------|-----------|
+| 26 janv. 2026 | Création projet, agents IA, CLI, import ROME |
+| 29 janv. 2026 | Interface Streamlit complète |
+| 30 janv. 2026 | Variantes multilingues (90/fiche), export PDF, déploiement Streamlit Cloud |
+| 2 fév. 2026 | Design System SOJAI (palette violet/rose, animations) |
+| 3 fév. 2026 | Backend FastAPI déployé sur Render.com (Docker, PostgreSQL) |
+| 7 fév. 2026 | Frontend Next.js (Netlify), page fiche détail style MetierScope |
+| Fév. 2026 | Sécurité (auth JWT, CORS, SQL injection), 118 tests, CI GitHub Actions |
+| 24 fév. 2026 | Données régionales France Travail (offres, salaires, contrats par région) |
+| 25 fév. 2026 | ⭐ Intégration IMT réel (France Travail Infotravail) + La Bonne Alternance |
+
+---
+
+## 15. Points d'Attention
+
+### Credentials France Travail
+- Le scope `api_infotravailv1` doit être activé sur https://francetravail.io pour que les stats IMT réelles fonctionnent
+- Sans ce scope, les données retombent sur l'analyse des offres réelles puis sur les estimations IA
+
+### Cold Start Render
+- Le plan gratuit Render met en veille après 15 min d'inactivité
+- Cold start = 30-60 secondes
+- Le frontend gère ça avec retry automatique (3 tentatives, timeout 60s GET)
+
+### Python 3.14
+- Le venv local utilise Python 3.14 (`/Users/jeremie/Desktop/Projets/agents-metiers/venv`)
+- `pydantic-core` ne se build pas avec les pins stricts → installer `fastapi uvicorn python-multipart python-jose` sans pins
+
+### Venv
 ```bash
-# Suivre le guide rapide
-cat QUICKSTART.md
-
-# Ou le guide complet
-cat STREAMLIT_CLOUD_DEPLOY.md
+# Si le venv est cassé, recréer :
+cd /Users/jeremie/Desktop/Projets/agents-metiers
+rm -rf venv
+python3.14 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+pip install fastapi uvicorn python-multipart python-jose
 ```
-
-**Note Windows** : Préfixer avec `PYTHONIOENCODING=utf-8` si erreur d'encodage
-
----
-
-## 📊 Cycle de Mise à Jour des Dates
-
-Chaque fiche possède 2 dates :
-- **`date_creation`** : Définie à la création, ne change jamais
-- **`date_maj`** : Mise à jour automatiquement à chaque modification
-
-### Déclencheurs de `date_maj`
-
-| Action | Agent/Composant | Mise à jour automatique |
-|--------|----------------|-------------------------|
-| Création | AgentRedacteurFiche | ✅ `date_creation` + `date_maj` |
-| Enrichissement | AgentRedacteurFiche | ✅ `date_maj` + `version++` |
-| Correction | AgentCorrecteurLangue | ✅ `date_maj` + `version++` |
-| Génération genre | AgentGenerationGenre | ✅ `date_maj` + `version++` |
-| Publication | Interface Streamlit | ✅ `date_maj` + `statut` |
-| Mise à jour variante | Repository.save_variante() | ✅ `date_maj` + `version++` |
-
-**Mécanisme** : SQLAlchemy `onupdate=datetime.now` + mise à jour manuelle dans `repository.py`
-
----
-
-## 🚀 État du Projet (7 fév. 2026)
-
-**Système complet et opérationnel** :
-- ✅ 1 584 fiches ROME importées (146 enrichies, 1 438 brouillons)
-- ✅ Interface Streamlit complète (Dashboard, Fiches, Actions, Guide)
-- ✅ **Design System SOJAI** appliqué sur toutes les pages (2 fév. 2026)
-- ✅ **Backend API FastAPI déployé sur Render.com** (3 fév. 2026)
-  - URL Production : https://agents-metiers.onrender.com
-  - Documentation : https://agents-metiers.onrender.com/docs
-  - PostgreSQL (données persistantes)
-- ✅ **Frontend Next.js déployé sur Netlify** (7 fév. 2026) 🆕
-  - Auto-deploy depuis branche `main`
-  - Variable : `NEXT_PUBLIC_API_URL=https://agents-metiers.onrender.com`
-- ✅ **Page fiche détail style MetierScope** (7 fév. 2026) 🆕
-  - Sidebar sticky avec scroll spy
-  - 6 sections : Infos clés, Statistiques, Compétences (3 tabs), Contextes, Services, Métiers proches
-  - Charts Recharts (BarChart salaires, PieChart contrats), jauge tension
-- ✅ **Backend enrichi** avec champs MetierScope (7 fév. 2026) 🆕
-  - Nouveaux champs : `missions_principales`, `savoirs`, `acces_metier`, `types_contrats`, `mobilite`
-  - Auto-migration PostgreSQL (ALTER TABLE au démarrage)
-  - Prompt enrichissement réécrit (style MetierScope)
-- ✅ **Bouton PDF sur chaque fiche** (jsPDF natif) 🆕 — à améliorer
-- ✅ Enrichissement automatique via Claude API
-- ✅ Système de variantes multilingues (90 variantes/fiche)
-- ✅ Export PDF professionnel (Streamlit)
-- ✅ Tests unitaires et E2E passants
-
-**Architecture déployée** :
-- Backend API : Render.com (https://agents-metiers.onrender.com) — plan gratuit, cold start ~30-60s
-- Frontend : Netlify (auto-deploy depuis `main`)
-- Base de données : PostgreSQL sur Render
-
-**Repository GitHub** : https://github.com/jchvetzoff-lab/agents-metiers
-
----
-
-## 🎯 Prochaines Étapes
-
-### 1. 🔴 Corriger le PDF des fiches (PRIORITÉ IMMÉDIATE)
-
-Le PDF généré via jsPDF natif n'est pas encore satisfaisant. C'est la première chose à faire à la prochaine session.
-
-**Problèmes actuels :**
-- Rendu pas assez professionnel / pas assez "joli"
-- Proportions et mise en page à affiner
-- Doit ressembler fidèlement à la fiche web
-
-**Contexte technique :**
-- Fichier : `frontend/app/fiches/[codeRome]/page.tsx` (fonction `handleDownloadPdf`)
-- Librairie : `jspdf` (texte natif, ~100KB de sortie)
-- Approche html2canvas abandonnée (20MB+, texte non sélectionnable, coupures entre pages)
-- Le PDF actuel a : bandeau violet titre, tableau salaires, barre contrats, listes numérotées/bullets, stat cards, page breaks
-- Il faut améliorer : hiérarchie visuelle, espacement, tailles de police, esthétique générale
-
-### 2. ⏳ Enrichir les 1 438 fiches restantes
-
-- Script : `scripts/enrich_batch.py --yes` (branche `backend-api`)
-- Coût estimé : ~$21 pour toutes les fiches
-- Le prompt génère tous les champs MetierScope
-
-### 3. ⏳ Améliorations futures
-
-- Générer variantes multilingues
-- Données temps réel (offres France Travail)
-- Améliorer le design global du frontend
-- Domaine custom
-
----
-
-## 📝 Notes de Déploiement
-
-**Render.com (Backend)** :
-- Plan gratuit : 750h/mois
-- Cold start après 15 min d'inactivité (~30-60s)
-- Pour éviter : plan Starter ($7/mois)
-
-**Netlify (Frontend)** :
-- Plan gratuit, auto-deploy depuis GitHub branche `main`
-- Pas de cold start
-
-**Coûts estimés** :
-- Backend Render (gratuit) : $0/mois
-- Frontend Netlify (gratuit) : $0/mois
-- API Claude (usage) : ~$5-20/mois selon utilisation
-- **Total : ~$5-20/mois**
