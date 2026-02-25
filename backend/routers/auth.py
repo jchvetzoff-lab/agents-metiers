@@ -46,10 +46,12 @@ def _validate_password(password: str) -> None:
 
 
 def _get_client_ip(request: Request) -> str:
-    """Extract client IP from request (handles proxies)."""
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
+    """Extract client IP from request.
+
+    Uses the actual TCP connection IP (request.client.host) to prevent
+    X-Forwarded-For spoofing. When behind a trusted reverse proxy,
+    configure uvicorn --forwarded-allow-ips to handle this correctly.
+    """
     return request.client.host if request.client else "unknown"
 
 
@@ -87,7 +89,7 @@ async def login(req: LoginRequest, request: Request):
             "email": user["email"],
             "name": user["name"],
             "iat": int(time.time()),
-            "exp": int(time.time()) + 86400 * 7,  # 7 days
+            "exp": int(time.time()) + 86400,  # 24 hours
         })
 
         return {

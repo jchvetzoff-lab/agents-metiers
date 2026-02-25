@@ -7,9 +7,9 @@ import unicodedata
 from datetime import datetime
 from typing import Optional, List
 from fastapi import APIRouter, HTTPException, Query, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
-from ..deps import repo
+from ..deps import repo, validate_code_rome
 from ..auth_middleware import get_current_user
 
 logger = logging.getLogger(__name__)
@@ -48,27 +48,27 @@ class AutocompleteItem(BaseModel):
 
 
 class FicheMetierCreate(BaseModel):
-    code_rome: str
-    nom_masculin: str
-    nom_feminin: str
-    nom_epicene: str
-    definition: Optional[str] = None
-    description: Optional[str] = None
+    code_rome: str = Field(..., max_length=5, pattern=r'^[A-Z]\d{4}$')
+    nom_masculin: str = Field(..., max_length=255)
+    nom_feminin: str = Field(..., max_length=255)
+    nom_epicene: str = Field(..., max_length=255)
+    definition: Optional[str] = Field(None, max_length=10000)
+    description: Optional[str] = Field(None, max_length=10000)
 
 
 class FicheMetierUpdate(BaseModel):
-    description: Optional[str] = None
-    description_courte: Optional[str] = None
-    competences: Optional[List[str]] = None
-    competences_transversales: Optional[List[str]] = None
-    formations: Optional[List[str]] = None
-    certifications: Optional[List[str]] = None
-    conditions_travail: Optional[List[str]] = None
-    environnements: Optional[List[str]] = None
-    secteurs_activite: Optional[List[str]] = None
+    description: Optional[str] = Field(None, max_length=10000)
+    description_courte: Optional[str] = Field(None, max_length=500)
+    competences: Optional[List[str]] = Field(None, max_length=100)
+    competences_transversales: Optional[List[str]] = Field(None, max_length=100)
+    formations: Optional[List[str]] = Field(None, max_length=100)
+    certifications: Optional[List[str]] = Field(None, max_length=100)
+    conditions_travail: Optional[List[str]] = Field(None, max_length=100)
+    environnements: Optional[List[str]] = Field(None, max_length=100)
+    secteurs_activite: Optional[List[str]] = Field(None, max_length=100)
     salaires: Optional[dict] = None
     perspectives: Optional[dict] = None
-    statut: Optional[str] = None
+    statut: Optional[str] = Field(None, max_length=50)
 
 
 # ==================== HELPERS ====================

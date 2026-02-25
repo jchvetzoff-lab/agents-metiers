@@ -13,7 +13,8 @@ class TestHealth:
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "ok"
-        assert data["db"] == "connected"
+        # Public health endpoint no longer exposes DB state
+        assert "db" not in data
 
     def test_health_no_sensitive_info(self, client):
         """Health endpoint should never leak DB details."""
@@ -35,10 +36,14 @@ class TestRoot:
 
 
 class TestGitVersion:
-    """GET /api/git-version"""
+    """GET /api/git-version (requires auth)"""
 
-    def test_git_version(self, client):
+    def test_git_version_no_auth(self, client):
         resp = client.get("/api/git-version")
+        assert resp.status_code == 401
+
+    def test_git_version_with_auth(self, client, auth_headers):
+        resp = client.get("/api/git-version", headers=auth_headers)
         assert resp.status_code == 200
         data = resp.json()
         assert "commit" in data
@@ -59,8 +64,13 @@ class TestStats:
 class TestAuditLogs:
     """GET /api/audit-logs"""
 
-    def test_audit_logs_list(self, client):
+    def test_audit_logs_no_auth(self, client):
+        """Audit logs now require authentication."""
         resp = client.get("/api/audit-logs")
+        assert resp.status_code == 401
+
+    def test_audit_logs_list(self, client, auth_headers):
+        resp = client.get("/api/audit-logs", headers=auth_headers)
         assert resp.status_code == 200
         data = resp.json()
         assert "logs" in data
@@ -68,7 +78,7 @@ class TestAuditLogs:
 
     def test_audit_logs_after_creation(self, client, auth_headers, created_fiche):
         """After creating a fiche, there should be an audit entry."""
-        resp = client.get("/api/audit-logs?limit=10")
+        resp = client.get("/api/audit-logs?limit=10", headers=auth_headers)
         assert resp.status_code == 200
         data = resp.json()
         logs = data["logs"]

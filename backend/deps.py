@@ -1,8 +1,10 @@
 """
 Shared dependencies for routers (repo, config, claude client).
 """
+import re
 import sys
 from pathlib import Path
+from fastapi import HTTPException
 
 # Ensure agents-metiers is on the path
 AGENTS_METIERS_PATH = Path(__file__).parent.parent
@@ -91,3 +93,17 @@ def get_lba_client():
 
     _lba_client_initialized = True
     return _lba_client
+
+
+# ---------- Validation helpers ----------
+_CODE_ROME_PATTERN = re.compile(r'^[A-Z]\d{4}$')
+
+
+def validate_code_rome(code_rome: str) -> str:
+    """Validate code_rome format. Returns the value or raises 422."""
+    if not _CODE_ROME_PATTERN.match(code_rome):
+        raise HTTPException(
+            status_code=422,
+            detail="Le code ROME doit être au format une lettre majuscule suivie de 4 chiffres (ex: M1805)"
+        )
+    return code_rome

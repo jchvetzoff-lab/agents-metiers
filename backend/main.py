@@ -8,7 +8,10 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 logger = logging.getLogger(__name__)
+from fastapi import Depends
 from fastapi.middleware.cors import CORSMiddleware
+
+from .auth_middleware import get_current_user
 
 
 @asynccontextmanager
@@ -123,20 +126,36 @@ async def _startup():
 
 @app.get("/health")
 async def health():
-    """Health check endpoint."""
+    """Health check endpoint (public, minimal info)."""
     from .deps import repo
     try:
-        # Vérifier la connexion DB
+        repo.get_all_fiches(limit=1)
+        return {"status": "ok"}
+    except Exception as e:
+        logger.warning(f"Health check DB issue: {e}")
+        return {"status": "degraded"}
+
+
+@app.get("/health/detailed")
+async def health_detailed(user: dict = Depends(get_current_user)):
+    """Detailed health check (auth required)."""
+    from .deps import repo
+    try:
         repo.get_all_fiches(limit=1)
         return {"status": "ok", "db": "connected"}
     except Exception as e:
-        logger.warning(f"Health check DB issue: {e}")
-        return {"status": "degraded", "db": "connection error"}
+        return {"status": "degraded", "db": "connection error", "error": str(e)}
 
 
 @app.get("/api/git-version")
-async def git_version():
-    """Shows deployed git commit."""
+async def git_version(user: dict = Depends(get_current_user)):
+    """Shows deployed git commit (auth required)."""
+    # Prefer build-time GIT_SHA env var (no subprocess in production)
+    git_sha = os.getenv("GIT_SHA", "")
+    git_msg = os.getenv("GIT_MSG", "")
+    if git_sha:
+        return {"commit": git_sha, "message": git_msg}
+
     import asyncio
     try:
         proc = await asyncio.create_subprocess_exec(

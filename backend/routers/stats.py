@@ -1,11 +1,12 @@
 """
 Stats and audit-logs endpoints.
 """
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel
 from typing import Optional
 
 from ..deps import repo
+from ..auth_middleware import get_current_user
 from database.models import StatutFiche
 
 router = APIRouter(prefix="/api", tags=["stats"])
@@ -42,8 +43,9 @@ async def get_audit_logs(
     type_evenement: Optional[str] = Query(None),
     agent: Optional[str] = Query(None),
     since: Optional[str] = Query(None),
+    user: dict = Depends(get_current_user),
 ):
-    """Récupère les logs d'audit avec filtres."""
+    """Récupère les logs d'audit avec filtres (auth required)."""
     try:
         from database.models import TypeEvenement as TE
         te = None

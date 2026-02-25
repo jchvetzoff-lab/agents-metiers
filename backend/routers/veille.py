@@ -61,8 +61,8 @@ async def trigger_rome_veille(user: dict = Depends(get_current_user)):
 
 
 @router.get("/api/veille/rome/changes")
-async def get_rome_changes(reviewed: Optional[bool] = Query(None)):
-    """Récupère les changements ROME détectés."""
+async def get_rome_changes(reviewed: Optional[bool] = Query(None), user: dict = Depends(get_current_user)):
+    """Récupère les changements ROME détectés (auth required)."""
     try:
         # Try to use repo method if available, otherwise return empty
         if hasattr(repo, 'get_rome_changes'):
@@ -99,8 +99,8 @@ async def review_rome_change(change_id: int, body: dict, user: dict = Depends(ge
 
 
 @router.get("/api/veille/rome/status")
-async def get_rome_veille_status():
-    """Statut de la veille ROME."""
+async def get_rome_veille_status(user: dict = Depends(get_current_user)):
+    """Statut de la veille ROME (auth required)."""
     try:
         if hasattr(repo, 'get_veille_status'):
             status = repo.get_veille_status()

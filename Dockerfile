@@ -20,11 +20,16 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install runtime dependencies + git for version endpoint
+# Install runtime dependencies only (no git — SHA injected at build time)
 RUN apt-get update && apt-get install -y \
     libpq5 \
-    git \
     && rm -rf /var/lib/apt/lists/*
+
+# Build-time args for git version (avoids needing git in production image)
+ARG GIT_SHA=unknown
+ARG GIT_MSG=
+ENV GIT_SHA=$GIT_SHA
+ENV GIT_MSG=$GIT_MSG
 
 # Copy installed packages from builder
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
