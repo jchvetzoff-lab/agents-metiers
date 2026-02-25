@@ -74,23 +74,26 @@ async def _startup():
         if "users" in inspector.get_table_names():
             existing_cols = {c["name"] for c in inspector.get_columns("users")}
             with repo.engine.begin() as conn:
-                # Model maps password_hash -> hashed_password column
-                if "hashed_password" not in existing_cols:
-                    logger.info("Migrating users table: adding hashed_password column")
-                    conn.execute(text("ALTER TABLE users ADD COLUMN hashed_password VARCHAR(255) NOT NULL DEFAULT ''"))
                 if "created_at" not in existing_cols:
                     logger.info("Migrating users table: adding created_at column")
-                    conn.execute(text("ALTER TABLE users ADD COLUMN created_at TIMESTAMP DEFAULT NOW()"))
+                    conn.execute(text("ALTER TABLE users ADD COLUMN created_at TIMESTAMP"))
                 if "name" not in existing_cols:
                     logger.info("Migrating users table: adding name column")
                     conn.execute(text("ALTER TABLE users ADD COLUMN name VARCHAR(255) NOT NULL DEFAULT ''"))
-                # Clean up unused password_hash column if it was added by mistake
-                if "password_hash" in existing_cols and "hashed_password" in existing_cols:
-                    try:
-                        conn.execute(text("ALTER TABLE users DROP COLUMN password_hash"))
-                        logger.info("Cleaned up unused password_hash column")
-                    except Exception as e:
-                        logger.debug(f"Could not drop password_hash column: {e}")
+
+                # Migrate from legacy "hashed_password" column to "password_hash"
+                # (old code mapped password_hash → hashed_password SQL column)
+                if "hashed_password" in existing_cols and "password_hash" not in existing_cols:
+                    logger.info("Migrating users table: renaming hashed_password → password_hash")
+                    conn.execute(text("ALTER TABLE users RENAME COLUMN hashed_password TO password_hash"))
+                elif "hashed_password" in existing_cols and "password_hash" in existing_cols:
+                    # Both exist: copy data from hashed_password into password_hash if password_hash is empty
+                    logger.info("Migrating users table: merging hashed_password data into password_hash")
+                    conn.execute(text(
+                        "UPDATE users SET password_hash = hashed_password "
+                        "WHERE (password_hash IS NULL OR password_hash = '') "
+                        "AND hashed_password IS NOT NULL AND hashed_password != ''"
+                    ))
 
         # Check audit_log table columns
         if "audit_log" in inspector.get_table_names():

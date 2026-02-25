@@ -785,8 +785,7 @@ class UserDB(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     email = Column(String(255), unique=True, nullable=False, index=True)
     name = Column(String(255), nullable=False)
-    # Map to existing "hashed_password" column in production PostgreSQL
-    password_hash = Column("hashed_password", String(255), nullable=False)
+    password_hash = Column(String(255), nullable=False)
     created_at = Column(DateTime, default=datetime.now)
 
 
