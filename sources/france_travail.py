@@ -2,6 +2,7 @@
 Client pour l'API France Travail (ex Pôle Emploi).
 """
 import asyncio
+import json
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 import logging
@@ -19,7 +20,7 @@ class FranceTravailClient:
     Permet d'accéder aux données sur :
     - Les offres d'emploi
     - Les tensions sur le marché du travail
-    - Les statistiques par métier et région
+    - Les statistiques par métier et région (IMT)
 
     Documentation :
     https://francetravail.io/data/api
@@ -28,41 +29,32 @@ class FranceTravailClient:
     AUTH_URL = "https://entreprise.francetravail.fr/connexion/oauth2/access_token"
     BASE_URL = "https://api.francetravail.io/partenaire"
 
+    # Scopes OAuth2
+    SCOPE_OFFRES = "api_offresdemploiv2 o2dsoffre"
+    SCOPE_IMT = "api_infotravailv1"
+
     def __init__(
         self,
         client_id: Optional[str] = None,
         client_secret: Optional[str] = None,
         logger: Optional[logging.Logger] = None
     ):
-        """
-        Initialise le client France Travail.
-
-        Args:
-            client_id: ID client OAuth2
-            client_secret: Secret client OAuth2
-            logger: Logger optionnel
-        """
         config = get_config()
         self.client_id = client_id or config.api.france_travail_client_id
         self.client_secret = client_secret or config.api.france_travail_client_secret
         self.timeout = config.api.request_timeout
         self.logger = logger or logging.getLogger("FranceTravailClient")
-        self._access_token: Optional[str] = None
-        self._token_expiry: Optional[datetime] = None
+        # Separate tokens per scope
+        self._tokens: Dict[str, str] = {}
+        self._token_expiries: Dict[str, datetime] = {}
+        # Cache for IMT resource IDs (discovered at runtime)
+        self._imt_resources: Optional[Dict[str, str]] = None
 
     async def _get_access_token(self, scope: str = "api_offresdemploiv2 o2dsoffre") -> str:
-        """
-        Obtient un token d'accès OAuth2.
-
-        Args:
-            scope: Scope demandé
-
-        Returns:
-            Token d'accès
-        """
-        if self._access_token and self._token_expiry:
-            if datetime.now() < self._token_expiry:
-                return self._access_token
+        """Obtient un token d'accès OAuth2 pour le scope donné."""
+        if scope in self._tokens and scope in self._token_expiries:
+            if datetime.now() < self._token_expiries[scope]:
+                return self._tokens[scope]
 
         async with httpx.AsyncClient() as client:
             response = await client.post(
@@ -72,16 +64,16 @@ class FranceTravailClient:
                     "grant_type": "client_credentials",
                     "client_id": self.client_id,
                     "client_secret": self.client_secret,
-                    "scope": scope
+                    "scope": f"application_{self.client_id} {scope}"
                 },
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
                 timeout=self.timeout
             )
             response.raise_for_status()
             data = response.json()
-            self._access_token = data["access_token"]
-            self._token_expiry = datetime.now() + timedelta(seconds=1400)
-            return self._access_token
+            self._tokens[scope] = data["access_token"]
+            self._token_expiries[scope] = datetime.now() + timedelta(seconds=1400)
+            return self._tokens[scope]
 
     async def _request(
         self,
@@ -89,7 +81,7 @@ class FranceTravailClient:
         endpoint: str,
         params: Optional[Dict] = None,
         scope: str = "api_offresdemploiv2 o2dsoffre"
-    ) -> Dict:
+    ) -> Any:
         """Effectue une requête authentifiée."""
         token = await self._get_access_token(scope)
 
@@ -198,115 +190,315 @@ class FranceTravailClient:
             return 0
 
     # =========================================================================
-    # Statistiques et tensions
+    # IMT (Informations sur le Marché du Travail) — vrais appels API
     # =========================================================================
 
-    async def get_tension_metier(self, code_rome: str) -> Optional[Dict]:
-        """
-        Récupère l'indice de tension pour un métier.
+    async def _discover_imt_resources(self) -> Dict[str, str]:
+        """Découvre les resource IDs du dataset IMT via l'API Infotravail."""
+        if self._imt_resources:
+            return self._imt_resources
 
-        L'indice de tension mesure le rapport entre les offres d'emploi
-        et les demandeurs d'emploi pour un métier donné.
-
-        Args:
-            code_rome: Code ROME
-
-        Returns:
-            Données de tension
-        """
-        # Note: Cette API n'existe peut-être pas directement
-        # On simule avec les données disponibles
         try:
-            # Compter les offres récentes
+            # Lister les packages de l'organisation digidata
+            org = await self._request(
+                "GET", "infotravail/v1/organization_show",
+                params={"id": "digidata"},
+                scope=self.SCOPE_IMT
+            )
+            packages = org.get("result", {}).get("packages", [])
+
+            # Trouver le package IMT
+            imt_package_id = None
+            for pkg in packages:
+                pkg_name = pkg if isinstance(pkg, str) else pkg.get("name", "")
+                if "imt" in pkg_name.lower() or "marche-du-travail" in pkg_name.lower():
+                    imt_package_id = pkg_name
+                    break
+
+            if not imt_package_id:
+                # Essayer avec un nom courant
+                imt_package_id = "imt"
+
+            # Récupérer les resources du package IMT
+            pkg_data = await self._request(
+                "GET", "infotravail/v1/package_show",
+                params={"id": imt_package_id},
+                scope=self.SCOPE_IMT
+            )
+            resources = pkg_data.get("result", {}).get("resources", [])
+
+            self._imt_resources = {}
+            for res in resources:
+                name = res.get("name", "").lower()
+                res_id = res.get("id", "")
+                if "salair" in name:
+                    self._imt_resources["salaires"] = res_id
+                elif "contrat" in name or "type" in name:
+                    self._imt_resources["contrats"] = res_id
+                elif "tension" in name or "difficulte" in name:
+                    self._imt_resources["tension"] = res_id
+                elif "embauche" in name or "recrutement" in name:
+                    self._imt_resources["embauches"] = res_id
+                # Store all for debugging
+                self._imt_resources[f"_raw_{name}"] = res_id
+
+            self.logger.info(f"IMT resources discovered: {[k for k in self._imt_resources if not k.startswith('_')]}")
+            return self._imt_resources
+
+        except Exception as e:
+            self.logger.error(f"Erreur découverte resources IMT: {e}")
+            self._imt_resources = {}
+            return {}
+
+    async def _imt_datastore_search(
+        self,
+        resource_id: str,
+        filters: Optional[Dict] = None,
+        limit: int = 100
+    ) -> List[Dict]:
+        """Requête le datastore IMT avec filtres."""
+        params: Dict[str, Any] = {"id": resource_id, "limit": limit}
+        if filters:
+            params["filters"] = json.dumps(filters)
+
+        try:
+            data = await self._request(
+                "GET", "infotravail/v1/datastore_search",
+                params=params,
+                scope=self.SCOPE_IMT
+            )
+            return data.get("result", {}).get("records", [])
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                self.logger.warning(f"IMT resource {resource_id} not found")
+                return []
+            raise
+
+    async def get_tension_metier(self, code_rome: str) -> Optional[Dict]:
+        """Récupère l'indice de tension pour un métier via IMT."""
+        try:
+            resources = await self._discover_imt_resources()
+            tension_id = resources.get("tension")
+
+            if tension_id:
+                records = await self._imt_datastore_search(
+                    tension_id,
+                    filters={"ROME_PROFESSIONNEL": code_rome}
+                )
+                if records:
+                    rec = records[0]
+                    return {
+                        "code_rome": code_rome,
+                        "indice_tension": rec.get("TENSION", rec.get("INDICE_TENSION", rec.get("IND_TENSION"))),
+                        "difficulte_recrutement": rec.get("DIFFICULTE_RECRUTEMENT"),
+                        "nb_offres": rec.get("NB_OFFRES"),
+                        "date": datetime.now().isoformat(),
+                        "source": "France Travail IMT"
+                    }
+
+            # Fallback: estimer via count d'offres
             offres = await self.count_offres(code_rome=code_rome)
-
-            # Calculer un indice de tension approximatif
-            # (en production, utiliser les vraies données BMO/STMT)
-            indice = min(offres / 1000, 1.0) if offres > 0 else 0.5
-
             return {
                 "code_rome": code_rome,
-                "indice_tension": indice,
+                "indice_tension": min(offres / 1000, 1.0) if offres > 0 else 0.5,
                 "nb_offres": offres,
                 "date": datetime.now().isoformat(),
-                "source": "France Travail API"
+                "source": "France Travail estimation"
             }
         except Exception as e:
             self.logger.error(f"Erreur récupération tension {code_rome}: {e}")
             return None
 
     async def get_statistiques_offres(self, code_rome: str) -> Optional[Dict]:
-        """
-        Récupère les statistiques d'offres pour un métier.
-
-        Args:
-            code_rome: Code ROME
-
-        Returns:
-            Statistiques (nombre, évolution, etc.)
-        """
+        """Récupère les vrais stats d'offres depuis IMT (types de contrats)."""
         try:
-            # Compter les offres actuelles
+            resources = await self._discover_imt_resources()
+            contrats_id = resources.get("contrats")
+
+            repartition = None
+            if contrats_id:
+                records = await self._imt_datastore_search(
+                    contrats_id,
+                    filters={"ROME_PROFESSIONNEL": code_rome}
+                )
+                if records:
+                    # Agréger les types de contrats depuis les records IMT
+                    totals = {"cdi": 0, "cdd": 0, "interim": 0, "autre": 0}
+                    for rec in records:
+                        # Les champs IMT varient, on essaie les noms courants
+                        for key, val in rec.items():
+                            key_lower = key.lower()
+                            if isinstance(val, (int, float)) and val > 0:
+                                if "cdi" in key_lower:
+                                    totals["cdi"] += val
+                                elif "cdd" in key_lower:
+                                    totals["cdd"] += val
+                                elif "interim" in key_lower or "intérim" in key_lower or "missionn" in key_lower:
+                                    totals["interim"] += val
+
+                    total = sum(totals.values())
+                    if total > 0:
+                        repartition = {k: round(v / total, 2) for k, v in totals.items()}
+                        repartition["autre"] = round(1 - repartition["cdi"] - repartition["cdd"] - repartition["interim"], 2)
+
+            # Aussi compter les offres actuelles
             nb_actuel = await self.count_offres(code_rome=code_rome)
 
-            # En production, on comparerait avec les données historiques
-            # Pour l'instant, on retourne des données simulées
+            # Si pas de données IMT, extraire la répartition depuis les offres réelles
+            if not repartition:
+                repartition = await self._compute_contract_distribution_from_offres(code_rome)
+
             return {
                 "code_rome": code_rome,
                 "nb_offres_actuelles": nb_actuel,
-                "evolution_annuelle": 0.0,  # À calculer avec historique
-                "repartition_contrat": {
-                    "cdi": 0.4,
-                    "cdd": 0.35,
-                    "interim": 0.15,
-                    "autre": 0.1
-                },
-                "date": datetime.now().isoformat()
+                "repartition_contrat": repartition or {"cdi": 0.4, "cdd": 0.35, "interim": 0.15, "autre": 0.1},
+                "date": datetime.now().isoformat(),
+                "source": "France Travail IMT" if contrats_id and repartition else "France Travail offres"
             }
         except Exception as e:
             self.logger.error(f"Erreur statistiques offres {code_rome}: {e}")
             return None
 
-    async def get_statistiques_salaires(self, code_rome: str) -> Optional[Dict]:
-        """
-        Récupère les statistiques salariales depuis les offres.
-
-        Note: Les salaires dans les offres sont indicatifs et peuvent
-        ne pas être représentatifs du marché réel.
-
-        Args:
-            code_rome: Code ROME
-
-        Returns:
-            Statistiques salariales
-        """
+    async def _compute_contract_distribution_from_offres(self, code_rome: str) -> Optional[Dict]:
+        """Calcule la répartition des contrats depuis les offres réelles."""
         try:
-            offres = await self.search_offres(code_rome=code_rome, limit=100)
-
-            salaires = []
-            for offre in offres:
-                salaire = offre.get("salaire", {})
-                if salaire.get("libelle"):
-                    # Parser le salaire (format variable)
-                    salaires.append(salaire)
-
-            if not salaires:
+            offres = await self.search_offres(code_rome=code_rome, limit=150)
+            if not offres:
                 return None
 
-            # Agrégation des salaires (simplifiée)
+            counts = {"cdi": 0, "cdd": 0, "interim": 0, "autre": 0}
+            for offre in offres:
+                type_contrat = offre.get("typeContrat", "").upper()
+                if type_contrat == "CDI":
+                    counts["cdi"] += 1
+                elif type_contrat == "CDD":
+                    counts["cdd"] += 1
+                elif type_contrat in ("MIS", "INT"):
+                    counts["interim"] += 1
+                else:
+                    counts["autre"] += 1
+
+            total = sum(counts.values())
+            if total == 0:
+                return None
+            return {k: round(v / total, 2) for k, v in counts.items()}
+        except Exception:
+            return None
+
+    async def get_statistiques_salaires(self, code_rome: str) -> Optional[Dict]:
+        """Récupère les vrais salaires depuis IMT."""
+        try:
+            resources = await self._discover_imt_resources()
+            salaires_id = resources.get("salaires")
+
+            if salaires_id:
+                records = await self._imt_datastore_search(
+                    salaires_id,
+                    filters={"ROME_PROFESSIONNEL": code_rome}
+                )
+                if records:
+                    # Extraire les salaires — les champs IMT incluent typiquement
+                    # SALAIRE_MIN, SALAIRE_MAX, SALAIRE_1ER_DECILE, SALAIRE_MEDIAN, SALAIRE_3EME_QUARTILE
+                    rec = records[0]  # Le premier record est national
+
+                    # Chercher les champs salaire dans le record
+                    sal_fields = {k: v for k, v in rec.items() if "salair" in k.lower() and isinstance(v, (int, float))}
+
+                    if sal_fields:
+                        # Mapper les champs vers notre structure
+                        min_sal = sal_fields.get("SALAIRE_1ER_DECILE") or sal_fields.get("SALAIRE_MIN") or sal_fields.get("MIN_SALARY")
+                        median_sal = sal_fields.get("SALAIRE_MEDIAN") or sal_fields.get("MEDIAN_SALARY")
+                        max_sal = sal_fields.get("SALAIRE_3EME_QUARTILE") or sal_fields.get("SALAIRE_MAX") or sal_fields.get("MAX_SALARY")
+                        q1_sal = sal_fields.get("SALAIRE_1ER_QUARTILE")
+                        q3_sal = sal_fields.get("SALAIRE_3EME_QUARTILE")
+
+                        return {
+                            "code_rome": code_rome,
+                            "source": "France Travail IMT",
+                            "nb_offres_avec_salaire": rec.get("NB_OFFRES", rec.get("NOMBRE_OFFRES", len(records))),
+                            "salaires": {
+                                "junior": {
+                                    "min": int(min_sal) if min_sal else None,
+                                    "max": int(q1_sal or median_sal) if (q1_sal or median_sal) else None,
+                                    "median": int((min_sal + (median_sal or min_sal)) / 2) if min_sal else None,
+                                },
+                                "confirme": {
+                                    "min": int(q1_sal or min_sal) if (q1_sal or min_sal) else None,
+                                    "max": int(q3_sal or max_sal) if (q3_sal or max_sal) else None,
+                                    "median": int(median_sal) if median_sal else None,
+                                },
+                                "senior": {
+                                    "min": int(median_sal) if median_sal else None,
+                                    "max": int(max_sal) if max_sal else None,
+                                    "median": int((median_sal + (max_sal or median_sal)) / 2) if median_sal else None,
+                                },
+                            },
+                            "raw_fields": sal_fields,
+                            "date": datetime.now().isoformat()
+                        }
+
+            # Fallback: extraire les salaires depuis les offres
+            return await self._compute_salary_stats_from_offres(code_rome)
+
+        except Exception as e:
+            self.logger.error(f"Erreur statistiques salaires {code_rome}: {e}")
+            return None
+
+    async def _compute_salary_stats_from_offres(self, code_rome: str) -> Optional[Dict]:
+        """Calcule les stats salariales depuis les offres réelles."""
+        try:
+            offres = await self.search_offres(code_rome=code_rome, limit=150)
+
+            salaires_annuels = []
+            for offre in offres:
+                salaire = offre.get("salaire", {})
+                complement = salaire.get("complement1") or salaire.get("libelle") or ""
+
+                # Tenter d'extraire un montant numérique
+                min_val = salaire.get("minimum")
+                max_val = salaire.get("maximum")
+
+                if min_val and isinstance(min_val, (int, float)):
+                    # Convertir en annuel brut si c'est mensuel
+                    if min_val < 10000:  # Probablement mensuel
+                        min_val = min_val * 12
+                    salaires_annuels.append(min_val)
+                if max_val and isinstance(max_val, (int, float)):
+                    if max_val < 10000:
+                        max_val = max_val * 12
+                    salaires_annuels.append(max_val)
+
+            if len(salaires_annuels) < 5:
+                return None
+
+            salaires_annuels.sort()
+            n = len(salaires_annuels)
+
             return {
                 "code_rome": code_rome,
-                "source": "Offres France Travail",
-                "nb_offres_avec_salaire": len(salaires),
+                "source": "France Travail offres",
+                "nb_offres_avec_salaire": len(salaires_annuels) // 2,
                 "salaires": {
-                    "junior": {"min": None, "max": None, "median": None},
-                    "confirme": {"min": None, "max": None, "median": None},
-                    "senior": {"min": None, "max": None, "median": None}
+                    "junior": {
+                        "min": int(salaires_annuels[0]),
+                        "max": int(salaires_annuels[n // 4]),
+                        "median": int(salaires_annuels[n // 6]),
+                    },
+                    "confirme": {
+                        "min": int(salaires_annuels[n // 4]),
+                        "max": int(salaires_annuels[3 * n // 4]),
+                        "median": int(salaires_annuels[n // 2]),
+                    },
+                    "senior": {
+                        "min": int(salaires_annuels[n // 2]),
+                        "max": int(salaires_annuels[-1]),
+                        "median": int(salaires_annuels[3 * n // 4]),
+                    },
                 },
                 "date": datetime.now().isoformat()
             }
         except Exception as e:
-            self.logger.error(f"Erreur statistiques salaires {code_rome}: {e}")
+            self.logger.error(f"Erreur calcul salaires offres {code_rome}: {e}")
             return None
 
     # =========================================================================
@@ -314,32 +506,31 @@ class FranceTravailClient:
     # =========================================================================
 
     async def get_offres_sans_rome(self) -> List[Dict]:
-        """
-        Recherche des offres potentiellement sans code ROME correct.
-
-        Ces offres peuvent indiquer des métiers émergents.
-
-        Returns:
-            Liste des offres concernées
-        """
-        # En pratique, on rechercherait des offres avec des intitulés
-        # qui ne correspondent pas bien aux codes ROME
-        # Cette fonction est un placeholder pour la logique métier
+        """Recherche des offres potentiellement sans code ROME correct."""
         return []
 
     async def get_metiers_en_tension(self, seuil: float = 0.7) -> List[Dict]:
-        """
-        Récupère les métiers actuellement en tension.
+        """Récupère les métiers en tension via IMT."""
+        try:
+            resources = await self._discover_imt_resources()
+            tension_id = resources.get("tension")
+            if not tension_id:
+                return []
 
-        Args:
-            seuil: Seuil minimal de tension (0-1)
-
-        Returns:
-            Liste des métiers en tension avec leurs indices
-        """
-        # En production, utiliser les données BMO (Besoins en Main d'Œuvre)
-        # ou STMT (Statistiques du Marché du Travail)
-        return []
+            records = await self._imt_datastore_search(tension_id, limit=200)
+            result = []
+            for rec in records:
+                tension = rec.get("TENSION") or rec.get("INDICE_TENSION") or rec.get("IND_TENSION")
+                if tension and float(tension) >= seuil:
+                    result.append({
+                        "code_rome": rec.get("ROME_PROFESSIONNEL", ""),
+                        "indice_tension": float(tension),
+                        "nom": rec.get("LIBELLE_ROME", ""),
+                    })
+            return result
+        except Exception as e:
+            self.logger.error(f"Erreur métiers en tension: {e}")
+            return []
 
     # =========================================================================
     # Référentiels

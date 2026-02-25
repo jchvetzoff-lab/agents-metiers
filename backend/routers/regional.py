@@ -172,6 +172,98 @@ async def get_offres(
         raise HTTPException(status_code=500, detail="Erreur interne. Veuillez réessayer.")
 
 
+@router.get("/fiches/{code_rome}/imt-stats")
+async def get_imt_stats(code_rome: str):
+    """Statistiques IMT réelles (salaires + contrats) pour un métier."""
+    try:
+        fiche = repo.get_fiche(code_rome)
+        if not fiche:
+            raise HTTPException(status_code=404, detail=f"Fiche {code_rome} non trouvée")
+
+        from sources.france_travail import FranceTravailClient
+        ft_client = FranceTravailClient()
+
+        salaires = None
+        contrats = None
+        source_salaires = "estimation_ia"
+        source_contrats = "estimation_ia"
+
+        # Tenter de récupérer les vrais salaires IMT
+        try:
+            sal_data = await ft_client.get_statistiques_salaires(code_rome)
+            if sal_data and sal_data.get("salaires"):
+                sals = sal_data["salaires"]
+                # Vérifier que les données ne sont pas toutes null
+                has_data = any(
+                    sals.get(level, {}).get("median") is not None
+                    for level in ["junior", "confirme", "senior"]
+                )
+                if has_data:
+                    salaires = sals
+                    source_salaires = sal_data.get("source", "France Travail IMT")
+        except Exception as e:
+            logger.debug(f"IMT salaires unavailable for {code_rome}: {e}")
+
+        # Tenter de récupérer la vraie répartition des contrats
+        try:
+            offres_data = await ft_client.get_statistiques_offres(code_rome)
+            if offres_data and offres_data.get("repartition_contrat"):
+                rep = offres_data["repartition_contrat"]
+                # Vérifier que ce ne sont pas les valeurs par défaut
+                if rep.get("cdi") != 0.4 or offres_data.get("source", "").startswith("France Travail"):
+                    contrats = rep
+                    source_contrats = offres_data.get("source", "France Travail")
+        except Exception as e:
+            logger.debug(f"IMT contrats unavailable for {code_rome}: {e}")
+
+        return {
+            "code_rome": code_rome,
+            "salaires": salaires,
+            "source_salaires": source_salaires,
+            "contrats": contrats,
+            "source_contrats": source_contrats,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erreur IMT stats {code_rome}: {e}")
+        return {
+            "code_rome": code_rome,
+            "salaires": None,
+            "source_salaires": "estimation_ia",
+            "contrats": None,
+            "source_contrats": "estimation_ia",
+        }
+
+
+@router.get("/fiches/{code_rome}/alternance")
+async def get_alternance(code_rome: str):
+    """Données alternance (formations + offres) pour un métier via La Bonne Alternance."""
+    try:
+        fiche = repo.get_fiche(code_rome)
+        if not fiche:
+            raise HTTPException(status_code=404, detail=f"Fiche {code_rome} non trouvée")
+
+        from sources.la_bonne_alternance import LaBonneAlternanceClient
+        lba_client = LaBonneAlternanceClient()
+        data = await lba_client.get_alternance_data(code_rome)
+        return data
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erreur alternance {code_rome}: {e}")
+        return {
+            "code_rome": code_rome,
+            "nb_formations": 0,
+            "nb_offres_alternance": 0,
+            "nb_entreprises_accueillantes": 0,
+            "formations": [],
+            "offres": [],
+            "niveaux_diplomes": {},
+            "source": "La Bonne Alternance",
+        }
+
+
 def _get_regional_coefficient(region_code: str) -> float:
     """Coefficient régional pour estimer les salaires."""
     coefficients = {

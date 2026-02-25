@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { api, FicheDetail, Variante, VarianteDetail, Region, RegionalData, RecrutementsData } from "@/lib/api";
+import { api, FicheDetail, Variante, VarianteDetail, Region, RegionalData, RecrutementsData, AlternanceData, ImtStatsData } from "@/lib/api";
 import { getTranslations } from "@/lib/translations";
 import { isAuthenticated } from "@/lib/auth";
 import StatusBadge from "@/components/StatusBadge";
@@ -16,6 +16,7 @@ import SectionErrorBoundary from "@/components/SectionErrorBoundary";
 import StatsSection from "@/components/StatsSection";
 import RecrutementsSection from "@/components/RecrutementsSection";
 import OffresSection from "@/components/OffresSection";
+import AlternanceSection from "@/components/AlternanceSection";
 import {
   SectionAnchor, BulletList, NumberedList, ServiceLink, SourceTag, LevelBadge,
   toStringItem, toStringArray, getItemLevel,
@@ -65,6 +66,13 @@ export default function FicheDetailPage() {
   const [offres, setOffres] = useState<import("@/lib/api").OffresData | null>(null);
   const [offresLoading, setOffresLoading] = useState(false);
   const [offresContractFilter, setOffresContractFilter] = useState<string>("all");
+
+  // IMT real stats (salaires + contrats from France Travail)
+  const [imtStats, setImtStats] = useState<ImtStatsData | null>(null);
+
+  // Alternance data (La Bonne Alternance)
+  const [alternanceData, setAlternanceData] = useState<AlternanceData | null>(null);
+  const [alternanceLoading, setAlternanceLoading] = useState(false);
 
   // Action buttons (authenticated only)
   const [authenticated, setAuthenticated] = useState(false);
@@ -264,6 +272,26 @@ export default function FicheDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [codeRome, selectedRegion, !!fiche]);
 
+  // Fetch IMT real stats (non-blocking, fires once)
+  useEffect(() => {
+    if (!fiche) return;
+    api.getImtStats(codeRome)
+      .then(data => setImtStats(data))
+      .catch(() => setImtStats(null));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [codeRome, !!fiche]);
+
+  // Fetch alternance data (non-blocking, fires once)
+  useEffect(() => {
+    if (!fiche) return;
+    setAlternanceLoading(true);
+    api.getAlternanceData(codeRome)
+      .then(data => setAlternanceData(data))
+      .catch(() => setAlternanceData(null))
+      .finally(() => setAlternanceLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [codeRome, !!fiche]);
+
   // Scroll spy
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -325,11 +353,13 @@ export default function FicheDetailPage() {
   // Key suffix to force Recharts remount when data source changes
   const chartKey = isRegional ? `reg-${selectedRegion}` : "national";
 
-  // Salary data: prefer regional salaires_par_niveau when available
+  // Salary data: prefer regional > IMT real > fiche IA estimate
   const regSal = isRegional ? regionalData?.salaires_par_niveau : null;
   const useSalRegional = !!(regSal && (regSal.junior || regSal.confirme || regSal.senior));
   const salaryFallbackToNational = isRegional && !useSalRegional;
-  const salarySource = useSalRegional ? regSal! : fiche.salaires;
+  const imtSal = imtStats?.salaires;
+  const useSalImt = !useSalRegional && !!(imtSal && (imtSal.junior?.median || imtSal.confirme?.median || imtSal.senior?.median));
+  const salarySource = useSalRegional ? regSal! : useSalImt ? imtSal! : fiche.salaires;
   const salaryData = salarySource && (salarySource.junior?.median || salarySource.confirme?.median || salarySource.senior?.median)
     ? [
         { niveau: t.junior, min: salarySource.junior?.min ?? 0, median: salarySource.junior?.median ?? 0, max: salarySource.junior?.max ?? 0 },
@@ -338,12 +368,13 @@ export default function FicheDetailPage() {
       ]
     : null;
 
-  // Contract data: prefer regional when available
-  // When regional is selected but has 0 offers, don't show IA fallback pie chart
+  // Contract data: prefer regional > IMT real > fiche IA estimate
   const regContrats = isRegional ? regionalData?.types_contrats : null;
   const useContratRegional = !!(regContrats && (regContrats.cdi > 0 || regContrats.cdd > 0));
   const hideContractChart = isRegional && !isEstimation && regionalData?.nb_offres === 0 && !useContratRegional;
-  const contratSource = useContratRegional ? regContrats! : fiche.types_contrats;
+  const imtContrats = imtStats?.contrats;
+  const useContratImt = !useContratRegional && !!(imtContrats && (imtContrats.cdi > 0 || imtContrats.cdd > 0));
+  const contratSource = useContratRegional ? regContrats! : useContratImt ? imtContrats! : fiche.types_contrats;
   const contractData = !hideContractChart && contratSource && (contratSource.cdi > 0 || contratSource.cdd > 0)
     ? [
         { name: t.cdi, value: contratSource.cdi },
@@ -411,6 +442,7 @@ export default function FicheDetailPage() {
     { id: "stats", label: t.secStatistics, icon: "📊", show: hasStats },
     { id: "recrutements", label: t.recruitmentsPerYear, icon: "📅", show: effectiveAge !== "11-15" },
     { id: "offres", label: t.liveOffers, icon: "💼", show: effectiveAge !== "11-15" },
+    { id: "alternance", label: "Alternance", icon: "🎓", show: effectiveAge !== "11-15" },
     { id: "sites", label: t.secUsefulLinks, icon: "🌐", show: hasSitesUtiles },
     { id: "services", label: effectiveAge === "11-15" ? t.secServicesOrientation : effectiveAge === "15-18" ? t.secServicesFormation : t.secServicesAdulte, icon: effectiveAge === "11-15" ? "🧭" : effectiveAge === "15-18" ? "🎓" : "🔗", show: true },
     { id: "mobilite", label: t.secRelatedJobs, icon: "🔄", show: hasMobilite },
@@ -1232,6 +1264,8 @@ export default function FicheDetailPage() {
                 isEstimation={isEstimation}
                 useSalRegional={useSalRegional}
                 useContratRegional={useContratRegional}
+                useSalImt={useSalImt}
+                useContratImt={useContratImt}
                 salaryFallbackToNational={salaryFallbackToNational}
                 hideContractChart={hideContractChart}
                 chartKey={chartKey}
@@ -1260,6 +1294,15 @@ export default function FicheDetailPage() {
                 offresLoading={offresLoading}
                 offresContractFilter={offresContractFilter}
                 onContractFilterChange={setOffresContractFilter}
+              />
+            )}
+
+            {/* ═══ ALTERNANCE ═══ */}
+            {effectiveAge !== "11-15" && (
+              <AlternanceSection
+                data={alternanceData}
+                loading={alternanceLoading}
+                t={t}
               />
             )}
 

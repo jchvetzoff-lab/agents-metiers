@@ -292,6 +292,51 @@ export interface OffresData {
   from_cache: boolean;
 }
 
+export interface AlternanceFormation {
+  titre: string;
+  organisme: string;
+  lieu: string;
+  niveau_diplome: string;
+  duree: string | null;
+}
+
+export interface AlternanceOffre {
+  titre: string;
+  entreprise: string;
+  lieu: string;
+  type_contrat: string;
+  source: string;
+  url: string | null;
+}
+
+export interface AlternanceData {
+  code_rome: string;
+  nb_formations: number;
+  nb_offres_alternance: number;
+  nb_entreprises_accueillantes: number;
+  formations: AlternanceFormation[];
+  offres: AlternanceOffre[];
+  niveaux_diplomes: Record<string, number>;
+  source: string;
+}
+
+export interface ImtStatsData {
+  code_rome: string;
+  salaires: {
+    junior: SalaireNiveau;
+    confirme: SalaireNiveau;
+    senior: SalaireNiveau;
+  } | null;
+  source_salaires: string;
+  contrats: {
+    cdi: number;
+    cdd: number;
+    interim: number;
+    autre: number;
+  } | null;
+  source_contrats: string;
+}
+
 export interface AuditLog {
   id: number;
   type_evenement: string;
@@ -565,6 +610,18 @@ class ApiClient {
     if (limit != null) searchParams.set("limit", limit.toString());
     const query = searchParams.toString() ? `?${searchParams.toString()}` : "";
     return this.request<OffresData>(`/api/fiches/${codeRome}/offres${query}`);
+  }
+
+  // ==================== IMT STATS ====================
+
+  async getImtStats(codeRome: string): Promise<ImtStatsData> {
+    return this.request<ImtStatsData>(`/api/fiches/${codeRome}/imt-stats`);
+  }
+
+  // ==================== ALTERNANCE ====================
+
+  async getAlternanceData(codeRome: string): Promise<AlternanceData> {
+    return this.request<AlternanceData>(`/api/fiches/${codeRome}/alternance`);
   }
 
   // ==================== ROME SYNC ====================

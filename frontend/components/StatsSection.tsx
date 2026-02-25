@@ -33,6 +33,8 @@ interface StatsSectionProps {
   isEstimation: boolean;
   useSalRegional: boolean;
   useContratRegional: boolean;
+  useSalImt?: boolean;
+  useContratImt?: boolean;
   salaryFallbackToNational: boolean;
   hideContractChart: boolean;
   chartKey: string;
@@ -55,6 +57,8 @@ export default function StatsSection({
   isEstimation,
   useSalRegional,
   useContratRegional,
+  useSalImt,
+  useContratImt,
   salaryFallbackToNational,
   hideContractChart,
   chartKey,
@@ -225,7 +229,12 @@ export default function StatsSection({
                   {t.regionalLive}
                 </span>
               )}
-              {!useSalRegional && (
+              {!useSalRegional && useSalImt && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold">
+                  France Travail
+                </span>
+              )}
+              {!useSalRegional && !useSalImt && (
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.06] text-gray-400 font-semibold">
                   {t.estimationIaNationale}
                 </span>
@@ -340,7 +349,12 @@ export default function StatsSection({
                   {t.regionalLive}
                 </span>
               )}
-              {!useContratRegional && (
+              {!useContratRegional && useContratImt && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold">
+                  France Travail
+                </span>
+              )}
+              {!useContratRegional && !useContratImt && (
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.06] text-gray-400 font-semibold">
                   {t.estimationIaNationale}
                 </span>
@@ -391,7 +405,9 @@ export default function StatsSection({
                 ? isEstimation
                   ? t.sourceInsee
                   : t.sourceFranceTravail
-                : t.sourceIa}
+                : useContratImt
+                  ? t.sourceFranceTravail
+                  : t.sourceIa}
             </SourceTag>
           </div>
         ) : hideContractChart ? (
@@ -415,7 +431,9 @@ export default function StatsSection({
               ? isEstimation
                 ? t.sourceInsee
                 : t.sourceFranceTravail
-              : t.sourceIa}
+              : useSalImt
+                ? t.sourceFranceTravail
+                : t.sourceIa}
           </SourceTag>
         </div>
       )}
