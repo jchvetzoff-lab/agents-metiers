@@ -35,6 +35,8 @@ interface PdfData {
   statuts_professionnels?: string[];
   aptitudes?: FicheDetail["aptitudes"];
   profil_riasec?: FicheDetail["profil_riasec"];
+  competences_dimensions?: FicheDetail["competences_dimensions"];
+  preferences_interets?: FicheDetail["preferences_interets"];
   conditions_travail_detaillees?: FicheDetail["conditions_travail_detaillees"];
   sites_utiles?: FicheDetail["sites_utiles"];
 }
@@ -240,6 +242,153 @@ export async function generateFichePdf(
   if (d.secteurs_activite?.length) { subTitle("Secteurs d'activité"); tags(d.secteurs_activite); }
   sourceText("Source : Référentiel ROME + enrichissement IA");
 
+  // ═══ PROFIL & PERSONNALITÉ ═══ (moved before compétences to match page order)
+  const hasProf = (d.traits_personnalite?.length ?? 0) > 0 || (d.aptitudes?.length ?? 0) > 0 || !!d.profil_riasec || !!d.competences_dimensions || !!d.preferences_interets;
+  if (hasProf) {
+    sectionTitle("Profil & Personnalité");
+    if (d.traits_personnalite?.length) { subTitle("Traits de personnalité"); tags(d.traits_personnalite); }
+    if (d.aptitudes?.length) {
+      subTitle("Aptitudes");
+      for (const apt of d.aptitudes) {
+        ensureSpace(10);
+        const aptName = typeof apt === "object" ? apt.nom : String(apt);
+        const aptLevel = typeof apt === "object" ? apt.niveau : 3;
+        pdf.setFontSize(9); pdf.setFont("helvetica", "normal"); txt(C.gray700); pdf.text(aptName, ML + 2, y + 1);
+        const barX = ML + 70, barW2 = CW - 90;
+        fill(C.gray100); pdf.roundedRect(barX, y - 2.5, barW2, 6, 3, 3, "F");
+        fill(C.purple); pdf.roundedRect(barX, y - 2.5, Math.max((aptLevel / 5) * barW2, 6), 6, 3, 3, "F");
+        pdf.setFontSize(8); pdf.setFont("helvetica", "bold"); txt(C.purple); pdf.text(`${aptLevel}/5`, barX + barW2 + 4, y + 1);
+        y += 9;
+      }
+      y += 4;
+    }
+
+    // Compétences dimensions (horizontal bars)
+    if (d.competences_dimensions) {
+      const dimLabels: Record<string, string> = {
+        relationnel: "Relationnel", intellectuel: "Intellectuel", communication: "Communication",
+        management: "Management", realisation: "Réalisation", expression: "Expression",
+        physique_sensoriel: "Physique/Sensoriel", technique: "Technique", analytique: "Analytique",
+        creatif: "Créatif", organisationnel: "Organisationnel", leadership: "Leadership", numerique: "Numérique",
+      };
+      const dims = Object.entries(d.competences_dimensions).filter(([, v]) => typeof v === "number" && v > 0).sort((a, b) => (b[1] as number) - (a[1] as number));
+      if (dims.length > 0) {
+        subTitle("Dimensions de compétences");
+        for (const [key, val] of dims) {
+          const v = val as number;
+          ensureSpace(10);
+          pdf.setFontSize(9); pdf.setFont("helvetica", "normal"); txt(C.gray700);
+          pdf.text(dimLabels[key] || key, ML + 2, y + 1);
+          const barX = ML + 55, barW2 = CW - 75;
+          fill(C.gray100); pdf.roundedRect(barX, y - 2.5, barW2, 6, 3, 3, "F");
+          fill(C.cyan); pdf.roundedRect(barX, y - 2.5, Math.max((v / 100) * barW2, 6), 6, 3, 3, "F");
+          pdf.setFontSize(8); pdf.setFont("helvetica", "bold"); txt(C.cyan); pdf.text(`${v}`, barX + barW2 + 4, y + 1);
+          y += 9;
+        }
+        y += 4;
+      }
+    }
+
+    if (d.profil_riasec && Object.values(d.profil_riasec).some((v: any) => v > 0)) {
+      subTitle("Profil RIASEC");
+      const riasecLabels: Record<string, string> = { realiste: "Réaliste", investigateur: "Investigateur", artistique: "Artistique", social: "Social", entreprenant: "Entreprenant", conventionnel: "Conventionnel" };
+      for (const [key, label] of Object.entries(riasecLabels)) {
+        const val = (d.profil_riasec as any)[key] ?? 0;
+        if (val > 0) {
+          ensureSpace(10);
+          pdf.setFontSize(9); pdf.setFont("helvetica", "normal"); txt(C.gray700); pdf.text(label, ML + 2, y + 1);
+          const barX = ML + 45, barW3 = CW - 65;
+          fill(C.gray100); pdf.roundedRect(barX, y - 2.5, barW3, 6, 3, 3, "F");
+          fill(C.purple); pdf.roundedRect(barX, y - 2.5, Math.max((val / 100) * barW3, 6), 6, 3, 3, "F");
+          pdf.setFontSize(8); pdf.setFont("helvetica", "bold"); txt(C.purple); pdf.text(`${val}`, barX + barW3 + 4, y + 1);
+          y += 9;
+        }
+      }
+      y += 4;
+    }
+
+    // Préférences & Intérêts
+    if (d.preferences_interets?.domaine_interet) {
+      subTitle("Préférences & Intérêts");
+      ensureSpace(12);
+      fill(C.cyanBg); stroke(C.cyanBorder); pdf.setLineWidth(0.3);
+      const domW = pdf.getTextWidth(d.preferences_interets.domaine_interet) * 1.15 + 14;
+      pdf.roundedRect(ML + 2, y - 4, Math.min(domW, CW - 4), 9, 4, 4, "FD");
+      pdf.setFontSize(9); pdf.setFont("helvetica", "bold"); txt(C.dark);
+      pdf.text(d.preferences_interets.domaine_interet, ML + 9, y + 1); y += 12;
+      if (d.preferences_interets.familles?.length) {
+        for (const fam of d.preferences_interets.familles) {
+          ensureSpace(14);
+          pdf.setFontSize(9); pdf.setFont("helvetica", "bold"); txt(C.gray700); pdf.text(fam.nom, ML + 4, y); y += 4.5;
+          if (fam.description) {
+            pdf.setFontSize(8.5); pdf.setFont("helvetica", "normal"); txt(C.gray500);
+            const fLines = pdf.splitTextToSize(fam.description, CW - 10);
+            for (const fl of fLines) { ensureSpace(5); pdf.text(fl, ML + 4, y); y += 4.5; }
+          }
+          y += 3;
+        }
+      }
+    }
+    sourceText("Source : Analyse IA (Claude)");
+  }
+
+  // ═══ COMPÉTENCES ═══
+  const hasComp = (d.competences?.length ?? 0) > 0;
+  const hasSE = (d.competences_transversales?.length ?? 0) > 0;
+  const hasSav = (d.savoirs?.length ?? 0) > 0;
+  if (hasComp || hasSE || hasSav) {
+    sectionTitle("Compétences");
+    if (hasComp) { subTitle(`Savoir-faire (${d.competences!.length})`); pdf.setFontSize(8); pdf.setFont("helvetica", "italic"); txt(C.gray500); pdf.text("Compétences pratiques et techniques en situation professionnelle.", ML + 2, y); y += 7; numberedList(d.competences!); }
+    if (hasSE) { subTitle(`Savoir-être (${d.competences_transversales!.length})`); pdf.setFontSize(8); pdf.setFont("helvetica", "italic"); txt(C.gray500); pdf.text("Qualités humaines et comportementales.", ML + 2, y); y += 6; bulletList(d.competences_transversales!, C.pink); }
+    if (hasSav) { subTitle(`Savoirs (${d.savoirs!.length})`); pdf.setFontSize(8); pdf.setFont("helvetica", "italic"); txt(C.gray500); pdf.text("Connaissances théoriques acquises par la formation.", ML + 2, y); y += 6; bulletList(d.savoirs!, C.cyan); }
+    sourceText("Source : Référentiel ROME + enrichissement IA");
+  }
+
+  // ═══ DOMAINE PROFESSIONNEL ═══
+  const hasDom = !!d.domaine_professionnel?.domaine || (d.autres_appellations?.length ?? 0) > 0;
+  if (hasDom) {
+    sectionTitle("Domaine professionnel");
+    if (d.domaine_professionnel?.domaine) {
+      ensureSpace(12);
+      fill(C.purple);
+      const domTxt = `${d.domaine_professionnel.code_domaine || ""} - ${d.domaine_professionnel.domaine}`;
+      const domW = pdf.getTextWidth(domTxt) * 1.15 + 14;
+      pdf.roundedRect(ML + 2, y - 4, Math.min(domW, CW - 4), 9, 4, 4, "F");
+      pdf.setFontSize(9); pdf.setFont("helvetica", "bold"); txt(C.white); pdf.text(domTxt, ML + 9, y + 1); y += 10;
+      if (d.domaine_professionnel.sous_domaine) {
+        fill(C.gray100);
+        const sdW = pdf.getTextWidth(d.domaine_professionnel.sous_domaine) * 1.15 + 14;
+        pdf.roundedRect(ML + 2, y - 4, Math.min(sdW, CW - 4), 9, 4, 4, "F");
+        pdf.setFontSize(9); txt(C.gray700); pdf.text(d.domaine_professionnel.sous_domaine, ML + 9, y + 1); y += 10;
+      }
+    }
+    if (d.niveau_formation) { ensureSpace(16); subTitle("Niveau de formation"); pdf.setFontSize(11); pdf.setFont("helvetica", "bold"); txt(C.dark); pdf.text(d.niveau_formation, ML + 2, y); y += 10; }
+    if (d.statuts_professionnels?.length) { subTitle("Statuts professionnels"); tags(d.statuts_professionnels); }
+    if (d.autres_appellations?.length) { subTitle("Autres appellations"); tags(d.autres_appellations); }
+    sourceText("Source : Référentiel ROME");
+  }
+
+  // ═══ CONTEXTES DE TRAVAIL ═══
+  const hasCond = (d.conditions_travail?.length ?? 0) > 0;
+  const hasEnv = (d.environnements?.length ?? 0) > 0;
+  if (hasCond || hasEnv) {
+    sectionTitle("Contextes de travail");
+    if (hasCond) { subTitle("Conditions & risques"); bulletList(d.conditions_travail!, C.purple); }
+    if (hasEnv) { subTitle("Structures & environnements"); bulletList(d.environnements!, C.cyan); }
+    if (d.conditions_travail_detaillees) {
+      const cd = d.conditions_travail_detaillees;
+      if (cd.horaires || cd.deplacements || cd.environnement) {
+        subTitle("Conditions détaillées");
+        if (cd.horaires) bodyText(`Horaires : ${cd.horaires}`);
+        if (cd.deplacements) bodyText(`Déplacements : ${cd.deplacements}`);
+        if (cd.environnement) bodyText(`Environnement : ${cd.environnement}`);
+      }
+      if (cd.exigences_physiques?.length) { subTitle("Exigences physiques"); bulletList(cd.exigences_physiques, C.purple); }
+      if (cd.risques?.length) { subTitle("Risques spécifiques"); bulletList(cd.risques, C.pink); }
+    }
+    sourceText("Source : Référentiel ROME");
+  }
+
   // ═══ STATISTIQUES ═══
   const showStats = d.salaires || d.perspectives || (d.types_contrats && (d.types_contrats.cdi > 0 || d.types_contrats.cdd > 0));
   if (showStats) {
@@ -287,7 +436,7 @@ export async function generateFichePdf(
       levels.forEach(l => { [l.data?.min, l.data?.median, l.data?.max].forEach(v => { if (v && v > maxVal) maxVal = v; }); });
       maxVal = Math.ceil(maxVal / 10000) * 10000; if (maxVal === 0) maxVal = 50000;
       const chartLeft = ML + 16, chartW = CW - 20, chartH = 55;
-      const chartTop = y, chartBottom = y + chartH;
+      const chartBottom = y + chartH;
       const gridSteps = 5;
       for (let i = 0; i <= gridSteps; i++) {
         const gy = chartBottom - (i / gridSteps) * chartH;
@@ -370,103 +519,6 @@ export async function generateFichePdf(
       y += 32;
     }
     sourceText("Source : Estimation IA (Claude)");
-  }
-
-  // ═══ COMPÉTENCES ═══
-  const hasComp = (d.competences?.length ?? 0) > 0;
-  const hasSE = (d.competences_transversales?.length ?? 0) > 0;
-  const hasSav = (d.savoirs?.length ?? 0) > 0;
-  if (hasComp || hasSE || hasSav) {
-    sectionTitle("Compétences");
-    if (hasComp) { subTitle(`Savoir-faire (${d.competences!.length})`); pdf.setFontSize(8); pdf.setFont("helvetica", "italic"); txt(C.gray500); pdf.text("Compétences pratiques et techniques en situation professionnelle.", ML + 2, y); y += 7; numberedList(d.competences!); }
-    if (hasSE) { subTitle(`Savoir-être (${d.competences_transversales!.length})`); pdf.setFontSize(8); pdf.setFont("helvetica", "italic"); txt(C.gray500); pdf.text("Qualités humaines et comportementales.", ML + 2, y); y += 6; bulletList(d.competences_transversales!, C.pink); }
-    if (hasSav) { subTitle(`Savoirs (${d.savoirs!.length})`); pdf.setFontSize(8); pdf.setFont("helvetica", "italic"); txt(C.gray500); pdf.text("Connaissances théoriques acquises par la formation.", ML + 2, y); y += 6; bulletList(d.savoirs!, C.cyan); }
-    sourceText("Source : Référentiel ROME + enrichissement IA");
-  }
-
-  // ═══ DOMAINE PROFESSIONNEL ═══
-  const hasDom = !!d.domaine_professionnel?.domaine || (d.autres_appellations?.length ?? 0) > 0;
-  if (hasDom) {
-    sectionTitle("Domaine professionnel");
-    if (d.domaine_professionnel?.domaine) {
-      ensureSpace(12);
-      fill(C.purple);
-      const domTxt = `${d.domaine_professionnel.code_domaine || ""} - ${d.domaine_professionnel.domaine}`;
-      const domW = pdf.getTextWidth(domTxt) * 1.15 + 14;
-      pdf.roundedRect(ML + 2, y - 4, Math.min(domW, CW - 4), 9, 4, 4, "F");
-      pdf.setFontSize(9); pdf.setFont("helvetica", "bold"); txt(C.white); pdf.text(domTxt, ML + 9, y + 1); y += 10;
-      if (d.domaine_professionnel.sous_domaine) {
-        fill(C.gray100);
-        const sdW = pdf.getTextWidth(d.domaine_professionnel.sous_domaine) * 1.15 + 14;
-        pdf.roundedRect(ML + 2, y - 4, Math.min(sdW, CW - 4), 9, 4, 4, "F");
-        pdf.setFontSize(9); txt(C.gray700); pdf.text(d.domaine_professionnel.sous_domaine, ML + 9, y + 1); y += 10;
-      }
-    }
-    if (d.niveau_formation) { ensureSpace(16); subTitle("Niveau de formation"); pdf.setFontSize(11); pdf.setFont("helvetica", "bold"); txt(C.dark); pdf.text(d.niveau_formation, ML + 2, y); y += 10; }
-    if (d.statuts_professionnels?.length) { subTitle("Statuts professionnels"); tags(d.statuts_professionnels); }
-    if (d.autres_appellations?.length) { subTitle("Autres appellations"); tags(d.autres_appellations); }
-    sourceText("Source : Référentiel ROME");
-  }
-
-  // ═══ PROFIL & PERSONNALITÉ ═══
-  const hasProf = (d.traits_personnalite?.length ?? 0) > 0 || (d.aptitudes?.length ?? 0) > 0;
-  if (hasProf) {
-    sectionTitle("Profil & Personnalité");
-    if (d.traits_personnalite?.length) { subTitle("Traits de personnalité"); tags(d.traits_personnalite); }
-    if (d.aptitudes?.length) {
-      subTitle("Aptitudes");
-      for (const apt of d.aptitudes) {
-        ensureSpace(10);
-        const aptName = typeof apt === "object" ? apt.nom : String(apt);
-        const aptLevel = typeof apt === "object" ? apt.niveau : 3;
-        pdf.setFontSize(9); pdf.setFont("helvetica", "normal"); txt(C.gray700); pdf.text(aptName, ML + 2, y + 1);
-        const barX = ML + 70, barW2 = CW - 90;
-        fill(C.gray100); pdf.roundedRect(barX, y - 2.5, barW2, 6, 3, 3, "F");
-        fill(C.purple); pdf.roundedRect(barX, y - 2.5, Math.max((aptLevel / 5) * barW2, 6), 6, 3, 3, "F");
-        pdf.setFontSize(8); pdf.setFont("helvetica", "bold"); txt(C.purple); pdf.text(`${aptLevel}/5`, barX + barW2 + 4, y + 1);
-        y += 9;
-      }
-      y += 4;
-    }
-    if (d.profil_riasec && Object.values(d.profil_riasec).some((v: any) => v > 0)) {
-      subTitle("Profil RIASEC");
-      const riasecLabels: Record<string, string> = { realiste: "Réaliste", investigateur: "Investigateur", artistique: "Artistique", social: "Social", entreprenant: "Entreprenant", conventionnel: "Conventionnel" };
-      for (const [key, label] of Object.entries(riasecLabels)) {
-        const val = (d.profil_riasec as any)[key] ?? 0;
-        if (val > 0) {
-          ensureSpace(10);
-          pdf.setFontSize(9); pdf.setFont("helvetica", "normal"); txt(C.gray700); pdf.text(label, ML + 2, y + 1);
-          const barX = ML + 45, barW3 = CW - 65;
-          fill(C.gray100); pdf.roundedRect(barX, y - 2.5, barW3, 6, 3, 3, "F");
-          fill(C.purple); pdf.roundedRect(barX, y - 2.5, Math.max((val / 100) * barW3, 6), 6, 3, 3, "F");
-          pdf.setFontSize(8); pdf.setFont("helvetica", "bold"); txt(C.purple); pdf.text(`${val}`, barX + barW3 + 4, y + 1);
-          y += 9;
-        }
-      }
-      y += 4;
-    }
-    sourceText("Source : Analyse IA (Claude)");
-  }
-
-  // ═══ CONTEXTES DE TRAVAIL ═══
-  const hasCond = (d.conditions_travail?.length ?? 0) > 0;
-  const hasEnv = (d.environnements?.length ?? 0) > 0;
-  if (hasCond || hasEnv) {
-    sectionTitle("Contextes de travail");
-    if (hasCond) { subTitle("Conditions & risques"); bulletList(d.conditions_travail!, C.purple); }
-    if (hasEnv) { subTitle("Structures & environnements"); bulletList(d.environnements!, C.cyan); }
-    if (d.conditions_travail_detaillees) {
-      const cd = d.conditions_travail_detaillees;
-      if (cd.horaires || cd.deplacements || cd.environnement) {
-        subTitle("Conditions détaillées");
-        if (cd.horaires) bodyText(`Horaires : ${cd.horaires}`);
-        if (cd.deplacements) bodyText(`Déplacements : ${cd.deplacements}`);
-        if (cd.environnement) bodyText(`Environnement : ${cd.environnement}`);
-      }
-      if (cd.exigences_physiques?.length) { subTitle("Exigences physiques"); bulletList(cd.exigences_physiques, C.purple); }
-      if (cd.risques?.length) { subTitle("Risques spécifiques"); bulletList(cd.risques, C.pink); }
-    }
-    sourceText("Source : Référentiel ROME");
   }
 
   // ═══ SITES UTILES ═══

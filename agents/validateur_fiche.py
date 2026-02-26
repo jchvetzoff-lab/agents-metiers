@@ -195,6 +195,16 @@ Retourne UNIQUEMENT un objet JSON valide :
     "suggestions": [
         "Action concrète et spécifique pour améliorer un point précis",
         "... (minimum 3 suggestions actionnables)"
+    ],
+    "plan_amelioration": [
+        {{
+            "critere": "completude|qualite|coherence|exactitude",
+            "priorite": "haute|moyenne|basse",
+            "quoi_corriger": "Description précise de CE QUI ne va pas (champ exact + contenu actuel problématique)",
+            "comment_corriger": "Instructions CONCRÈTES : le texte/contenu exact à ajouter ou modifier. Donne des EXEMPLES de contenu réel à écrire.",
+            "impact_score": "+X pts sur le score global estimé si corrigé"
+        }},
+        "... (1 item par critère ayant un score < 80, classés par priorité décroissante. Si un critère est à 90+, ne pas l'inclure.)"
     ]
 }}
 
@@ -259,7 +269,8 @@ BARÈME DE RÉFÉRENCE :
                     "resume": resume,
                     "criteres": criteres,
                     "problemes": data.get("problemes", []),
-                    "suggestions": data.get("suggestions", [])
+                    "suggestions": data.get("suggestions", []),
+                    "plan_amelioration": data.get("plan_amelioration", []),
                 }
 
                 self.logger.info(f"Validation complétée pour {fiche.code_rome}: score {score_global}/100, verdict: {verdict}")
@@ -377,5 +388,6 @@ Tendance: {fiche.perspectives.tendance.value}
                 "exactitude": {"score": 70, "commentaire": "Non évaluée (mode simulation)"}
             },
             "problemes": ["Validation en mode simulation - Claude non disponible"],
-            "suggestions": ["Réactiver Claude pour une validation complète"]
+            "suggestions": ["Réactiver Claude pour une validation complète"],
+            "plan_amelioration": [],
         }

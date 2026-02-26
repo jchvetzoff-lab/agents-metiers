@@ -330,6 +330,10 @@ async def publish_fiche(code_rome: str, user: dict = Depends(get_current_user)):
         fiche_dict = fiche.model_dump()
         fiche_dict["metadata"]["statut"] = StatutFiche.PUBLIEE.value
         fiche_dict["metadata"]["date_maj"] = datetime.now()
+        # Clear validation data on publish — published fiche = clean content only
+        fiche_dict["validation_ia_score"] = None
+        fiche_dict["validation_ia_date"] = None
+        fiche_dict["validation_ia_details"] = None
         updated = FicheMetier(**fiche_dict)
         repo.update_fiche(updated)
 
@@ -425,6 +429,10 @@ async def publish_batch(req: PublishBatchRequest, user: dict = Depends(get_curre
             fiche_dict = fiche.model_dump()
             fiche_dict["metadata"]["statut"] = StatutFiche.PUBLIEE.value
             fiche_dict["metadata"]["date_maj"] = datetime.now()
+            # Clear validation data on publish
+            fiche_dict["validation_ia_score"] = None
+            fiche_dict["validation_ia_date"] = None
+            fiche_dict["validation_ia_details"] = None
             updated = FicheMetier(**fiche_dict)
             repo.update_fiche(updated)
 

@@ -182,6 +182,13 @@ export interface FicheDetail extends FicheMetier {
     criteres?: Record<string, { score: number; commentaire: string }>;
     problemes?: string[];
     suggestions?: string[];
+    plan_amelioration?: {
+      critere: string;
+      priorite: "haute" | "moyenne" | "basse";
+      quoi_corriger: string;
+      comment_corriger: string;
+      impact_score: string;
+    }[];
   } | null;
 }
 

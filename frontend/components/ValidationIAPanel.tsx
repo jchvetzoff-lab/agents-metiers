@@ -6,6 +6,14 @@
  * Extracted from page.tsx (~117 lines).
  */
 
+interface PlanItem {
+  critere: string;
+  priorite: "haute" | "moyenne" | "basse";
+  quoi_corriger: string;
+  comment_corriger: string;
+  impact_score: string;
+}
+
 interface ValidationDetails {
   score?: number | null;
   verdict?: string;
@@ -13,6 +21,7 @@ interface ValidationDetails {
   criteres?: Record<string, { score: number; commentaire?: string }>;
   problemes?: string[];
   suggestions?: string[];
+  plan_amelioration?: PlanItem[];
   [key: string]: unknown;
 }
 
@@ -37,6 +46,7 @@ export default function ValidationIAPanel({
   const problemes = details.problemes || [];
   const suggestions = details.suggestions || [];
   const criteres = details.criteres || {};
+  const plan = (details.plan_amelioration || []) as PlanItem[];
   const dateStr = validationDate
     ? new Date(validationDate).toLocaleDateString("fr-FR", {
         day: "2-digit", month: "2-digit", year: "numeric",
@@ -140,6 +150,56 @@ export default function ValidationIAPanel({
             </ul>
           )}
         </div>
+
+        {/* Plan d'amélioration */}
+        {plan.length > 0 && (
+          <div>
+            <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
+              Plan d&apos;amelioration ({plan.length})
+            </div>
+            <div className="space-y-3">
+              {plan.map((item, i) => {
+                const prioColors: Record<string, { bg: string; text: string; border: string; icon: string }> = {
+                  haute:  { bg: "bg-red-500/10",    text: "text-red-400",    border: "border-red-500/20",    icon: "!!!" },
+                  moyenne: { bg: "bg-amber-500/10",  text: "text-amber-400",  border: "border-amber-500/20",  icon: "!!" },
+                  basse:  { bg: "bg-blue-500/10",   text: "text-blue-400",   border: "border-blue-500/20",   icon: "!" },
+                };
+                const prio = prioColors[item.priorite] || prioColors.moyenne;
+                const critereLabels: Record<string, string> = {
+                  completude: "Completude",
+                  qualite: "Qualite",
+                  coherence: "Coherence",
+                  exactitude: "Exactitude",
+                };
+                return (
+                  <div key={i} className={`rounded-xl border ${prio.border} ${prio.bg} p-4 space-y-2`}>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${prio.border} ${prio.text} uppercase`}>
+                        {item.priorite}
+                      </span>
+                      <span className="text-xs font-semibold text-gray-300">
+                        {critereLabels[item.critere] || item.critere}
+                      </span>
+                      {item.impact_score && (
+                        <span className="text-[10px] font-bold text-green-400 bg-green-500/10 px-2 py-0.5 rounded-full">
+                          {item.impact_score}
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-xs font-semibold text-gray-400 mb-0.5">Probleme</div>
+                      <p className="text-sm text-gray-300">{item.quoi_corriger}</p>
+                    </div>
+                    <div>
+                      <div className="text-xs font-semibold text-gray-400 mb-0.5">Comment corriger</div>
+                      <p className="text-sm text-gray-300">{item.comment_corriger}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
