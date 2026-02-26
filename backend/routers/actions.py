@@ -121,7 +121,7 @@ async def validate_fiche(code_rome: str, user: dict = Depends(get_current_user))
 
         # Log audit de la validation
         try:
-            from database.models import TypeEvenement, AuditLog
+            from database.models import AuditLog
             audit = AuditLog(
                 type_evenement=TypeEvenement.VALIDATION,
                 code_rome=code_rome,
@@ -322,6 +322,8 @@ Retourne UNIQUEMENT un JSON avec les champs corrigés: description, competences,
 @router.post("/{code_rome}/publish")
 async def publish_fiche(code_rome: str, user: dict = Depends(get_current_user)):
     """Publie une fiche (change le statut en 'publiee')."""
+    validate_code_rome(code_rome)
+    rate_limiter.check(f"publish:{user.get('sub', 'anon')}:{code_rome}", max_requests=20)
     try:
         fiche = repo.get_fiche(code_rome)
         if not fiche:
@@ -416,10 +418,12 @@ publish_batch_router = APIRouter(prefix="/api/fiches", tags=["actions"])
 @publish_batch_router.post("/publish-batch")
 async def publish_batch(req: PublishBatchRequest, user: dict = Depends(get_current_user)):
     """Publie plusieurs fiches en batch (max 50)."""
+    rate_limiter.check(f"publish-batch:{user.get('sub', 'anon')}", max_requests=10)
     if len(req.codes_rome) > 50:
         raise HTTPException(status_code=400, detail="Maximum 50 fiches par batch")
     results = []
     for code_rome in req.codes_rome:
+        validate_code_rome(code_rome)
         try:
             fiche = repo.get_fiche(code_rome)
             if not fiche:
