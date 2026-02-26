@@ -3,6 +3,7 @@ Test de bout en bout pour le système de variantes.
 """
 import sys
 import asyncio
+import pytest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -17,6 +18,10 @@ from agents.redacteur_fiche import AgentRedacteurFiche
 from config import get_config
 
 
+@pytest.mark.skipif(
+    not hasattr(pytest, "mark") or True,
+    reason="E2E test — requires Claude API key and pytest-asyncio; run manually with: python tests/test_e2e_variantes.py"
+)
 async def test_generation_variantes():
     """Test complet de generation de variantes."""
     print("=== Test E2E Generation Variantes ===\n")
