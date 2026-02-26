@@ -14,7 +14,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from .models import (
     Base, FicheMetierDB, SalaireDB, HistoriqueVeilleDB, AuditLogDB, DictionnaireGenreDB,
-    VarianteFicheDB, UserDB,
+    VarianteFicheDB, UserDB, RefreshTokenDB,
     FicheMetier, Salaire, HistoriqueVeille, AuditLog, DictionnaireGenre, VarianteFiche,
     TypeEvenement, StatutFiche, NiveauExperience, LangueSupporte, TrancheAge,
     FormatContenu, GenreGrammatical
@@ -726,3 +726,69 @@ class Repository:
                 "email": user.email,
                 "name": user.name,
             }
+
+    # ============================================================================
+    # Refresh Tokens
+    # ============================================================================
+
+    def save_refresh_token(self, token_hash: str, user_id: int, expires_at: datetime) -> None:
+        """Store a hashed refresh token."""
+        with self.session() as session:
+            rt = RefreshTokenDB(
+                token_hash=token_hash,
+                user_id=user_id,
+                expires_at=expires_at,
+            )
+            session.add(rt)
+
+    def get_refresh_token(self, token_hash: str) -> Optional[dict]:
+        """Get a refresh token by its hash. Returns None if not found or revoked."""
+        with self.session() as session:
+            row = session.execute(
+                select(RefreshTokenDB).where(
+                    RefreshTokenDB.token_hash == token_hash,
+                    RefreshTokenDB.revoked == False,
+                )
+            ).scalar_one_or_none()
+            if row is None:
+                return None
+            return {
+                "id": row.id,
+                "token_hash": row.token_hash,
+                "user_id": row.user_id,
+                "expires_at": row.expires_at,
+                "created_at": row.created_at,
+            }
+
+    def revoke_refresh_token(self, token_hash: str) -> bool:
+        """Revoke a specific refresh token. Returns True if found and revoked."""
+        with self.session() as session:
+            result = session.execute(
+                update(RefreshTokenDB)
+                .where(RefreshTokenDB.token_hash == token_hash, RefreshTokenDB.revoked == False)
+                .values(revoked=True)
+            )
+            return result.rowcount > 0
+
+    def revoke_all_user_tokens(self, user_id: int) -> int:
+        """Revoke all refresh tokens for a user. Returns count revoked."""
+        with self.session() as session:
+            result = session.execute(
+                update(RefreshTokenDB)
+                .where(RefreshTokenDB.user_id == user_id, RefreshTokenDB.revoked == False)
+                .values(revoked=True)
+            )
+            return result.rowcount
+
+    def cleanup_expired_tokens(self) -> int:
+        """Delete expired or revoked refresh tokens. Returns count deleted."""
+        with self.session() as session:
+            result = session.execute(
+                delete(RefreshTokenDB).where(
+                    or_(
+                        RefreshTokenDB.expires_at < datetime.now(),
+                        RefreshTokenDB.revoked == True,
+                    )
+                )
+            )
+            return result.rowcount

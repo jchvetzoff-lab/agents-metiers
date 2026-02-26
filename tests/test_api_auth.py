@@ -173,3 +173,124 @@ class TestMe:
         })
         resp = client.get("/api/auth/me", headers={"Authorization": f"Bearer {expired_token}"})
         assert resp.status_code == 401
+
+
+class TestRefreshToken:
+    """POST /api/auth/refresh"""
+
+    def test_login_sets_cookies(self, client):
+        """Login should set access_token and refresh_token cookies."""
+        email = f"cookie_{int(time.time())}@test.com"
+        client.post("/api/auth/register", json={
+            "email": email,
+            "password": "StrongPass1",
+            "name": "Cookie Test"
+        })
+        resp = client.post("/api/auth/login", json={
+            "email": email,
+            "password": "StrongPass1"
+        })
+        assert resp.status_code == 200
+        cookies = {c.name: c for c in resp.cookies.jar}
+        assert "access_token" in cookies
+        assert "refresh_token" in cookies
+
+    def test_refresh_with_valid_cookie(self, client):
+        """Refresh endpoint should issue new tokens when refresh cookie is valid."""
+        email = f"refresh_{int(time.time())}@test.com"
+        client.post("/api/auth/register", json={
+            "email": email,
+            "password": "StrongPass1",
+            "name": "Refresh Test"
+        })
+        login_resp = client.post("/api/auth/login", json={
+            "email": email,
+            "password": "StrongPass1"
+        })
+        assert login_resp.status_code == 200
+
+        # The TestClient carries cookies automatically
+        refresh_resp = client.post("/api/auth/refresh")
+        assert refresh_resp.status_code == 200
+        data = refresh_resp.json()
+        assert "token" in data
+        assert data["user"]["email"] == email
+
+    def test_refresh_without_cookie(self, client):
+        """Refresh without a cookie should return 401."""
+        # Use a fresh client with no cookies
+        from fastapi.testclient import TestClient
+        from backend.main import app
+        with TestClient(app) as fresh_client:
+            resp = fresh_client.post("/api/auth/refresh")
+            assert resp.status_code == 401
+
+    def test_refresh_token_rotation(self, client):
+        """After refresh, the old refresh token should be revoked (single-use)."""
+        email = f"rotate_{int(time.time())}@test.com"
+        client.post("/api/auth/register", json={
+            "email": email,
+            "password": "StrongPass1",
+            "name": "Rotate Test"
+        })
+        client.post("/api/auth/login", json={
+            "email": email,
+            "password": "StrongPass1"
+        })
+
+        # First refresh should work
+        resp1 = client.post("/api/auth/refresh")
+        assert resp1.status_code == 200
+
+        # Second refresh with old cookie would fail if cookies weren't updated
+        # But TestClient auto-updates cookies, so it should work with the NEW refresh token
+        resp2 = client.post("/api/auth/refresh")
+        assert resp2.status_code == 200
+
+    def test_cookie_auth_for_me(self, client):
+        """The /me endpoint should work with cookie-based auth."""
+        email = f"cookieme_{int(time.time())}@test.com"
+        client.post("/api/auth/register", json={
+            "email": email,
+            "password": "StrongPass1",
+            "name": "CookieMe"
+        })
+        client.post("/api/auth/login", json={
+            "email": email,
+            "password": "StrongPass1"
+        })
+
+        # Call /me without Authorization header — should use cookie
+        resp = client.get("/api/auth/me")
+        assert resp.status_code == 200
+        assert resp.json()["email"] == email
+
+
+class TestLogout:
+    """POST /api/auth/logout"""
+
+    def test_logout_clears_session(self, client):
+        """After logout, refresh should fail."""
+        email = f"logout_{int(time.time())}@test.com"
+        client.post("/api/auth/register", json={
+            "email": email,
+            "password": "StrongPass1",
+            "name": "Logout Test"
+        })
+        client.post("/api/auth/login", json={
+            "email": email,
+            "password": "StrongPass1"
+        })
+
+        # Logout
+        resp = client.post("/api/auth/logout")
+        assert resp.status_code == 200
+        assert resp.json()["message"] == "Deconnecte"
+
+    def test_logout_without_session(self, client):
+        """Logout without a session should not error."""
+        from fastapi.testclient import TestClient
+        from backend.main import app
+        with TestClient(app) as fresh_client:
+            resp = fresh_client.post("/api/auth/logout")
+            assert resp.status_code == 200

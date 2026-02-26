@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { api } from "@/lib/api";
-import { setToken, isAuthenticated } from "@/lib/auth";
+import { setLoggedIn, isAuthenticated } from "@/lib/auth";
 
 type Phase = "intro" | "login" | "signup";
 
@@ -56,8 +56,8 @@ export default function LoginPage() {
         setSuccess("Compte créé avec succès. Connectez-vous.");
         setPassword("");
       } else {
-        const result = await api.login(email, password);
-        setToken(result.token);
+        await api.login(email, password);
+        setLoggedIn();
         router.replace("/");
       }
     } catch (err: unknown) {

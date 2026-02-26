@@ -37,6 +37,8 @@ def _setup_db():
 def repo(_setup_db):
     """Get repository, reset rate limiter between tests."""
     from backend.rate_limiter import rate_limiter
+    # Force in-memory fallback for tests (no SQLite rate limiter file)
+    rate_limiter._fallback = True
     rate_limiter._requests.clear()
     return _setup_db
 

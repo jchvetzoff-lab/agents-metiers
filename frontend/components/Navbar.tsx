@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { removeToken, isAuthenticated } from "@/lib/auth";
+import { clearLoggedIn, isAuthenticated } from "@/lib/auth";
+import { api } from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
 
 const NAV_ITEMS = [
@@ -60,8 +61,8 @@ export default function Navbar() {
     setMobileOpen(false);
   }, [pathname]);
 
-  const handleLogout = () => {
-    removeToken();
+  const handleLogout = async () => {
+    await api.logout();
     router.push("/login");
   };
 

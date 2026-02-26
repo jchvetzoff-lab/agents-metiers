@@ -789,6 +789,18 @@ class UserDB(Base):
     created_at = Column(DateTime, default=datetime.now)
 
 
+class RefreshTokenDB(Base):
+    """Table des refresh tokens (revocable)."""
+    __tablename__ = "refresh_tokens"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    token_hash = Column(String(64), unique=True, nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    expires_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, default=datetime.now)
+    revoked = Column(Boolean, default=False)
+
+
 class DictionnaireGenreDB(Base):
     """Table du dictionnaire de correspondances de genre."""
     __tablename__ = "dictionnaire_genre"

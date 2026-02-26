@@ -2,7 +2,7 @@
  * Client API pour communiquer avec le backend FastAPI
  */
 
-import { getToken, removeToken } from "./auth";
+import { getToken, clearLoggedIn } from "./auth";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -349,9 +349,35 @@ export interface AuditLog {
 
 class ApiClient {
   private baseUrl: string;
+  private _refreshing: Promise<boolean> | null = null;
 
   constructor(baseUrl: string = API_BASE_URL) {
     this.baseUrl = baseUrl;
+  }
+
+  /**
+   * Attempt to refresh the access token using the refresh cookie.
+   * Returns true if refresh succeeded, false otherwise.
+   * Deduplicates concurrent refresh attempts.
+   */
+  private async _tryRefresh(): Promise<boolean> {
+    if (this._refreshing) return this._refreshing;
+
+    this._refreshing = (async () => {
+      try {
+        const resp = await fetch(`${this.baseUrl}/api/auth/refresh`, {
+          method: "POST",
+          credentials: "include",
+        });
+        return resp.ok;
+      } catch {
+        return false;
+      } finally {
+        this._refreshing = null;
+      }
+    })();
+
+    return this._refreshing;
   }
 
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
@@ -371,8 +397,8 @@ class ApiClient {
         ...(options?.headers as Record<string, string>),
       };
 
-      // Ajouter le token d'authentification si present
-      // Ne pas envoyer le token pour les requetes GET publiques (fiches, stats, regions)
+      // Legacy: send Bearer token from localStorage if present (backward compat)
+      // New flow: cookies are sent automatically via credentials: "include"
       const isPublicGet = method === "GET" && (
         endpoint.startsWith("/api/fiches") ||
         endpoint.startsWith("/api/stats") ||
@@ -391,6 +417,7 @@ class ApiClient {
         response = await fetch(url, {
           ...options,
           headers,
+          credentials: "include",  // Send HttpOnly cookies cross-origin
           signal: controller.signal,
         });
       } catch (err: any) {
@@ -414,10 +441,34 @@ class ApiClient {
         const body = await response.json().catch(() => null);
         const detail = body?.detail || `${response.status} ${response.statusText}`;
 
-        // 401 sur les pages protegees = session expiree, rediriger
-        // 401 sur /api/auth/ = erreur de login, afficher le message du backend
+        // 401 on non-auth endpoints: try to refresh, then retry once
         if (response.status === 401 && !endpoint.startsWith("/api/auth/")) {
-          removeToken();
+          const refreshed = await this._tryRefresh();
+          if (refreshed) {
+            // Retry the original request with the new access cookie
+            const retryController = new AbortController();
+            const retryTimeout = setTimeout(() => retryController.abort(), timeoutMs);
+            try {
+              const retryResp = await fetch(url, {
+                ...options,
+                headers: {
+                  "Content-Type": "application/json",
+                  ...(options?.headers as Record<string, string>),
+                },
+                credentials: "include",
+                signal: retryController.signal,
+              });
+              clearTimeout(retryTimeout);
+              if (retryResp.ok) {
+                return retryResp.json();
+              }
+            } catch {
+              clearTimeout(retryTimeout);
+            }
+          }
+
+          // Refresh failed or retry failed — session is dead
+          clearLoggedIn();
           if (typeof window !== "undefined" && !window.location.pathname.includes("/login")) {
             window.location.href = "/login";
           }
@@ -695,6 +746,15 @@ class ApiClient {
 
   async getMe(): Promise<{ id: number; email: string; name: string }> {
     return this.request("/api/auth/me");
+  }
+
+  async logout(): Promise<void> {
+    try {
+      await this.request("/api/auth/logout", { method: "POST" });
+    } catch {
+      // Ignore errors — we clear cookies/state regardless
+    }
+    clearLoggedIn();
   }
 }
 

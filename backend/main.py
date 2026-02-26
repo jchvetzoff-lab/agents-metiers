@@ -119,6 +119,18 @@ async def _startup():
                 except Exception as e:
                     logger.warning(f"Statut migration {old_val}->{new_val}: {e}")
 
+        # Clean up expired refresh tokens on startup
+        try:
+            deleted = repo.cleanup_expired_tokens()
+            if deleted > 0:
+                logger.info(f"Cleaned up {deleted} expired/revoked refresh tokens")
+        except Exception as e:
+            logger.warning(f"Refresh token cleanup failed: {e}")
+
+        # Clean up old rate limiter entries
+        from .rate_limiter import rate_limiter
+        rate_limiter.cleanup()
+
         logger.info("Database migration check completed")
     except Exception as e:
         logger.error(f"Failed to init/migrate DB at startup: {e}")

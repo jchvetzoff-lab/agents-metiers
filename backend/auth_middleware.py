@@ -1,6 +1,7 @@
 """
 Authentication middleware for FastAPI.
 JWT token verification with stable secret.
+Supports both Authorization header AND HttpOnly cookie (access_token).
 """
 import os
 import json
@@ -10,7 +11,7 @@ import base64
 import time
 import logging
 from typing import Optional
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 security = HTTPBearer(auto_error=False)
@@ -90,21 +91,34 @@ def verify_jwt(token: str) -> Optional[dict]:
 
 
 async def get_current_user(
+    request: Request,
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
 ) -> dict:
     """
-    FastAPI dependency: extracts and verifies JWT from Authorization header.
+    FastAPI dependency: extracts and verifies JWT from:
+    1. Authorization: Bearer <token> header (API clients, backward compat)
+    2. access_token HttpOnly cookie (browser sessions)
     Returns the decoded payload (sub, email, name, etc.).
     Raises 401 if token is missing or invalid.
     """
-    if credentials is None:
+    token = None
+
+    # Priority 1: Authorization header
+    if credentials is not None:
+        token = credentials.credentials
+
+    # Priority 2: HttpOnly cookie
+    if token is None:
+        token = request.cookies.get("access_token")
+
+    if token is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication required",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    payload = verify_jwt(credentials.credentials)
+    payload = verify_jwt(token)
     if payload is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
